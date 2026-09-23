@@ -1,0 +1,1 @@
+# catalogo-nevada-skalta-etc
