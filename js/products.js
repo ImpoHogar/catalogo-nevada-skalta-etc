@@ -36,7 +36,7 @@ const PRODUCTS = [
   {"id":19,"brand":"ARGOM","code":"886540003554","name":"AC-0105 CARGADOR DUAL USB PARA P","categoria":"Tecnología","img":"886540003554.webp"},
   {"id":20,"brand":"ARGOM","code":"886540007675","name":"AC-0118BK CARGADOR DUAL DE CAR","categoria":"Tecnología","img":"886540007675.webp"},
   {"id":21,"brand":"ARGOM","code":"886540007699","name":"AC-0122BK AC0122BLK CARGADOR DE PARED DU","categoria":"Tecnología","img":"886540007699.webp"},
-  {"id":22,"brand":"ARGOM","code":"886540008856","name":"AC-0144BK AC0144BK WIRELESS FAST CHARGER","categoria":"Tecnología","img":false},
+  {"id":22,"brand":"ARGOM","code":"886540008856","name":"AC-0144BK AC0144BK WIRELESS FAST CHARGER","categoria":"Tecnología","img":"886540008856.webp"},
   {"id":23,"brand":"ARGOM","code":"886540006746","name":"AC-0160BK SOPORTE/CARGA INALAMBRICA","categoria":"Tecnología","img":false},
   {"id":24,"brand":"ARGOM","code":"886540008115","name":"AC-0161BK AC-0161BK SOPORTE CON CARGA IN","categoria":"Tecnología","img":false},
   {"id":25,"brand":"ARGOM","code":"886540001475","name":"AC-0252BK POWER STRIP ARGOM 6-OUTLETS 11","categoria":"Tecnología","img":false},
