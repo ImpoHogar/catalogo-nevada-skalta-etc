@@ -89,6 +89,24 @@ Reemplaza únicamente `js/stock.js`. Los negativos quedan en 0 (agotado).
 
 ## Para agregar fotos
 
+**Con el Excel de fotos** (`Fotos-catalogo-tecnologia-belleza.xlsx`, hoja
+"Fotos", cada producto con su N° de foto):
+
+```
+pip install openpyxl pillow
+# fotos nombradas con su N° (0001.jpg, 0002.jpg...):
+python3 herramientas/procesar_fotos.py Fotos.xlsx carpeta_con_fotos/
+# fotos sin numero, en el orden de la lista, empezando por el N° 6:
+python3 herramientas/procesar_fotos.py Fotos.xlsx --desde 6 a.jpg b.jpg c.jpg
+# y despues, para que el catalogo las detecte:
+python3 herramientas/actualizar_catalogo.py plantilla.xlsx
+```
+
+`procesar_fotos.py` las deja con fondo blanco, cuadradas, de 800x800 y en webp,
+guardadas como `img/productos/<código de barras>.webp`.
+
+**A mano:**
+
 Copiar las fotos a `img/productos/` con el código de barras como nombre
 (`7501234567890.jpg`, también sirve `.png` o `.webp`), fondo blanco, y volver a
 correr el script con la plantilla para que las detecte. Mientras un producto no
