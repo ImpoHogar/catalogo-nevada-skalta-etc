@@ -9,7 +9,7 @@ Lo que cambió es el contenido, porque es otro mercado:
 
 | Perfumería                          | Este catálogo                                                        |
 |-------------------------------------|----------------------------------------------------------------------|
-| Categorías Hombre / Mujer / Estuches…| Tecnología, Electrodomésticos, Maquillaje, Cuidado facial, Cuidado corporal, Cabello y barbería, Fragancias |
+| Categorías Hombre / Mujer / Estuches…| Tecnología, Electrodomésticos, Maquillaje, Cuidado facial, Cuidado corporal, Cabello y barbería |
 | Notas olfativas                     | Sección "Detalles" (opcional, campo `notes`)                         |
 | Dupe / Inspiración                  | "Productos relacionados" (complemento / alternativa), vacío por ahora |
 | Fotos `img/p<id>.webp`              | Fotos `img/productos/<código de barras>.jpg`                         |
@@ -66,6 +66,10 @@ El script:
   Cabello y barbería).
 - **No publica** lo interno: GASTOS, MATERIAL POP, MUEBLES/EXHIBIDORES,
   REGALÍAS-ACTIVACIONES, TESTER.
+- **No publica perfumería** (Afnan, Armani, Carolina Herrera, Adidas,
+  Victoria's Secret): esos productos van en el catálogo de perfumería. Si
+  aparece otra marca de perfumes, se agrega en `MARCAS_PERFUMERIA` dentro del
+  script.
 - **No publica el precio de costo** (la columna no se usa).
 - Si una marca nueva no tiene categoría asignada, la manda a "Otros" y lo
   avisa: se agrega en `POR_MARCA` dentro del script.

@@ -90,7 +90,6 @@ const CATEGORIAS = [
   "Cuidado facial",
   "Cuidado corporal",
   "Cabello y barbería",
-  "Fragancias",
   "Otros"
 ];
 
@@ -105,7 +104,6 @@ const CATEGORIA_ICONOS = {
   "Cuidado facial": "facial.svg",
   "Cuidado corporal": "corporal.svg",
   "Cabello y barbería": "cabello.svg",
-  "Fragancias": "fragancias.svg",
   "Otros": "otros.svg"
 };
 
