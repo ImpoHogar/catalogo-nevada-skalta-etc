@@ -34,7 +34,7 @@ function isInNuevosIngresosView(p) {
 // Foto del producto: img/productos/<archivo> (el archivo se llama con
 // el codigo de barras) o, si todavia no hay foto, el marcador.
 function productImgSrc(p) {
-  return p.img ? `img/productos/${encodeURIComponent(p.img)}?v=${IMG_VERSION}` : placeholderImg(p.brand);
+  return p.img ? `img/productos/${encodeURIComponent(p.img)}?v=${IMG_VERSION}` : placeholderImg(p.brand, p.categoria);
 }
 
 // ============================================================
@@ -203,7 +203,7 @@ function renderCategoriaFilter() {
       ? `<span class="category-tile-media"><img src="img/categorias/${archivoIcono}?v=${IMG_VERSION}" alt="" class="category-tile-icon"></span>`
       : '';
     return `
-    <button type="button" class="category-tile${activa ? ' active' : ''}" onclick="toggleCategoria('${opt}')" aria-pressed="${activa}"${activa ? ' title="Tocar de nuevo para quitar el filtro"' : ''}>
+    <button type="button" class="category-tile cat-${catSlug(opt)}${activa ? ' active' : ''}" onclick="toggleCategoria('${opt}')" aria-pressed="${activa}"${activa ? ' title="Tocar de nuevo para quitar el filtro"' : ''}>
       ${iconoHTML}
       <span class="category-tile-label">${opt}</span>
       <span class="category-tile-count">${activa ? '✕' : counts[opt]}</span>
@@ -252,7 +252,7 @@ function cardHTML(p) {
   const agotadoBadge = agotado ? '<span class="agotado-badge">AGOTADO</span>' : '';
   const stockLabel = agotado ? 'Agotado' : `${escapeHtml(p.stock)} uds`;
   const initialQty = qtyMap[p.id] || 0;
-  const cardClasses = 'card' + (initialQty > 0 ? ' has-qty' : '') + (agotado ? ' agotado' : '') + (esNuevo ? ' new-arrival' : '');
+  const cardClasses = 'card cat-' + catSlug(p.categoria) + (initialQty > 0 ? ' has-qty' : '') + (agotado ? ' agotado' : '') + (esNuevo ? ' new-arrival' : '');
   const qtyControls = agotado
     ? `<span class="lbl">Sin stock disponible</span>`
     : `<span class="lbl">Pedir</span>

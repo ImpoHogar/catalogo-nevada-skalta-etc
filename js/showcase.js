@@ -39,6 +39,7 @@ const VITRINA_FILAS = [
 ].concat(((typeof VITRINA_CATEGORIAS !== 'undefined') ? VITRINA_CATEGORIAS : []).map((cat, i) => ({
   id: 'cat-' + i,
   titulo: cat,
+  categoria: cat,
   dir: i % 2 === 0 ? 1 : -1,
   vel: VITRINA_VELOCIDADES[i % VITRINA_VELOCIDADES.length],
   limite: (typeof VITRINA_MAX_POR_FILA !== 'undefined') ? VITRINA_MAX_POR_FILA : 40,
@@ -127,7 +128,7 @@ function vitrinaFilaHTML(fila, productos, total) {
     .replace(/<article class="vt-card">/g, '<article class="vt-card" aria-hidden="true">');
   const pista = vitrinaReduce ? cards : cards + copia;
   return `
-    <section class="vt-row${vitrinaReduce ? ' vt-row--estatico' : ''}" data-fila="${fila.id}" aria-label="${escapeHtml(fila.titulo)}">
+    <section class="vt-row${fila.categoria ? ' cat-' + catSlug(fila.categoria) : ''}${vitrinaReduce ? ' vt-row--estatico' : ''}" data-fila="${fila.id}" aria-label="${escapeHtml(fila.titulo)}">
       <div class="vt-row-head">
         <h2 class="vt-row-title">${escapeHtml(fila.titulo)}</h2>
         <span class="vt-row-rule" aria-hidden="true"></span>

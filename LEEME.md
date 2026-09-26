@@ -135,3 +135,23 @@ versión vieja.
   Apps Script.
 - **Vendedores** (`SELLERS` en `js/config.js` y en `index.html`): Roy Chacón y
   Pedro Alemán.
+
+## Colores
+
+La paleta sale de los mercados del catálogo (en `css/styles.css`, sección 01
+y sección 19):
+
+| Uso | Color |
+|---|---|
+| Fondo (cremas) | crema de leche `#FBF6F2` |
+| Botones principales (frescura + tecnología) | verde azulado `#1F5F66` |
+| Detalles y marcas (maquillaje) | rosa baya `#C24D66` |
+| Tecnología | azul eléctrico `#3F6FE0` |
+| Electrodomésticos | turquesa `#0E8C8C` |
+| Maquillaje | rosa baya `#C73E6A` |
+| Cuidado facial | verde aloe `#4E8F6E` |
+| Cuidado corporal | durazno `#D9804F` |
+| Cabello y barbería | lavanda `#7A5AB5` |
+
+Cada producto lleva una línea arriba y el nombre de la marca en el color de su
+mercado; las tarjetas de categoría y las filas de la vitrina también.
