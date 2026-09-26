@@ -9,7 +9,7 @@ Lo que cambió es el contenido, porque es otro mercado:
 
 | Perfumería                          | Este catálogo                                                        |
 |-------------------------------------|----------------------------------------------------------------------|
-| Categorías Hombre / Mujer / Estuches…| Tecnología, Electrodomésticos, Maquillaje, Cuidado facial, Cuidado corporal, Cabello y barbería, Fragancias |
+| Categorías Hombre / Mujer / Estuches…| Tecnología, Electrodomésticos, Maquillaje, Cuidado facial, Cuidado corporal, Cabello y barbería |
 | Notas olfativas                     | Sección "Detalles" (opcional, campo `notes`)                         |
 | Dupe / Inspiración                  | "Productos relacionados" (complemento / alternativa), vacío por ahora |
 | Fotos `img/p<id>.webp`              | Fotos `img/productos/<código de barras>.jpg`                         |
@@ -66,6 +66,10 @@ El script:
   Cabello y barbería).
 - **No publica** lo interno: GASTOS, MATERIAL POP, MUEBLES/EXHIBIDORES,
   REGALÍAS-ACTIVACIONES, TESTER.
+- **No publica perfumería** (Afnan, Armani, Carolina Herrera, Adidas,
+  Victoria's Secret): esos productos van en el catálogo de perfumería. Si
+  aparece otra marca de perfumes, se agrega en `MARCAS_PERFUMERIA` dentro del
+  script.
 - **No publica el precio de costo** (la columna no se usa).
 - Si una marca nueva no tiene categoría asignada, la manda a "Otros" y lo
   avisa: se agrega en `POR_MARCA` dentro del script.
@@ -84,6 +88,24 @@ Reemplaza únicamente `js/stock.js`. Los negativos quedan en 0 (agotado).
 > código. No normalizar ceros a la izquierda.
 
 ## Para agregar fotos
+
+**Con el Excel de fotos** (`Fotos-catalogo-tecnologia-belleza.xlsx`, hoja
+"Fotos", cada producto con su N° de foto):
+
+```
+pip install openpyxl pillow
+# fotos nombradas con su N° (0001.jpg, 0002.jpg...):
+python3 herramientas/procesar_fotos.py Fotos.xlsx carpeta_con_fotos/
+# fotos sin numero, en el orden de la lista, empezando por el N° 6:
+python3 herramientas/procesar_fotos.py Fotos.xlsx --desde 6 a.jpg b.jpg c.jpg
+# y despues, para que el catalogo las detecte:
+python3 herramientas/actualizar_catalogo.py plantilla.xlsx
+```
+
+`procesar_fotos.py` las deja con fondo blanco, cuadradas, de 800x800 y en webp,
+guardadas como `img/productos/<código de barras>.webp`.
+
+**A mano:**
 
 Copiar las fotos a `img/productos/` con el código de barras como nombre
 (`7501234567890.jpg`, también sirve `.png` o `.webp`), fondo blanco, y volver a
@@ -113,3 +135,23 @@ versión vieja.
   Apps Script.
 - **Vendedores** (`SELLERS` en `js/config.js` y en `index.html`): Roy Chacón y
   Pedro Alemán.
+
+## Colores
+
+La paleta sale de los mercados del catálogo (en `css/styles.css`, sección 01
+y sección 19):
+
+| Uso | Color |
+|---|---|
+| Fondo (cremas) | crema de leche `#FBF6F2` |
+| Botones principales (frescura + tecnología) | verde azulado `#1F5F66` |
+| Detalles y marcas (maquillaje) | rosa baya `#C24D66` |
+| Tecnología | azul eléctrico `#3F6FE0` |
+| Electrodomésticos | turquesa `#0E8C8C` |
+| Maquillaje | rosa baya `#C73E6A` |
+| Cuidado facial | verde aloe `#4E8F6E` |
+| Cuidado corporal | durazno `#D9804F` |
+| Cabello y barbería | lavanda `#7A5AB5` |
+
+Cada producto lleva una línea arriba y el nombre de la marca en el color de su
+mercado; las tarjetas de categoría y las filas de la vitrina también.

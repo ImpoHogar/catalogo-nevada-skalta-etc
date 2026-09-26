@@ -88,6 +88,7 @@ function renderLightboxInfo(p) {
       </div>
     </div>` : '';
 
+  info.className = 'lightbox-info cat-' + catSlug(p.categoria);
   info.innerHTML = `
     <div class="lb-brand">${escapeHtml(p.brand)}</div>
     <h2 class="lb-name">${escapeHtml(p.name)}</h2>

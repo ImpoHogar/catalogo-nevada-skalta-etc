@@ -69,13 +69,17 @@ MARCA_PUBLICADA = {
     "BATERIAS MAXELL": "MAXELL",
     "MAXELL ACCESORIOS": "MAXELL",
     "MAQUILLAJE": "PATRICIA DE LEÓN",
-    "VICTORIA SECRET": "VICTORIA'S SECRET",
 }
 
 # Categorias del sistema que NO se publican (uso interno).
 CATEGORIAS_OCULTAS = {
     "GASTOS", "MATERIAL POP", "MUEBLES PARA EXI DIF",
     "REGALIAS-ACTIVACIONE", "TESTER",
+}
+# Perfumeria: va en su propio catalogo (Catalogo-Perfumer-a-Web), aca no.
+# Si aparece otra marca de perfumes en la plantilla, agregala a esta lista.
+MARCAS_PERFUMERIA = {
+    "AFNAN", "ARMANI", "CAROLINA HERRERA", "ADIDAS", "VICTORIA SECRET",
 }
 NOMBRES_OCULTOS = ("EXHIBIDOR", "DISPLAY DE MESA")
 
@@ -89,7 +93,6 @@ MAQ = "Maquillaje"
 FACIAL = "Cuidado facial"
 CORP = "Cuidado corporal"
 CAB = "Cabello y barbería"
-FRAG = "Fragancias"
 OTROS = "Otros"
 
 POR_MARCA = {
@@ -99,8 +102,6 @@ POR_MARCA = {
     "SKALA": CAB, "ORIGEM": CAB, "INOAR": CAB, "SALON LINE": CAB, "IMMORTAL": CAB,
     "EQQUALBERRY": FACIAL,
     "MAQUILLAJE": MAQ,
-    "AFNAN": FRAG, "ARMANI": FRAG, "CAROLINA HERRERA": FRAG, "ADIDAS": FRAG,
-    "VICTORIA SECRET": FRAG,
 }
 
 # Marcas mixtas: se decide por palabras del nombre.
@@ -310,13 +311,16 @@ def main():
     siguiente_id = max([p["id"] for p in previos.values()] + [0]) + 1
     hoy = datetime.date.today().isoformat()
 
-    productos, ocultos, otros, vistos = [], [], [], set()
+    productos, ocultos, otros, perfumeria, vistos = [], [], [], [], set()
     stock = {}
     for f in filas:
         if f["code"] in vistos:
             print("Aviso: codigo repetido, se usa solo la primera fila:", f["code"], f["name"])
             continue
         vistos.add(f["code"])
+        if clave(f["cat"]) in MARCAS_PERFUMERIA:
+            perfumeria.append(f)
+            continue
         if clave(f["cat"]) in CATEGORIAS_OCULTAS or any(k in clave(f["name"]) for k in NOMBRES_OCULTOS):
             ocultos.append(f)
             continue
@@ -360,6 +364,10 @@ def main():
     nuevos = [p for p in productos if p.get("dateAdded") == hoy]
     if nuevos:
         print(f"Nuevos ingresos de hoy: {len(nuevos)}")
+    if perfumeria:
+        print(f"No publicados (perfumeria, van en su propio catalogo): {len(perfumeria)}")
+        for f in perfumeria:
+            print(f"    {f['code']}  {f['name']}  [{f['cat']}]")
     if ocultos:
         print(f"No publicados (uso interno): {len(ocultos)}")
         for f in ocultos:
