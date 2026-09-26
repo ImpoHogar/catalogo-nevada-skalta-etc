@@ -11,7 +11,7 @@
 //  Valores negativos del excel se llevan a 0 (agotado) hasta que
 //  se revisen en el sistema interno.
 //
-//  Generado el 2026-09-23 por herramientas/actualizar_catalogo.py
+//  Generado el 2026-09-26 por herramientas/actualizar_catalogo.py
 // ============================================================
 const STOCK = {
   "025215721113": 15862,

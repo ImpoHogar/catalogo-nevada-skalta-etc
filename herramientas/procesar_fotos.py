@@ -11,11 +11,14 @@
 #
 #  Uso:
 #    python3 herramientas/procesar_fotos.py Fotos.xlsx carpeta_o_fotos...
-#        -> cada foto se empareja por su nombre: 0001.jpg = N° 0001.
+#        -> cada foto se empareja por su nombre: por el codigo de barras
+#           (886540006081.jpg) o, si el Excel tiene N° de foto, tambien
+#           por ese N° (0001.jpg = N° 0001).
 #
 #    python3 herramientas/procesar_fotos.py Fotos.xlsx --desde 6 a.jpg b.jpg c.jpg
-#        -> fotos sin numero: se asignan en orden desde el N° 6
+#        -> fotos sin nombre util: se asignan en orden desde el N° 6
 #           (a.jpg = 0006, b.jpg = 0007, ...). Ojo: si falta una, se corren.
+#           Requiere que el Excel tenga la columna N° de foto.
 #
 #  Despues hay que correr actualizar_catalogo.py para que el catalogo
 #  las detecte.
@@ -41,12 +44,28 @@ LADO = 800
 
 
 def leer_lista(path):
-    ws = openpyxl.load_workbook(path, read_only=True)["Fotos"]
-    lista = {}
+    # Acepta la lista completa (hoja "Fotos": N° foto / Codigo / Nombre)
+    # o la lista de pendientes (hoja "Pendientes": Codigo / Nombre / Marca
+    # / Nombre del archivo / Categoria / Foto). En la de pendientes no hay
+    # N° de foto, asi que solo sirve el emparejado por codigo de barras.
+    wb = openpyxl.load_workbook(path, read_only=True)
+    nombre_hoja = "Fotos" if "Fotos" in wb.sheetnames else "Pendientes"
+    ws = wb[nombre_hoja]
+    encabezado = [str(c or "").strip().lower() for c in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+    col_num = encabezado.index("n° foto") if "n° foto" in encabezado else None
+    col_code = encabezado.index("código de barras")
+    col_nombre = encabezado.index("nombre")
+
+    por_numero, por_codigo = {}, {}
     for fila in ws.iter_rows(min_row=2, values_only=True):
-        if fila[0] and fila[1]:
-            lista[int(fila[0])] = (str(fila[1]).strip(), str(fila[2] or "").strip())
-    return lista
+        code = str(fila[col_code] or "").strip()
+        if not code:
+            continue
+        nombre = str(fila[col_nombre] or "").strip()
+        por_codigo[code] = (code, nombre)
+        if col_num is not None and fila[col_num]:
+            por_numero[int(fila[col_num])] = (code, nombre)
+    return por_numero, por_codigo
 
 
 def juntar_fotos(entradas):
@@ -83,29 +102,33 @@ def main():
     ap.add_argument("--desde", type=int, help="N° de la primera foto si no vienen numeradas")
     args = ap.parse_args()
 
-    lista = leer_lista(args.lista)
+    por_numero, por_codigo = leer_lista(args.lista)
     os.makedirs(DESTINO, exist_ok=True)
     siguiente = args.desde
     for src in juntar_fotos(args.fotos):
-        base = os.path.splitext(os.path.basename(src))[0]
-        if siguiente is not None:
-            num = siguiente
+        base = os.path.splitext(os.path.basename(src))[0].strip()
+        etiqueta = base
+        if base in por_codigo:
+            code, nombre = por_codigo[base]
+        elif siguiente is not None:
+            if siguiente not in por_numero:
+                print(f"SALTADA {src}: el N° {siguiente:04d} no esta en la lista")
+                siguiente += 1
+                continue
+            code, nombre = por_numero[siguiente]
+            etiqueta = f"{siguiente:04d}"
             siguiente += 1
-        elif re.fullmatch(r"\d{1,4}", base):
-            num = int(base)
+        elif re.fullmatch(r"\d{1,4}", base) and int(base) in por_numero:
+            code, nombre = por_numero[int(base)]
         else:
-            print(f"SALTADA {src}: el nombre no es un N° de foto (usa --desde)")
+            print(f"SALTADA {src}: el nombre '{base}' no es un codigo de barras de la lista ni un N° de foto (usa --desde)")
             continue
-        if num not in lista:
-            print(f"SALTADA {src}: el N° {num:04d} no esta en la lista")
-            continue
-        code, nombre = lista[num]
         for ext in EXT:  # si ya habia una foto de este producto, se reemplaza
             viejo = os.path.join(DESTINO, code + ext)
             if os.path.exists(viejo):
                 os.remove(viejo)
         procesar(src, os.path.join(DESTINO, code + ".webp"))
-        print(f"{num:04d}  {code}  {nombre}  <- {os.path.basename(src)}")
+        print(f"{etiqueta}  {code}  {nombre}  <- {os.path.basename(src)}")
 
 
 if __name__ == "__main__":

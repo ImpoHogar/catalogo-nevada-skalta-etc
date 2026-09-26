@@ -94,9 +94,11 @@ Reemplaza únicamente `js/stock.js`. Los negativos quedan en 0 (agotado).
 
 ```
 pip install openpyxl pillow
-# fotos nombradas con su N° (0001.jpg, 0002.jpg...):
+# lo mas rapido: fotos nombradas con el codigo de barras (886540006081.jpg)
+python3 herramientas/procesar_fotos.py Fotos-pendientes.xlsx carpeta_con_fotos/
+# o, con la lista vieja, fotos nombradas con su N° (0001.jpg, 0002.jpg...):
 python3 herramientas/procesar_fotos.py Fotos.xlsx carpeta_con_fotos/
-# fotos sin numero, en el orden de la lista, empezando por el N° 6:
+# o fotos sin numero, en el orden de la lista, empezando por el N° 6:
 python3 herramientas/procesar_fotos.py Fotos.xlsx --desde 6 a.jpg b.jpg c.jpg
 # y despues, para que el catalogo las detecte:
 python3 herramientas/actualizar_catalogo.py plantilla.xlsx
