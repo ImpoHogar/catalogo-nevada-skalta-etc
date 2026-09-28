@@ -38,7 +38,7 @@ const VITRINA_FILAS = [
   }
 ].concat(((typeof VITRINA_CATEGORIAS !== 'undefined') ? VITRINA_CATEGORIAS : []).map((cat, i) => ({
   id: 'cat-' + i,
-  titulo: cat,
+  titulo: (typeof catMeta === 'function') ? catMeta(cat).short : cat,
   categoria: cat,
   dir: i % 2 === 0 ? 1 : -1,
   vel: VITRINA_VELOCIDADES[i % VITRINA_VELOCIDADES.length],
@@ -84,6 +84,9 @@ function vitrinaProductosDe(fila, indice) {
   const todos = VISIBLE_PRODUCTS.filter(fila.filtro);
   const conStock = todos.filter(p => (parseInt(p.stock) || 0) > 0);
   let base = conStock.length ? conStock : todos;
+  // En la vitrina se lucen primero los productos que ya tienen foto.
+  const conFoto = base.filter(p => p.img);
+  if (conFoto.length >= 6) base = conFoto;
 
   if (fila.id === 'nuevos') {
     // Los nuevos ingresos van del mas reciente al mas antiguo. Los del
@@ -102,11 +105,11 @@ function vitrinaProductosDe(fila, indice) {
 // ============================================================
 
 function vitrinaCardHTML(p, eager) {
-  const nombre = escapeHtml(p.name);
+  const nombre = escapeHtml(prettyName(p));
   const marca = escapeHtml(p.brand);
-  const notas = (p.notes && p.notes.length) ? escapeHtml(p.notes.slice(0, 4).join(' · ')) : '';
+  const notas = escapeHtml(p.subtipo && p.subtipo !== 'Otros' ? p.subtipo : catMeta(p.categoria).short);
   return `
-    <article class="vt-card">
+    <article class="vt-card cat-${catSlug(p.categoria)}">
       <div class="vt-plate">
         <img src="${productImgSrc(p)}" alt="${nombre}"${eager ? '' : ' loading="lazy"'} decoding="async" draggable="false">
       </div>
@@ -125,7 +128,7 @@ function vitrinaFilaHTML(fila, productos, total) {
   // div) para que medir el ancho de una vuelta sea exacto.
   // Con "reducir movimiento" no hace falta: la fila se navega scrolleando.
   const copia = productos.map((p) => vitrinaCardHTML(p, false)).join('')
-    .replace(/<article class="vt-card">/g, '<article class="vt-card" aria-hidden="true">');
+    .replace(/<article class="vt-card /g, '<article aria-hidden="true" class="vt-card ');
   const pista = vitrinaReduce ? cards : cards + copia;
   return `
     <section class="vt-row${fila.categoria ? ' cat-' + catSlug(fila.categoria) : ''}${vitrinaReduce ? ' vt-row--estatico' : ''}" data-fila="${fila.id}" aria-label="${escapeHtml(fila.titulo)}">
@@ -153,6 +156,7 @@ function renderVitrina() {
   const vitrina = document.getElementById('vitrina');
   if (!cont || !vitrina) return;
   if (typeof VISIBLE_PRODUCTS === 'undefined' || typeof getCategoria !== 'function') return;
+  if (typeof prettyName !== 'function') return;
 
   const armadas = [];
   VITRINA_FILAS.forEach((fila, i) => {
@@ -169,11 +173,43 @@ function renderVitrina() {
   if (!armadas.length) { vitrina.style.display = 'none'; return; }
 
   cont.innerHTML = armadas.map(a => vitrinaFilaHTML(a.fila, a.productos, a.total)).join('');
+  vitrinaExtras();
   vitrinaTicker(armadas.map(a => a.fila.titulo));
 
   cont.querySelectorAll('.vt-row').forEach((el, i) => vitrinaConectaFila(el, armadas[i].fila));
   window.addEventListener('resize', vitrinaMideTodo, { passive: true });
   vitrinaMideTodo();
+}
+
+// Cifras reales del catalogo, tarjetas de categorias y el mosaico de fotos
+// de la pantalla de clave. Todo sale de VISIBLE_PRODUCTS.
+function vitrinaExtras() {
+  const stats = document.getElementById('vtStats');
+  if (stats) {
+    const conStock = VISIBLE_PRODUCTS.filter(p => (parseInt(p.stock) || 0) > 0).length;
+    stats.innerHTML = [
+      [VISIBLE_PRODUCTS.length.toLocaleString('es-CR'), 'productos'],
+      [BRANDS.length, 'marcas'],
+      [conStock.toLocaleString('es-CR'), 'con stock hoy']
+    ].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  }
+  const cats = document.getElementById('vtCats');
+  if (cats) {
+    cats.innerHTML = categoriesWithCounts().map(c => {
+      const meta = catMeta(c.name);
+      return `<div class="vt-cat cat-${catSlug(c.name)}"><span class="vt-cat-icon">${iconSVG(meta.icon)}</span><span class="vt-cat-name">${escapeHtml(meta.short)}</span><span class="vt-cat-count">${c.count}</span></div>`;
+    }).join('');
+  }
+  const mosaic = document.getElementById('gateMosaic');
+  if (mosaic) {
+    const fotos = vitrinaMezcla(VISIBLE_PRODUCTS.filter(p => p.img && (parseInt(p.stock) || 0) > 0), vitrinaSemillaDelDia());
+    // Una de cada categoria primero, para que el mosaico se vea variado.
+    const elegidas = [];
+    categoriesWithCounts().forEach(c => { const f = fotos.find(p => p.categoria === c.name); if (f) elegidas.push(f); });
+    fotos.forEach(p => { if (elegidas.length < 9 && !elegidas.includes(p)) elegidas.push(p); });
+    mosaic.innerHTML = vitrinaMezcla(elegidas.slice(0, 9), 7).map((p, i) =>
+      `<span class="gm-cell cat-${catSlug(p.categoria)}" style="--i:${i}"><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('');
+  }
 }
 
 // Linea de texto que se desplaza despacio bajo el titular.

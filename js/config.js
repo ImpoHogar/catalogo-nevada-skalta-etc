@@ -109,7 +109,7 @@ const CATEGORIA_ICONOS = {
 
 // Filas de la vitrina de entrada (ademas de "Nuevos ingresos", que
 // siempre va primero si hay). Cada nombre debe estar en CATEGORIAS.
-const VITRINA_CATEGORIAS = ["Tecnología", "Maquillaje", "Cuidado facial", "Cuidado corporal"];
+const VITRINA_CATEGORIAS = ["Maquillaje", "Tecnología", "Cuidado facial", "Electrodomésticos"];
 
 // ============================================================
 //  ROTACION SEMANAL DE BAJA ROTACION

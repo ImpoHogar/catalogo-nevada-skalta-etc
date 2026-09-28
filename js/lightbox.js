@@ -28,7 +28,7 @@ function getProductImages(p) {
   const photoSrc = productImgSrc(p);
   const barcodeSrc = barcodeDataURL(p.code);
   return [
-    { src: photoSrc, caption: `${p.brand} — ${p.name}` },
+    { src: photoSrc, caption: `${p.brand} · ${prettyName(p)}` },
     { src: barcodeSrc, caption: `Código de barras · ${p.code}` }
   ];
 }
@@ -52,15 +52,19 @@ function openLightbox(pid, imgIndex) {
 function renderLightboxInfo(p) {
   const info = document.getElementById('lightboxInfo');
   if (!info) return;
-  const stockNum = parseInt(p.stock) || 0;
-  const agotado = stockNum <= 0;
-  const categoria = (typeof getCategoria === 'function') ? getCategoria(p) : null;
+  const meta = catMeta(p.categoria);
+  const lvl = stockLevel(p);
+  const agotado = lvl.key === 'out';
   const esNuevo = (typeof isProductNew === 'function') && isProductNew(p);
   const enPedido = (typeof qtyMap !== 'undefined' && qtyMap[p.id]) ? qtyMap[p.id] : 0;
+  const specs = productSpecs(p);
+  const model = modelCode(p);
+  const rows = (model ? [{ label: 'Modelo', value: model }] : []).concat(specs);
 
   const tags = [];
   if (esNuevo) tags.push('<span class="lb-tag is-new">Nuevo ingreso</span>');
-  if (categoria) tags.push(`<span class="lb-tag">${escapeHtml(categoria)}</span>`);
+  tags.push(`<span class="lb-tag is-cat">${iconSVG(meta.icon)}${escapeHtml(meta.short)}</span>`);
+  if (p.subtipo && p.subtipo !== 'Otros') tags.push(`<span class="lb-tag">${escapeHtml(p.subtipo)}</span>`);
 
   const notas = (p.notes && p.notes.length) ? `
     <div class="lb-section">
@@ -75,34 +79,63 @@ function renderLightboxInfo(p) {
       <div class="lb-related">
         ${rels.map(r => {
           const rp = r.product;
-          const rAgotado = (parseInt(rp.stock) || 0) <= 0;
-          const label = relacionEtiqueta(r.tipo);
-          const rImg = productImgSrc(rp);
+          const rl = stockLevel(rp);
           return `
           <button type="button" class="lb-rel" onclick="openLightbox(${rp.id}, 0)">
-            <img src="${rImg}" alt="">
-            <span><span class="lb-rel-brand">${escapeHtml(rp.brand)} · ${label}</span><span class="lb-rel-name">${escapeHtml(rp.name)}</span></span>
-            <span class="stock${rAgotado ? ' is-out' : ''}">${rAgotado ? 'Agotado' : escapeHtml(rp.stock) + ' uds'}</span>
+            <img src="${productImgSrc(rp)}" alt="">
+            <span><span class="lb-rel-brand">${escapeHtml(rp.brand)} · ${relacionEtiqueta(r.tipo)}</span><span class="lb-rel-name">${escapeHtml(prettyName(rp))}</span></span>
+            <span class="lb-stock is-${rl.key}">${escapeHtml(rl.short)}</span>
           </button>`;
         }).join('')}
       </div>
     </div>` : '';
 
-  info.className = 'lightbox-info cat-' + catSlug(p.categoria);
+  const buy = agotado
+    ? `<div class="lb-soldout">Este producto está agotado por ahora.</div>`
+    : `<div class="lb-buy">
+        <div class="lb-stepper" role="group" aria-label="Cantidad">
+          <button type="button" onclick="changeQty(${p.id},-1)" aria-label="Quitar una unidad">−</button>
+          <input type="number" min="0" inputmode="numeric" value="${enPedido}" id="lb-qty-${p.id}" onchange="setQty(${p.id}, this.value)" onfocus="this.select()" aria-label="Cantidad">
+          <button type="button" onclick="changeQty(${p.id},1)" aria-label="Agregar una unidad">+</button>
+        </div>
+        <button type="button" class="btn btn-primary lb-add" onclick="changeQty(${p.id},1)">${enPedido ? 'Agregar otra unidad' : 'Agregar al pedido'}</button>
+      </div>
+      <div class="lb-incart" id="lb-incart-${p.id}"${enPedido ? '' : ' hidden'}>En tu pedido: <b>${enPedido} ${enPedido === 1 ? 'unidad' : 'unidades'}</b></div>`;
+
+  info.className = `lightbox-info cat-${catSlug(p.categoria)} is-${meta.group}`;
   info.innerHTML = `
-    <div class="lb-brand">${escapeHtml(p.brand)}</div>
-    <h2 class="lb-name">${escapeHtml(p.name)}</h2>
-    ${tags.length ? `<div class="lb-tags">${tags.join('')}</div>` : ''}
+    <div class="lb-kicker"><span class="lb-brand">${escapeHtml(p.brand)}</span></div>
+    <h2 class="lb-name">${escapeHtml(prettyName(p))}</h2>
+    <div class="lb-raw">${escapeHtml(p.name)}</div>
+    <div class="lb-tags">${tags.join('')}</div>
+    <div class="lb-availability is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span></div>
+    ${buy}
     <dl class="lb-facts">
-      <div class="lb-fact"><dt>Disponibilidad</dt><dd><span class="stock${agotado ? ' is-out' : ''}">${agotado ? 'Agotado' : escapeHtml(p.stock) + ' uds'}</span></dd></div>
-      <div class="lb-fact"><dt>Código</dt><dd class="code">${escapeHtml(p.code)}</dd></div>
+      <div class="lb-fact"><dt>Código de barras</dt><dd class="code">${escapeHtml(p.code)}</dd></div>
+      ${rows.map(r => `<div class="lb-fact"><dt>${escapeHtml(r.label)}</dt><dd>${escapeHtml(r.value)}</dd></div>`).join('')}
     </dl>
-    ${enPedido ? `<div class="lb-incart">En tu pedido: <b>${enPedido} ${enPedido === 1 ? 'unidad' : 'unidades'}</b></div>` : ''}
     ${notas}
     ${relacionados}
     <div class="lb-actions">
-      <button type="button" class="btn btn-ghost" onclick="closeLightbox(); jumpToProduct(${p.id});">Ir al producto en el catálogo</button>
+      <button type="button" class="link-btn" onclick="closeLightbox(); jumpToProduct(${p.id});">Ir al producto en el catálogo ${ICONS.arrow}</button>
     </div>`;
+}
+
+// Cuando cambia la cantidad (desde la ficha o la tarjeta) se refresca la
+// ficha abierta sin volver a dibujarla entera.
+function refreshLightboxQty(id) {
+  const lb = document.getElementById('lightbox');
+  if (!lb || !lb.classList.contains('open') || lightboxState.pid !== id) return;
+  const q = qtyMap[id] || 0;
+  const input = document.getElementById('lb-qty-' + id);
+  if (input) input.value = q;
+  const inCart = document.getElementById('lb-incart-' + id);
+  if (inCart) {
+    inCart.hidden = !q;
+    inCart.innerHTML = `En tu pedido: <b>${q} ${q === 1 ? 'unidad' : 'unidades'}</b>`;
+  }
+  const add = document.querySelector('#lightboxInfo .lb-add');
+  if (add) add.textContent = q ? 'Agregar otra unidad' : 'Agregar al pedido';
 }
 
 function updateLightbox() {

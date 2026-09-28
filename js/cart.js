@@ -14,13 +14,16 @@ function setQty(id, val) {
   const card = document.getElementById(`card-${id}`);
   if (v > 0) { qtyMap[id] = v; if (card) card.classList.add('has-qty'); }
   else { delete qtyMap[id]; if (card) card.classList.remove('has-qty'); }
+  if (card && v > 0) { card.classList.remove('just-added'); void card.offsetWidth; card.classList.add('just-added'); }
+  if (typeof refreshLightboxQty === 'function') refreshLightboxQty(id);
   saveCartToStorage();
   updateOrderBar();
 }
 
 function changeQty(id, delta) {
-  const input = document.getElementById(`qty-${id}`);
-  const newVal = Math.max(0, (parseInt(input.value)||0) + delta);
+  // La cantidad sale del pedido (no del input): asi funciona tambien
+  // desde la ficha o el panel del pedido aunque la tarjeta no este en pantalla.
+  const newVal = Math.max(0, (qtyMap[id] || 0) + delta);
   setQty(id, newVal);
 }
 
@@ -53,6 +56,8 @@ function updateOrderBar() {
   document.getElementById('selUnits').textContent = units;
   document.getElementById('genBtn').disabled = ids.length === 0;
 
+  const bar = document.getElementById('orderBar');
+  if (bar) bar.classList.toggle('has-items', ids.length > 0);
   const badge = document.getElementById('reviewBadge');
   if (units > 0) {
     badge.textContent = units;
@@ -78,16 +83,17 @@ function renderOrderReview() {
   const list = document.getElementById('orderList');
   const ids = Object.keys(qtyMap);
   if (ids.length === 0) {
-    list.innerHTML = '<div class="order-empty">Todavía no has agregado productos.<br>Escribe la cantidad que deseas en cualquier artículo del catálogo.</div>';
+    list.innerHTML = '<div class="order-empty"><b>Tu pedido está vacío</b>Toca “Agregar” en cualquier producto del catálogo.</div>';
   } else {
     list.innerHTML = ids.map(id => {
       const p = PRODUCTS_BY_ID[id];
       const imgSrc = productImgSrc(p);
       return `
         <div class="order-item">
-          <img src="${imgSrc}" alt="${escapeHtml(p.name)}">
+          <img src="${imgSrc}" alt="${escapeHtml(prettyName(p))}">
           <div class="oi-info">
-            <div class="oi-name">${escapeHtml(p.name)}</div>
+            <div class="oi-brand">${escapeHtml(p.brand)}</div>
+            <div class="oi-name">${escapeHtml(prettyName(p))}</div>
             <div class="oi-code">${escapeHtml(p.code)}</div>
           </div>
           <div class="oi-qty">
