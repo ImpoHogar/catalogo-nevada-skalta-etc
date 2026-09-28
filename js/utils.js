@@ -26,20 +26,29 @@ function catSlug(categoria) {
 
 // Color de cada mercado para el marcador de "foto pendiente".
 const CAT_COLOR_HEX = {
-  'tecnologia': '#3F6FE0', 'electrodomesticos': '#0E8C8C', 'maquillaje': '#C73E6A',
-  'cuidado-facial': '#4E8F6E', 'cuidado-corporal': '#D9804F', 'cabello-y-barberia': '#7A5AB5'
+  'tecnologia': '#3553E8', 'electrodomesticos': '#0E8C96', 'maquillaje': '#D93A69',
+  'cuidado-facial': '#1E9A72', 'cuidado-corporal': '#E0763C', 'cabello-y-barberia': '#7C4FE0'
 };
 
+// Marcador para productos sin foto: fondo transparente (toma el tono de
+// la tarjeta), el icono de su categoria y la marca. Se guarda en cache
+// porque se repite muchisimo.
+const _placeholderCache = {};
 function placeholderImg(brand, categoria) {
-  const label = escapeHtml(brand);
-  const color = CAT_COLOR_HEX[catSlug(categoria)] || '#C24D66';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">
-    <rect width="100%" height="100%" fill="#ffffff"/>
-    <rect x="20" y="20" width="360" height="360" fill="none" stroke="#e2e2e2" stroke-width="2"/>
-    <text x="200" y="190" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="${color}" text-anchor="middle">${label}</text>
-    <text x="200" y="220" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#aaaaaa" text-anchor="middle">foto pendiente</text>
+  const key = brand + '|' + categoria;
+  if (_placeholderCache[key]) return _placeholderCache[key];
+  const label = escapeHtml(String(brand).slice(0, 22));
+  const color = CAT_COLOR_HEX[catSlug(categoria)] || '#6B6E78';
+  let glyph = '';
+  if (typeof ICONS !== 'undefined' && typeof catMeta === 'function') {
+    glyph = (ICONS[catMeta(categoria).icon] || '').replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+    <g transform="translate(164 118) scale(3)" fill="none" stroke="${color}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".55">${glyph}</g>
+    <text x="200" y="250" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" letter-spacing="2" fill="${color}" text-anchor="middle">${label}</text>
+    <text x="200" y="276" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#8A8D96" text-anchor="middle">Foto próximamente</text>
   </svg>`;
-  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+  return (_placeholderCache[key] = "data:image/svg+xml;utf8," + encodeURIComponent(svg));
 }
 
 function sanitizeFilename(str) {

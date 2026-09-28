@@ -15,20 +15,21 @@ function applyTheme(theme) {
     if (btn) { btn.innerHTML = THEME_ICON_MOON; btn.title = 'Cambiar a tema oscuro'; }
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0C1016' : '#F6F4EF');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B0C10' : '#F4F4F6');
 }
 
 function toggleTheme() {
   const isDark = document.body.classList.contains('dark');
   const next = isDark ? 'light' : 'dark';
   applyTheme(next);
-  try { localStorage.setItem('impohogar_theme', next); } catch (err) {}
+  try { localStorage.setItem('impohogar_tec_theme', next); } catch (err) {}
 }
 
 function initTheme() {
-  // Por defecto el catalogo abre en modo oscuro. Si el cliente ya eligio
-  // un tema antes (guardado en su navegador), se respeta esa eleccion.
-  let saved = 'dark';
-  try { saved = localStorage.getItem('impohogar_theme') || 'dark'; } catch (err) {}
+  // Por defecto el catalogo abre en modo claro (en perfumeria es oscuro).
+  // Si el cliente ya eligio un tema en ESTE catalogo, se respeta; la clave
+  // es propia para no heredar la eleccion hecha en el de perfumeria.
+  let saved = 'light';
+  try { saved = localStorage.getItem('impohogar_tec_theme') || 'light'; } catch (err) {}
   applyTheme(saved);
 }

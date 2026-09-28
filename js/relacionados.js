@@ -64,7 +64,7 @@ function dupePanelHTML(pid) {
          <button type="button" onclick="event.stopPropagation(); dupeChangeQty(${rp.id}, 1)" aria-label="Agregar una unidad">+</button>`;
     return `<div class="dupe-item">
       <img src="${imgSrc}" alt="" onclick="event.stopPropagation(); jumpToProduct(${rp.id})">
-      <div class="dupe-item-text" onclick="event.stopPropagation(); jumpToProduct(${rp.id})" title="Ir a este producto"><div class="dupe-item-brand">${escapeHtml(rp.brand)} · ${label}</div><div class="dupe-item-name">${escapeHtml(rp.name)}</div></div>
+      <div class="dupe-item-text" onclick="event.stopPropagation(); jumpToProduct(${rp.id})" title="Ir a este producto"><div class="dupe-item-brand">${escapeHtml(rp.brand)} · ${label}</div><div class="dupe-item-name">${escapeHtml(prettyName(rp))}</div></div>
       <div class="dupe-item-qty">${qtyControls}</div>
     </div>`;
   }).join('');
