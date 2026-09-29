@@ -167,7 +167,16 @@ function subtypesOf(cat) {
 //  Especificaciones / tono / tamano (salen del nombre)
 // ------------------------------------------------------------
 function productSpecs(p) {
-  const n = String(p.name).toUpperCase();
+  // El codigo de modelo del inicio (ej. "PC-486W") no es una especificacion:
+  // se quita antes de leer potencia, largo, etc.
+  let n = String(p.name).toUpperCase();
+  const model = modelCode(p);
+  if (model) {
+    n = n.replace(MODEL_RE, '');
+    const compact = model.replace(/[- ]/g, '').slice(0, 5);
+    const first = n.split(' ')[0] || '';
+    if (first.replace(/[- ]/g, '').startsWith(compact)) n = n.slice(first.length).trim();
+  }
   const g = catMeta(p.categoria).group;
   const specs = [];
   const add = (label, value) => { if (value && !specs.some(s => s.value === value)) specs.push({ label, value }); };
