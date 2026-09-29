@@ -39,7 +39,7 @@ except ImportError:
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESTINO = os.path.join(RAIZ, "img", "productos")
-EXT = (".jpg", ".jpeg", ".png", ".webp")
+EXT = (".jpg", ".jpeg", ".png", ".webp", ".avif")
 LADO = 800
 
 
