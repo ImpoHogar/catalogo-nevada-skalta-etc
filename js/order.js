@@ -18,7 +18,7 @@ function openCustomerModal() {
     return;
   }
   try {
-    const saved = JSON.parse(localStorage.getItem('impohogar_customer') || '{}');
+    const saved = JSON.parse(localStorage.getItem('impohogar_tec_customer') || '{}');
     document.getElementById('custName').value = saved.name || '';
     document.getElementById('custPhone').value = saved.phone || '';
   } catch (err) {}
@@ -39,7 +39,7 @@ function confirmCustomerInfo() {
   }
   currentCustomer = { name, phone };
   try {
-    localStorage.setItem('impohogar_customer', JSON.stringify(currentCustomer));
+    localStorage.setItem('impohogar_tec_customer', JSON.stringify(currentCustomer));
   } catch (err) {}
   closeCustomerModal();
   generateExcel();
