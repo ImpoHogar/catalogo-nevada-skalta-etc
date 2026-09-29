@@ -66,10 +66,23 @@ function prettyWord(w, i) {
 // Codigo de modelo al inicio del nombre (tecnologia): "AC-0104", "CB4073BL",
 // "ARG-CB-0071BK", "TS-292R". Se muestra aparte como especificacion.
 const MODEL_RE = /^((?:ARG-)?[A-Z]{1,4}[- ]?\d{2,5}[A-Z]{0,4}(?:-\d{1,3}[A-Z]{0,3})?)\s+/;
+// Codigos cortos sin guion, con letras y numeros mezclados ("IS2AQ",
+// "BST3RR", "MBNDCK5MG"): solo cuentan si tienen al menos 5 caracteres y
+// no son una medida (ML, MAH, W, GB...).
+const MODEL_RE_2 = /^([A-Z]{1,6}\d{1,4}[A-Z]{1,5}\d{0,2}[A-Z]{0,3})\s+/;
+const NOT_MODEL = /^\d*(ML|MAH|MM|CM|GB|TB|W|V|L|G|KG|OZ|PK|PCS|PZA)$/;
+function matchModel(name) {
+  const n = String(name);
+  const m = n.match(MODEL_RE);
+  if (m) return m;
+  const m2 = n.match(MODEL_RE_2);
+  if (m2 && m2[1].length >= 5 && !NOT_MODEL.test(m2[1])) return m2;
+  return null;
+}
 
 function modelCode(p) {
   if (!p || catMeta(p.categoria).group !== 'tech') return '';
-  const m = String(p.name).match(MODEL_RE);
+  const m = matchModel(p.name);
   return m ? m[1].replace(/\s+/, '-') : '';
 }
 
@@ -79,7 +92,7 @@ function prettyName(p) {
   let n = String(p.name).replace(/\s+/g, ' ').trim();
   const model = modelCode(p);
   if (model) {
-    n = n.replace(MODEL_RE, '');
+    n = n.slice(matchModel(n)[0].length);
     // a veces el modelo viene repetido: "AC-0122BK AC0122BLK CARGADOR"
     // a veces el modelo viene repetido ("AC-1242 AC-1242 ...", "AC-0122BK AC0122BLK ...")
     const compact = model.replace(/[- ]/g, '').slice(0, 5);
@@ -172,7 +185,7 @@ function productSpecs(p) {
   let n = String(p.name).toUpperCase();
   const model = modelCode(p);
   if (model) {
-    n = n.replace(MODEL_RE, '');
+    n = n.slice(matchModel(n)[0].length);
     const compact = model.replace(/[- ]/g, '').slice(0, 5);
     const first = n.split(' ')[0] || '';
     if (first.replace(/[- ]/g, '').startsWith(compact)) n = n.slice(first.length).trim();
@@ -212,7 +225,7 @@ const LOW_STOCK = 12;
 function stockLevel(p) {
   const s = parseInt(p.stock) || 0;
   if (s <= 0) return { key: 'out', label: 'Agotado', short: 'Agotado' };
-  if (s <= LOW_STOCK) return { key: 'low', label: `Últimas ${s} unidades`, short: `Quedan ${s}` };
+  if (s <= LOW_STOCK) return { key: 'low', label: s === 1 ? 'Última unidad' : `Últimas ${s} unidades`, short: s === 1 ? 'Queda 1' : `Quedan ${s}` };
   return { key: 'ok', label: `${s.toLocaleString('es-CR')} disponibles`, short: `${s.toLocaleString('es-CR')} disp.` };
 }
 
