@@ -163,4 +163,9 @@ Todo lo que se muestra sale de los datos reales (`js/ui.js`):
   nombre.
 - **Disponibilidad:** agotado, "últimas unidades" (12 o menos) o disponible.
 
+El listado de productos sale por defecto **por marca** (orden "Por marca"): cada marca
+junta con su encabezado, y dentro de ella los productos agrupados por tipo
+(Labios, Rostro, Sérums, Audio…), sin intercalar. En el filtro "Ordenar" se
+puede cambiar a Destacados, Más disponibles o Nombre.
+
 No hay precios porque la plantilla solo trae el costo, que no se publica.
