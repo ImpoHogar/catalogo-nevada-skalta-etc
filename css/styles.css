@@ -634,6 +634,15 @@ body.dark .sub-chip.active { color: #0B0C10; }
 
 /* ---------- 10 Tarjetas ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 18px 16px; margin-top: 20px; }
+/* Listado "Por marca": encabezado de marca y de tipo de producto */
+.grid-brand { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; margin-top: 26px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.grid-brand:first-child { margin-top: 0; }
+.grid-brand h3 { margin: 0; font-family: var(--font-display); font-size: clamp(20px, 2vw, 26px); font-weight: 700; letter-spacing: -.02em; }
+.grid-brand span { color: var(--muted); font-size: 13px; }
+.grid-group { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 8px 0 -6px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.grid-group i { width: 8px; height: 8px; border-radius: 50%; background: var(--cat, var(--ink)); }
+.grid-group span { color: var(--faint); font-weight: 500; }
+.grid-group::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .card {
   position: relative; display: flex; flex-direction: column;
   background: var(--surface); border-radius: var(--r-lg); overflow: hidden;

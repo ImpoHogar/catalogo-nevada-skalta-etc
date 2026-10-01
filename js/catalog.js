@@ -19,7 +19,7 @@ let renderedCount = 0;
 
 let selectedCategoria = new Set();   // seleccion unica (se usa como Set por compatibilidad)
 let selectedSubtipo = '';
-const filterState = { stock: false, foto: false, sort: 'featured' };
+const filterState = { stock: false, foto: false, sort: 'brand' };
 
 function isProductNew(p) {
   if (!MOSTRAR_ETIQUETA_NUEVO) return false;
@@ -411,8 +411,8 @@ function clearAllFilters() {
   document.getElementById('brandFilter').value = '';
   document.getElementById('fStock').checked = false;
   document.getElementById('fFoto').checked = false;
-  document.getElementById('sortSel').value = 'featured';
-  filterState.stock = false; filterState.foto = false; filterState.sort = 'featured';
+  document.getElementById('sortSel').value = 'brand';
+  filterState.stock = false; filterState.foto = false; filterState.sort = 'brand';
   selectedCategoria.clear();
   selectedSubtipo = '';
   diaNinoMode = false; nuevosIngresosMode = false;
@@ -534,10 +534,54 @@ function computeFiltered() {
     list = list.slice().sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0));
   } else if (filterState.sort === 'az') {
     list = list.slice().sort((a, b) => prettyName(a).localeCompare(prettyName(b), 'es'));
-  } else {
+  } else if (filterState.sort === 'featured') {
     list = list.slice().sort((a, b) => featuredScore(b) - featuredScore(a));
+  } else {
+    // Por marca: cada marca junta, y dentro de ella cada tipo de producto
+    // junto (ej. TirTir: cushions, labiales, sérums...), no intercalados.
+    list = list.slice().sort((a, b) =>
+      a.brand.localeCompare(b.brand, 'es') ||
+      catOrder(a) - catOrder(b) ||
+      (groupLabel(a) === catMeta(a.categoria).short) - (groupLabel(b) === catMeta(b.categoria).short) ||
+      groupLabel(a).localeCompare(groupLabel(b), 'es') ||
+      prettyName(a).localeCompare(prettyName(b), 'es', { numeric: true }));
   }
+  groupCounts = {};
+  if (filterState.sort === 'brand') list.forEach(p => {
+    groupCounts[p.brand] = (groupCounts[p.brand] || 0) + 1;
+    const k = p.brand + '|' + p.categoria + '|' + groupLabel(p);
+    groupCounts[k] = (groupCounts[k] || 0) + 1;
+  });
   return list;
+}
+
+// Agrupacion del listado "Por marca".
+let groupCounts = {};
+let lastBrand = '', lastGroup = '';
+function catOrder(p) {
+  const i = CATEGORIAS.indexOf(p.categoria);
+  return i < 0 ? 99 : i;
+}
+function groupLabel(p) {
+  return p.subtipo && p.subtipo !== 'Otros' ? p.subtipo : catMeta(p.categoria).short;
+}
+function groupHeadersHTML(p) {
+  if (filterState.sort !== 'brand') return '';
+  let html = '';
+  const oneBrand = !!document.getElementById('brandFilter').value;
+  if (p.brand !== lastBrand) {
+    lastBrand = p.brand; lastGroup = '';
+    if (!oneBrand) {
+      const n = groupCounts[p.brand] || 0;
+      html += `<div class="grid-brand"><h3>${escapeHtml(p.brand)}</h3><span>${n.toLocaleString('es-CR')} ${n === 1 ? 'producto' : 'productos'}</span></div>`;
+    }
+  }
+  const k = p.brand + '|' + p.categoria + '|' + groupLabel(p);
+  if (k !== lastGroup) {
+    lastGroup = k;
+    html += `<div class="grid-group cat-${catSlug(p.categoria)}"><i></i>${escapeHtml(groupLabel(p))}<span>${groupCounts[k] || 0}</span></div>`;
+  }
+  return html;
 }
 
 function updateCatalogHead() {
@@ -574,7 +618,7 @@ function renderActiveFilters() {
     ? chips.map(([l, fn]) => `<button type="button" class="active-chip" onclick="${fn}">${escapeHtml(l)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>`).join('') +
       `<button type="button" class="link-btn" onclick="clearAllFilters()">Limpiar todo</button>`
     : '';
-  const n = [brand, filterState.stock, filterState.foto, filterState.sort !== 'featured'].filter(Boolean).length;
+  const n = [brand, filterState.stock, filterState.foto, filterState.sort !== 'brand'].filter(Boolean).length;
   const fc = document.getElementById('filtersCount');
   if (fc) fc.textContent = n ? n : '';
 }
@@ -615,6 +659,7 @@ function renderPage(reset, scroll) {
   if (reset) {
     grid.innerHTML = '';
     renderedCount = 0;
+    lastBrand = ''; lastGroup = '';
     if (scroll) scrollToCatalog();
     if (filteredProducts.length === 0) {
       grid.innerHTML = `
@@ -628,7 +673,7 @@ function renderPage(reset, scroll) {
   }
   const nextBatch = filteredProducts.slice(renderedCount, renderedCount + PAGE_SIZE);
   const antes = grid.children.length;
-  grid.insertAdjacentHTML('beforeend', nextBatch.map(cardHTML).join(''));
+  grid.insertAdjacentHTML('beforeend', nextBatch.map(p => groupHeadersHTML(p) + cardHTML(p)).join(''));
   observeRevealCards(Array.from(grid.children).slice(antes));
   renderedCount += nextBatch.length;
 
