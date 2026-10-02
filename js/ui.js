@@ -47,7 +47,7 @@ function iconSVG(name) { return ICONS[name] || ICONS.other; }
 // ------------------------------------------------------------
 //  Nombres legibles
 // ------------------------------------------------------------
-const KEEP_UPPER = new Set(['USB','HDMI','TWS','LED','VGA','AUX','BT','RGB','SPF','UV','PD','QC','TV','PC','DJ','AI','BB','CC','SOS','PHA','NAD+','PDRN','II','III','XL','XXL','LCD','SD','GPS','DC','AC','CAT6','CAT5E','UTP','TH','KB','NYC','LOL','PJ','VGA','DP','OTG','AAA','AA','ML','4K','3D','2D']);
+const KEEP_UPPER = new Set(['IA','USB','HDMI','TWS','LED','VGA','AUX','BT','RGB','SPF','UV','PD','QC','TV','PC','DJ','AI','BB','CC','SOS','PHA','NAD+','PDRN','II','III','XL','XXL','LCD','SD','GPS','DC','AC','CAT6','CAT5E','UTP','TH','KB','NYC','LOL','PJ','VGA','DP','OTG','AAA','AA','ML','4K','3D','2D']);
 const KEEP_LOWER = new Set(['de','del','la','el','y','con','para','en','a','por','the','and','of','to','with','for','in','x']);
 
 function prettyWord(w, i) {
@@ -99,10 +99,58 @@ function prettyName(p) {
     const first = n.split(' ')[0] || '';
     if (first.replace(/[- ]/g, '').toUpperCase().startsWith(compact)) n = n.slice(first.length).trim();
   }
-  n = n.replace(/^(TH|KB)\s+/, m => m);                       // Tree Hut / Kara Beauty: se deja
-  n = n.replace(/\s+-\s+-\s+/g, ' - ').replace(/\s*-\s*$/, '');
-  p._pretty = n.split(' ').map(prettyWord).join(' ');
+  n = n.replace(/^\d{5,}\s+/, '');                              // SKU numerico al inicio ("723410 LR06-10PK ...")
+  n = stripBrand(n, p.brand);
+  n = n.replace(/\bCRE,A\b/gi, 'CREMA');
+  n = n.replace(/\s+-\s+-\s+/g, ' - ').replace(/^\s*-\s*/, '').replace(/\s*-\s*$/, '');
+  p._pretty = n.split(' ').map(prettyWord).map(fixAccents).join(' ');
   return p._pretty;
+}
+
+// La marca ya se muestra arriba del nombre: se quita del nombre para no
+// repetirla ("TIRTIR · Tirtir Glow Tint" -> "TIRTIR · Glow Tint").
+const BRAND_TOKENS = {
+  'TIRTIR': ['TIRTIR'], 'NEVADA': ['NEVADA'], 'ORIGEM': ['ORIGEM', 'ORIGM'], 'IMMORTAL': ['IMMORTAL'],
+  'SKALA': ['SKALA'], 'ARGOM': ['ARGOM'], 'MAXELL': ['MAXELL'], 'UNNO TEKNO': ['UNNO TEKNO', 'UNNO'],
+  'EQQUALBERRY': ['EQQUALB.', 'EQQUALBERRY'], 'PATRICIA DE LEÓN': ['PATRICIA DE LEÓN', 'PATRICIA DE LEON'],
+  'TREE HUT': ['TREE HUT', 'TH'], 'KARA BEAUTY': ['KARA BEAUTY', 'KB'], 'NIVEA': ['NIVEA'], 'INOAR': ['INOAR'],
+  'BRENTWOOD': ['BRENTWOOD'], 'NOSTALGIA': ['NOSTALGIA'], 'WAHL': ['WAHL'], 'SALON LINE': ['SALON LINE']
+};
+function stripBrand(n, brand) {
+  const toks = BRAND_TOKENS[String(brand).toUpperCase()];
+  if (!toks) return n;
+  let out = n;
+  toks.forEach(t => {
+    const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // palabra completa; tambien "NEVADA-SERUM" -> "SERUM"
+    out = out.replace(new RegExp('(^|\\s)' + esc + '(?:-|(?=\\s|$))', 'gi'), '$1');
+  });
+  out = out.replace(/\s+/g, ' ').trim();
+  return out.length >= 4 ? out : n;
+}
+
+// Tildes que faltan en palabras en espanol del inventario.
+const ACCENTS = {
+  bateria: 'batería', baterias: 'baterías', tonico: 'tónico', colageno: 'colágeno', azucar: 'azúcar',
+  jabon: 'jabón', balsamo: 'bálsamo', numerico: 'numérico', vehiculo: 'vehículo', acido: 'ácido',
+  hialuronico: 'hialurónico', ferulico: 'ferúlico', electrico: 'eléctrico', electrica: 'eléctrica',
+  magnetico: 'magnético', magnetica: 'magnética', inalambrico: 'inalámbrico', inalambrica: 'inalámbrica',
+  audifono: 'audífono', audifonos: 'audífonos', microfono: 'micrófono', portatil: 'portátil',
+  capsula: 'cápsula', capsulas: 'cápsulas', algodon: 'algodón', limon: 'limón', celulas: 'células',
+  proteina: 'proteína', proteinas: 'proteínas', cafe: 'café', cafetera: 'cafetera', telefono: 'teléfono',
+  camara: 'cámara', proteccion: 'protección', hidratacion: 'hidratación', nutricion: 'nutrición',
+  reparacion: 'reparación', definicion: 'definición', extension: 'extensión', presion: 'presión',
+  vitaminico: 'vitamínico', organico: 'orgánico', antimanchas: 'antimanchas', pestanas: 'pestañas',
+  sarten: 'sartén', maquina: 'máquina', parrilla: 'parrilla', facil: 'fácil', rapido: 'rápido', rapida: 'rápida',
+  carbon: 'carbón', limpiador: 'limpiador', aloe: 'aloe', melon: 'melón', platano: 'plátano'
+};
+function fixAccents(w) {
+  const m = w.match(/^([^A-Za-z]*)([A-Za-z]+)([^A-Za-z]*)$/);
+  if (!m) return w;
+  const rep = ACCENTS[m[2].toLowerCase()];
+  if (!rep || rep === m[2].toLowerCase()) return w;
+  const cased = m[2][0] === m[2][0].toUpperCase() ? rep[0].toUpperCase() + rep.slice(1) : rep;
+  return m[1] + cased + m[3];
 }
 
 // ------------------------------------------------------------
