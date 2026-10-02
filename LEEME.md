@@ -140,7 +140,7 @@ versión vieja.
 ## Vendedores
 
 Están en `SELLERS` de `js/config.js` (nombre, cargo, WhatsApp y foto). Cada
-uno tiene su tarjeta en `img/vendedores/`. Salen en la ventana "Elige tu
+uno tiene su retrato en `img/vendedores/`. Salen en la ventana "Elige tu
 vendedor" al generar el pedido (abre WhatsApp con el mensaje del pedido) y al
 pie de la página (abre el chat directo). Para cambiar uno, se edita su línea
 en `SELLERS` y se reemplaza su imagen.
