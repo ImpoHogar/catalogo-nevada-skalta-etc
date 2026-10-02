@@ -207,17 +207,20 @@ function sellerPhoneLabel(phone) {
   const n = String(phone).replace(/^506/, '');
   return `(506) ${n.slice(0, 4)}-${n.slice(4)}`;
 }
-function sellerCardInner(s) {
-  return `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role)}" loading="lazy" width="480" height="480">
-    <span class="seller-phone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>${sellerPhoneLabel(s.phone)}</span>`;
+const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>';
+const ARROW_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+function sellerInfoHTML(s) {
+  return `<span class="sl-photo"><img src="${s.img}" alt="" loading="lazy" width="360" height="360"></span>
+    <span class="sl-info"><b class="sl-name">${escapeHtml(s.name)}</b><span class="sl-role">${escapeHtml(s.role)}</span>
+    <span class="sl-phone">${WA_ICON}${sellerPhoneLabel(s.phone)}</span></span>`;
 }
 function renderSellers() {
   const list = document.getElementById('sellerList');
   if (list) list.innerHTML = Object.entries(SELLERS).map(([key, s]) =>
-    `<button type="button" class="seller-option" onclick="sendToSeller('${key}')" aria-label="Enviar pedido a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</button>`).join('');
+    `<button type="button" class="seller-row" onclick="sendToSeller('${key}')" aria-label="Enviar pedido a ${escapeHtml(s.name)} por WhatsApp">${sellerInfoHTML(s)}<span class="sl-go">${ARROW_ICON}</span></button>`).join('');
   const foot = document.getElementById('footerSellers');
   if (foot) foot.innerHTML = Object.values(SELLERS).map(s =>
-    `<a class="seller-option" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</a>`).join('');
+    `<a class="seller-tile" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerInfoHTML(s)}<span class="sl-cta">${WA_ICON}Escribir</span></a>`).join('');
 }
 document.addEventListener('DOMContentLoaded', renderSellers);
 

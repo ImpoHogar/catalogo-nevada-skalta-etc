@@ -70,8 +70,8 @@ const VITRINA_MAX_POR_FILA = 40;
 // ya tienen foto en img/productos/).
 const HAS_PHOTOS = true;
 
-// Vendedores de este catalogo. "img" es la tarjeta de cada uno
-// (img/vendedores/). Al tocarla se abre WhatsApp con ese numero.
+// Vendedores de este catalogo. "img" es la foto de cada uno
+// (retrato redondo en img/vendedores/). Al tocarlo se abre WhatsApp.
 const SELLERS = {
   esteban:  { name: 'Esteban Guerrero H.', role: 'Supervisor de ventas', phone: '50683683535', img: 'img/vendedores/esteban.webp' },
   ingrid:   { name: 'Ingrid Mora G.',      role: 'Asesora de ventas',    phone: '50686052020', img: 'img/vendedores/ingrid.webp' },

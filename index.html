@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20261002a">
+<link rel="stylesheet" href="css/styles.css?v=20261002b">
 </head>
 <body>
 <noscript>
@@ -252,11 +252,14 @@
 
 <!-- ============ PIE ============ -->
 <footer class="site-footer">
-  <div class="footer-sellers">
-    <h2>Tus vendedores</h2>
-    <p>Toca a tu vendedor para escribirle por WhatsApp.</p>
-    <div class="seller-list" id="footerSellers"></div>
-  </div>
+  <section class="footer-sellers" aria-labelledby="sellersTitle">
+    <div class="fs-head">
+      <span class="fs-eyebrow">Atención personalizada</span>
+      <h2 id="sellersTitle">Tu equipo de ventas</h2>
+      <p>Escríbele directo a tu vendedor por WhatsApp.</p>
+    </div>
+    <div class="fs-grid" id="footerSellers"></div>
+  </section>
   <div class="footer-inner">
     <div class="footer-brand">
       <img src="img/logo-dark.png" alt="Grupo Impohogar" class="footer-logo">
@@ -337,7 +340,7 @@
     <div class="thanks-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-4 16-4.5-6.5z"/><path d="M11.5 13.5 20 4"/></svg></div>
     <p class="thanks-text thanks-text-tight">Elige tu vendedor para enviarle tu pedido por WhatsApp</p>
     <p class="thanks-note">Se abrirá un chat de WhatsApp con el mensaje listo: solo adjunta ahí el Excel que se acaba de descargar.</p>
-    <div class="seller-list" id="sellerList"></div>
+    <div class="seller-rows" id="sellerList"></div>
     <button class="thanks-btn thanks-btn-ghost" type="button" onclick="closeSellerModal()">Omitir</button>
   </div>
 </div>
@@ -431,23 +434,23 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
-<script defer src="js/config.js?v=20261002a"></script>
-<script defer src="js/products.js?v=20261002a"></script>
-<script defer src="js/stock.js?v=20261002a"></script>
-<script defer src="js/data.js?v=20261002a"></script>
-<script defer src="js/utils.js?v=20261002a"></script>
-<script defer src="js/ui.js?v=20261002a"></script>
-<script defer src="js/relacionados.js?v=20261002a"></script>
-<script defer src="js/catalog.js?v=20261002a"></script>
-<script defer src="js/cart.js?v=20261002a"></script>
-<script defer src="js/theme.js?v=20261002a"></script>
-<script defer src="js/order.js?v=20261002a"></script>
-<script defer src="js/history.js?v=20261002a"></script>
-<script defer src="js/calculator.js?v=20261002a"></script>
-<script defer src="js/lightbox.js?v=20261002a"></script>
-<script defer src="js/showcase.js?v=20261002a"></script>
-<script defer src="js/gate.js?v=20261002a"></script>
-<script defer src="js/feedback.js?v=20261002a"></script>
-<script defer src="js/main.js?v=20261002a"></script>
+<script defer src="js/config.js?v=20261002b"></script>
+<script defer src="js/products.js?v=20261002b"></script>
+<script defer src="js/stock.js?v=20261002b"></script>
+<script defer src="js/data.js?v=20261002b"></script>
+<script defer src="js/utils.js?v=20261002b"></script>
+<script defer src="js/ui.js?v=20261002b"></script>
+<script defer src="js/relacionados.js?v=20261002b"></script>
+<script defer src="js/catalog.js?v=20261002b"></script>
+<script defer src="js/cart.js?v=20261002b"></script>
+<script defer src="js/theme.js?v=20261002b"></script>
+<script defer src="js/order.js?v=20261002b"></script>
+<script defer src="js/history.js?v=20261002b"></script>
+<script defer src="js/calculator.js?v=20261002b"></script>
+<script defer src="js/lightbox.js?v=20261002b"></script>
+<script defer src="js/showcase.js?v=20261002b"></script>
+<script defer src="js/gate.js?v=20261002b"></script>
+<script defer src="js/feedback.js?v=20261002b"></script>
+<script defer src="js/main.js?v=20261002b"></script>
 </body>
 </html>
