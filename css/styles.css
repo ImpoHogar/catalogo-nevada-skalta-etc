@@ -266,7 +266,7 @@ body.dark .switch input:checked + .switch-ui::after { background: #0B0C10; }
 #gateBtn:active { transform: scale(.99); }
 #gateError { min-height: 20px; margin-top: 12px; font-size: 13.5px; font-weight: 500; color: var(--danger); }
 .gate-help { margin: 22px 0 0; font-size: 13px; color: var(--muted); }
-.gate-help a { color: var(--ink); font-weight: 600; }
+.gate-help a { color: var(--ink); font-weight: 600; white-space: nowrap; }
 
 /* ---------- 06 Vitrina (antes de la clave) ---------- */
 .vitrina {
