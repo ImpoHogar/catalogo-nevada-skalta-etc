@@ -70,9 +70,14 @@ const VITRINA_MAX_POR_FILA = 40;
 // ya tienen foto en img/productos/).
 const HAS_PHOTOS = true;
 
+// Vendedores de este catalogo. "img" es la tarjeta de cada uno
+// (img/vendedores/). Al tocarla se abre WhatsApp con ese numero.
 const SELLERS = {
-  roy: { name: 'Roy Chacón', phone: '50687203737' },
-  pedro: { name: 'Pedro Alemán', phone: '50672349212' }
+  esteban:  { name: 'Esteban Guerrero H.', role: 'Supervisor de ventas', phone: '50683683535', img: 'img/vendedores/esteban.webp' },
+  ingrid:   { name: 'Ingrid Mora G.',      role: 'Asesora de ventas',    phone: '50686052020', img: 'img/vendedores/ingrid.webp' },
+  jennifer: { name: 'Jennifer Rivera M.',  role: 'Agente de ventas',     phone: '50684700099', img: 'img/vendedores/jennifer.webp' },
+  lohana:   { name: 'Lohana Mora',         role: 'Agente de ventas',     phone: '50670519682', img: 'img/vendedores/lohana.webp' },
+  nicole:   { name: 'Nicole Díaz C.',      role: 'Agente de ventas',     phone: '50684732332', img: 'img/vendedores/nicole.webp' }
 };
 
 // URL de despliegue del Google Apps Script que recibe los mensajes
