@@ -936,6 +936,8 @@ body.dark .order-bar { background: rgba(28,30,37,.96); box-shadow: 0 20px 50px -
 .seller-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
 .seller-option { display: flex; flex-direction: column; padding: 0; border: none; border-radius: 16px; overflow: hidden; background: #1B3F8B; color: #fff; text-decoration: none; cursor: pointer; transition: transform var(--t-fast), box-shadow var(--t-fast); }
 .seller-option:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px #25D366, var(--sh-2); }
+.seller-option.is-mine { position: relative; box-shadow: 0 0 0 2px #25D366; }
+.seller-mine { position: absolute; top: 8px; left: 8px; z-index: 1; padding: 4px 9px; border-radius: 999px; background: #25D366; color: #06210F; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
 .seller-option:focus-visible { outline: 3px solid #25D366; outline-offset: 2px; }
 .seller-option img { display: block; width: 100%; height: auto; aspect-ratio: 1; }
 .seller-phone { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; background: #25D366; color: #fff; font-size: 13px; font-weight: 600; }

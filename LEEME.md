@@ -163,7 +163,9 @@ Identidad propia, distinta del catálogo de perfumería:
 
 Todo lo que se muestra sale de los datos reales (`js/ui.js`):
 
-- **Nombres legibles** (el Excel del pedido sigue usando el nombre original).
+- **Nombres legibles** (el Excel del pedido sigue usando el nombre original):
+  sin la marca repetida (ya sale arriba), sin códigos internos al inicio y
+  con tildes (`BRAND_TOKENS` y `ACCENTS` en `js/ui.js`).
 - **Tipo de producto** (Labios, Rostro, Sérums, Audio, Cables…) deducido de
   palabras del nombre. Reglas en `SUBTYPE_RULES`.
 - **Especificaciones** (tono, tamaño, potencia, conector, mAh…) leídas del
@@ -176,3 +178,9 @@ junta con su encabezado, y dentro de ella los productos agrupados por tipo
 puede cambiar a Destacados, Más disponibles o Nombre.
 
 No hay precios porque la plantilla solo trae el costo, que no se publica.
+
+## Al compartir el enlace
+
+`img/compartir.jpg` es la imagen que sale al pegar el enlace del catálogo en
+WhatsApp, Facebook, etc. (etiquetas `og:` en `index.html`). El ícono de la
+pestaña es `img/favicon.svg` (+ `favicon-32.png` y `apple-touch-icon.png`).

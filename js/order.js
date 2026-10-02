@@ -211,10 +211,18 @@ function sellerCardInner(s) {
   return `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role)}" loading="lazy" width="480" height="480">
     <span class="seller-phone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>${sellerPhoneLabel(s.phone)}</span>`;
 }
+// El ultimo vendedor que eligio el cliente sale primero y marcado
+// ("Tu vendedor"). Se guarda solo en este navegador.
+const SELLER_KEY = 'impohogar_tec_seller';
+function savedSellerKey() {
+  try { const k = localStorage.getItem(SELLER_KEY); return SELLERS[k] ? k : ''; } catch (e) { return ''; }
+}
 function renderSellers() {
   const list = document.getElementById('sellerList');
-  if (list) list.innerHTML = Object.entries(SELLERS).map(([key, s]) =>
-    `<button type="button" class="seller-option" onclick="sendToSeller('${key}')" aria-label="Enviar pedido a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</button>`).join('');
+  const mine = savedSellerKey();
+  const entries = Object.entries(SELLERS).sort((a, b) => (b[0] === mine) - (a[0] === mine));
+  if (list) list.innerHTML = entries.map(([key, s]) =>
+    `<button type="button" class="seller-option${key === mine ? ' is-mine' : ''}" onclick="sendToSeller('${key}')" aria-label="Enviar pedido a ${escapeHtml(s.name)} por WhatsApp">${key === mine ? '<span class="seller-mine">Tu vendedor</span>' : ''}${sellerCardInner(s)}</button>`).join('');
   const foot = document.getElementById('footerSellers');
   if (foot) foot.innerHTML = Object.values(SELLERS).map(s =>
     `<a class="seller-option" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</a>`).join('');
@@ -222,6 +230,7 @@ function renderSellers() {
 document.addEventListener('DOMContentLoaded', renderSellers);
 
 function openSellerModal() {
+  renderSellers();
   document.getElementById('sellerModal').classList.add('open');
 }
 
@@ -233,8 +242,11 @@ function sendToSeller(key) {
   const seller = SELLERS[key];
   if (!seller) return;
   const s = lastOrderSummary;
-  const message = `Buenas, mi nombre es ${s.name || ''}, este es mi pedido.`;
+  const intro = s.name ? `Buenas, mi nombre es ${s.name}, este es mi pedido` : 'Buenas, este es mi pedido';
+  const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
+  const message = intro + detalle;
   const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
+  try { localStorage.setItem(SELLER_KEY, key); } catch (e) {}
   window.open(url, '_blank');
   closeSellerModal();
 }
