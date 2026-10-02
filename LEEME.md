@@ -135,8 +135,15 @@ versión vieja.
   se distinguen por la dirección de la página.
 - **Formulario de opinión** (`FEEDBACK_URL` en `js/config.js`): mismo Google
   Apps Script.
-- **Vendedores** (`SELLERS` en `js/config.js` y en `index.html`): Roy Chacón y
-  Pedro Alemán.
+- (Ya no) **Vendedores**: este catálogo tiene los suyos propios (ver abajo).
+
+## Vendedores
+
+Están en `SELLERS` de `js/config.js` (nombre, cargo, WhatsApp y foto). Cada
+uno tiene su tarjeta en `img/vendedores/`. Salen en la ventana "Elige tu
+vendedor" al generar el pedido (abre WhatsApp con el mensaje del pedido) y al
+pie de la página (abre el chat directo). Para cambiar uno, se edita su línea
+en `SELLERS` y se reemplaza su imagen.
 
 ## Diseño (ImpoHogar Market)
 
