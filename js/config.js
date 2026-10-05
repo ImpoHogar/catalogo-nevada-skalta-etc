@@ -73,13 +73,13 @@ const VITRINA_MAX_POR_FILA = 40;
 //  BARRAS exactos, como en el resto del catalogo.
 // ============================================================
 
-// Textos del encabezado del inicio ("¿Que quieres comprar hoy?").
+// Textos del encabezado del inicio ("¿Que estas buscando?").
 // En "texto" se puede usar {productos} y {marcas}: se reemplazan solos
 // por las cantidades reales del catalogo.
 const INICIO = {
   etiqueta: 'Catálogo mayorista · Grupo ImpoHogar',
-  titulo: '¿Qué quieres comprar hoy?',
-  texto: '{productos} productos de {marcas} marcas con disponibilidad real de bodega. Busca por nombre, marca o código, o entra por departamento.'
+  titulo: '¿Qué estás buscando?',
+  texto: '{productos} productos de {marcas} marcas con disponibilidad real de bodega.'
 };
 
 // ------------------------------------------------------------
@@ -101,7 +101,12 @@ const NUEVOS_INGRESOS = [];
 //  mover inventario, dar a conocer, productos estrategicos...
 //  Se marcan con su CODIGO DE BARRAS en esta lista (en el orden en que
 //  quieres que salgan) o con "oportunidad":true en products.js.
-//    Ej: const OPORTUNIDADES = ["7897042018512", "025215723476"];
+//  Opcional: una nota corta para el cliente / vendedor (se muestra en la
+//  tarjeta). Solo texto real: nada de precios ni descuentos inventados.
+//    Ej: const OPORTUNIDADES = [
+//          "7897042018512",
+//          { codigo: "025215723476", nota: "Ideal para exhibición en caja" }
+//        ];
 //
 //  OPORTUNIDADES_AUTO: mientras la lista este vacia, el catalogo elige
 //  solo los productos con MAS UNIDADES en bodega de cada categoria
@@ -134,7 +139,7 @@ const MARCAS_INFO = {
 const STOCK_VOLUMEN = 500;
 
 // Botones de "Compra por volumen" (cantidad minima disponible).
-const VOLUMEN_NIVELES = [5, 10, 25, 50, 100];
+const VOLUMEN_NIVELES = [5, 10, 25, 50];
 // Nivel que se muestra al entrar a "Compra por volumen".
 const VOLUMEN_NIVEL_INICIAL = 50;
 

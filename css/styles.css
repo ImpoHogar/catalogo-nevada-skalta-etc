@@ -1772,3 +1772,217 @@ body.dark .pdp-mini-stepper { color: #0D0F14; }
 }
 /* Con "Mi pedido" abierto no se tapa el pie del pedido con el aviso de "agregado" */
 body:has(.order-modal.open) .add-toast:not(:has(.at-only)) { display: none; }
+
+/* ==========================================================================
+   22 Segunda ronda: jerarquia comercial, escaparates, marcas y movil
+   ========================================================================== */
+.tone-care { --tone: #2F7A5C; --tone-soft: #E8F3EE; --tone-band: #F5F9F7; --stage: #F3F7F5; }
+
+/* Inicio: buscador primero, compacto */
+.welcome-hero { padding: 30px 36px 26px; }
+.welcome-hero .wh-head { max-width: 900px; }
+.wh-title { font-size: clamp(28px, 3.2vw, 42px); }
+.wh-text { margin-bottom: 18px; }
+.home-depts-sec { margin-top: 34px; }
+
+/* Compra por departamento: 5 accesos */
+.dept-access { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 0; }
+.da-card { padding: 14px 14px 14px; box-shadow: 0 0 0 1px var(--line), inset 0 -3px 0 var(--tone); }
+.da-card:hover { box-shadow: 0 0 0 1px var(--tone), inset 0 -3px 0 var(--tone), var(--sh-2); }
+.da-top { justify-content: flex-start; gap: 10px; }
+.da-txt { display: flex; flex-direction: column; min-width: 0; }
+.da-name { margin: 0; font-size: 18px; }
+.da-count { font-size: 12px; font-weight: 600; }
+.da-pics { margin-top: 12px; gap: 6px; }
+.da-sub { margin-top: 10px; min-height: 0; font-size: 12px; -webkit-line-clamp: 2; }
+.da-brands { margin-top: 8px; min-height: 0; }
+.da-go { padding-top: 12px; font-size: 13px; }
+
+/* Mega menu con 5 departamentos */
+.mm-cols { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+.dn-low svg { color: var(--avail-low-dot); }
+
+/* ---------- Escaparates comerciales ---------- */
+.showcases { display: flex; flex-direction: column; gap: 18px; margin-top: 40px; }
+.showcase { --sc: var(--brand); --sc-soft: var(--brand-soft); padding: 20px 22px 14px; border-radius: 20px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); border-top: 4px solid var(--sc); }
+.sc-nuevos { --sc: var(--new); --sc-soft: color-mix(in srgb, var(--new) 10%, transparent); }
+.sc-oportunidades { --sc: var(--opp); --sc-soft: var(--opp-soft); }
+.sc-ultimas { --sc: var(--avail-low-dot); --sc-soft: var(--avail-low-soft); }
+.sc-volumen { --sc: var(--brand); --sc-soft: var(--brand-soft); }
+.sc-mas-vendidos { --sc: var(--ink); --sc-soft: var(--surface-2); }
+.sc-head { display: flex; align-items: flex-start; gap: 14px; }
+.sc-icon { width: 46px; height: 46px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; background: var(--sc-soft); color: var(--sc); }
+.sc-ultimas .sc-icon { color: var(--avail-low); }
+.sc-icon svg { width: 24px; height: 24px; }
+.sc-copy { flex: 1; min-width: 0; }
+.sc-claim { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sc); }
+.sc-ultimas .sc-claim { color: var(--avail-low); }
+.sc-title { font-family: var(--font-display); font-size: clamp(21px, 2vw, 26px); font-weight: 800; letter-spacing: -.025em; line-height: 1.15; }
+.sc-sub { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
+.sc-more { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 10px; background: var(--sc-soft); color: var(--ink); font-size: 13.5px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.sc-more svg { width: 16px; height: 16px; transition: transform var(--t-fast); }
+.sc-more:hover { box-shadow: inset 0 0 0 1.5px var(--sc); }
+.sc-more:hover svg { transform: translateX(3px); }
+.sc-bar { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
+.sc-tabs { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.sc-tabs::-webkit-scrollbar { display: none; }
+.sc-tab { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: none; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.sc-tab small { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.sc-tab b { font-family: var(--font-display); font-size: 14.5px; color: var(--ink); }
+.sc-tab:hover { box-shadow: inset 0 0 0 1.5px var(--sc); }
+.sc-tab.on { background: var(--ink); color: var(--surface); }
+.sc-tab.on small, .sc-tab.on b { color: inherit; opacity: .8; }
+.sc-track { display: grid; grid-auto-flow: column; grid-auto-columns: 204px; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; padding: 2px 2px 12px; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.sc-track .pc { scroll-snap-align: start; }
+
+/* ---------- Tarjetas: estado comercial con una sola marca sutil ---------- */
+.pc.f-new .pc-media { box-shadow: inset 0 3px 0 var(--new); }
+.pc.f-opp .pc-media { box-shadow: inset 0 3px 0 var(--opp); }
+.pc.f-low .pc-media { box-shadow: inset 0 3px 0 var(--avail-low-dot); }
+.pc.f-vol .pc-media { box-shadow: inset 0 3px 0 var(--brand); }
+.pc-note { display: flex; align-items: flex-start; gap: 5px; padding: 6px 8px; border-radius: 8px; background: var(--opp-soft); font-size: 12px; line-height: 1.35; color: var(--ink-2); }
+.pc-note svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--opp); }
+.pc.f-low .pc-stock b { font-weight: 800; }
+.grid { grid-template-columns: repeat(auto-fill, minmax(206px, 1fr)); gap: 16px 14px; }
+
+/* ---------- Filtros rapidos ---------- */
+.quick-filters { display: flex; gap: 6px; overflow-x: auto; padding: 12px 2px 2px; scrollbar-width: none; }
+.quick-filters:empty { display: none; }
+.quick-filters::-webkit-scrollbar { display: none; }
+.qf { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 13px; border: none; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--ink); font-size: 13.5px; font-weight: 600; }
+.qf svg { width: 15px; height: 15px; }
+.qf small { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.qf:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.qf.on { background: var(--ink); color: var(--surface); box-shadow: none; }
+.qf.on small { color: inherit; opacity: .75; }
+.qf-new:not(.on) svg { color: var(--new); }
+.qf-opp:not(.on) svg { color: var(--opp); }
+.qf-vol:not(.on) svg { color: var(--brand); }
+.qf-low:not(.on) svg { color: var(--avail-low-dot); }
+.facet .fopt { min-height: 36px; }
+
+/* ---------- Marcas ---------- */
+.brand-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.brand-tile { gap: 8px; padding: 0 0 14px; overflow: hidden; }
+.bt-mark { display: flex; align-items: center; min-height: 70px; padding: 14px 16px; background: var(--tone-soft); }
+.bt-mark .bt-word { min-height: 0; }
+.brand-tile .bt-cats, .brand-tile .bt-thumbs, .brand-tile .bt-stats, .brand-tile .bt-go { margin-left: 14px; margin-right: 14px; }
+.bt-cats { margin-top: 2px; }
+.bt-stats { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--muted); }
+.bt-stats b { color: var(--ink); font-weight: 700; }
+.bt-stats .bt-new b { color: var(--new); }
+.bt-stats .bt-vol b { color: var(--brand); }
+.bt-go { margin-top: auto; }
+.brand-dir { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.brand-hero .page-eyebrow { margin: 0 0 8px; }
+.bh-cats a { display: inline-flex; align-items: center; gap: 6px; }
+.bh-cats small { font-size: 11.5px; color: var(--muted); }
+.bh-stats { display: flex; gap: 8px; overflow-x: auto; margin: 14px 0 0; padding: 2px; scrollbar-width: none; }
+.bh-stats::-webkit-scrollbar { display: none; }
+.bh-stat { flex: none; display: flex; flex-direction: column; align-items: flex-start; min-width: 128px; padding: 10px 14px; border: none; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink); text-align: left; }
+.bh-stat b { font-family: var(--font-display); font-size: 22px; font-weight: 800; line-height: 1.1; }
+.bh-stat span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.bh-stat:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.bh-stat.on { background: var(--ink); color: var(--surface); box-shadow: none; }
+.bh-stat.on span { color: inherit; opacity: .75; }
+.bh-stat.is-ok:not(.on) b { color: var(--avail-ok); }
+.bh-stat.is-new:not(.on) b { color: var(--new); }
+.bh-stat.is-opp:not(.on) b { color: var(--opp); }
+.bh-stat.is-vol:not(.on) b { color: var(--brand); }
+.bh-stat.is-low:not(.on) b { color: var(--avail-low); }
+.plp-title { margin-top: 26px; font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---------- Ficha ---------- */
+.pdp-keyfacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.pdp-keyfacts div { display: flex; flex-direction: column; padding: 9px 12px; background: var(--surface); min-width: 0; }
+.pdp-keyfacts span { font-size: 11.5px; color: var(--muted); }
+.pdp-keyfacts b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdp-sticky { display: none; }
+
+/* ---------- Historial y pedido generado ---------- */
+.history-stats { flex-wrap: wrap; align-items: center; }
+.history-state { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.history-state svg { width: 14px; height: 14px; }
+.history-state.is-ok { background: var(--avail-ok-soft); color: var(--avail-ok); }
+.history-state.is-warn { background: var(--avail-low-soft); color: var(--avail-low); }
+.done-ok { margin: 4px 0 0; font-size: 15px; font-weight: 700; color: var(--avail-ok); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1279px) {
+  .dept-access { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .da-brands { display: none; }
+  .brand-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .dept-access { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mm-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1023px) {
+  .showcase { padding: 16px 16px 10px; }
+  .sc-bar .rail-arrows { display: none; }
+  /* Filtros: pantalla completa, comodos para el dedo */
+  .facets { top: 0; max-height: none; height: 100%; height: 100dvh; border-radius: 0; }
+  .facets-head { padding: 14px 10px 12px 20px; }
+  .fopt { min-height: 46px; font-size: 15px; }
+  .fbox { width: 22px; height: 22px; }
+  .facet summary { font-size: 16px; padding: 6px 0; }
+  .facets-apply { position: sticky; bottom: 0; background: var(--surface); }
+  /* Ficha: barra fija para agregar sin buscar el boton */
+  body[data-view="product"] .order-bar { display: none; }
+  .pdp-sticky { display: flex; align-items: center; gap: 8px; position: fixed; z-index: 1950; left: 0; right: 0; bottom: calc(62px + env(safe-area-inset-bottom)); padding: 8px 12px; background: var(--surface); box-shadow: 0 -1px 0 var(--line), 0 -10px 24px -18px rgba(16,24,40,.4); }
+  .pdp-sticky-info { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; line-height: 1.25; }
+  .pdp-sticky-info b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+  .pdp-sticky-info .is-ok { color: var(--avail-ok); } .pdp-sticky-info .is-low { color: var(--avail-low); }
+  .pdp-stepper-sm { grid-template-columns: 38px 46px 38px; height: 46px; }
+  .pdp-sticky .btn { height: 46px; padding: 0 14px; }
+  .pdp-sticky .btn svg { width: 18px; height: 18px; }
+  body[data-view="product"] .add-toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  body[data-view="product"] #mainContent { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+  /* Mi pedido: botones mas grandes para el dedo */
+  .oi-qty { grid-template-columns: 42px 50px 42px; height: 42px; }
+  .oi-qty button { font-size: 20px; }
+  .order-card.drawer { width: 100%; }
+}
+@media (max-width: 640px) {
+  .welcome-hero { padding: 20px var(--gutter) 18px; }
+  .wh-title { font-size: 27px; margin: 6px 0 4px; }
+  .wh-text { font-size: 13.5px; margin-bottom: 14px; }
+  .home-depts-sec { margin-top: 24px; }
+  /* Departamentos en lista: comodo y sin cortes */
+  .dept-access { grid-template-columns: 1fr; gap: 8px; }
+  .da-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding: 10px 12px; border-radius: 14px; box-shadow: 0 0 0 1px var(--line), inset 3px 0 0 var(--tone); }
+  .da-card:hover { transform: none; }
+  .da-top { grid-column: 1; }
+  .da-icon { width: 38px; height: 38px; }
+  .da-name { font-size: 16px; margin: 0; }
+  .da-count { font-size: 11.5px; }
+  .da-pics { grid-column: 2; grid-row: 1; display: flex; gap: 4px; margin: 0; }
+  .da-pics span { width: 44px; height: 44px; aspect-ratio: auto; }
+  .da-sub, .da-brands, .da-go { display: none; }
+  .showcases { margin-top: 28px; gap: 14px; }
+  .showcase { margin: 0 calc(-1 * var(--gutter)); border-radius: 0; padding: 16px var(--gutter) 8px; box-shadow: none; border-top-width: 3px; background: var(--surface); }
+  .sc-head { gap: 10px; flex-wrap: wrap; }
+  .sc-icon { width: 38px; height: 38px; border-radius: 11px; }
+  .sc-icon svg { width: 20px; height: 20px; }
+  .sc-title { font-size: 20px; }
+  .sc-sub { font-size: 13px; }
+  .sc-more { width: 100%; justify-content: center; height: 40px; order: 3; }
+  .sc-bar { margin: 12px calc(-1 * var(--gutter)) 8px 0; }
+  .sc-tabs { padding-right: var(--gutter); }
+  .sc-track { grid-auto-columns: 158px; gap: 10px; margin: 0 calc(-1 * var(--gutter)); padding: 2px var(--gutter) 10px; scroll-padding-inline: var(--gutter); }
+  .brand-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bt-mark { min-height: 56px; padding: 10px 12px; }
+  .brand-tile .bt-cats, .brand-tile .bt-thumbs, .brand-tile .bt-stats, .brand-tile .bt-go { margin-left: 10px; margin-right: 10px; }
+  .bh-stat { min-width: 112px; padding: 8px 12px; }
+  .bh-stat b { font-size: 19px; }
+  .pdp-keyfacts b { font-size: 13px; }
+  .qf { height: 38px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.plp-main { min-width: 0; }
+@media (max-width: 1023px) { .plp { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  /* En celular la etiqueta VOLUMEN ya lo dice: tarjetas mas cortas */
+  .pc-vol { display: none; }
+  .sc-track .pc-meta .pc-spec { display: none; }
+}

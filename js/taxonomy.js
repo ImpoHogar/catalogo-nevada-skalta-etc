@@ -17,12 +17,14 @@
 //  Cargar DESPUES de ui.js y ANTES de catalog.js.
 // ============================================================
 
-// Los cuatro grandes accesos del catalogo. "tone" define la experiencia
-// visual y los filtros de cada uno (beauty / tech / battery / home).
+// Los cinco grandes accesos del catalogo. "tone" define la experiencia
+// visual y los filtros de cada uno (care / beauty / tech / battery / home).
 // "aliases": direcciones viejas que siguen funcionando (#/d/belleza).
 const DEPARTMENTS = [
-  { id: 'cuidado-personal', name: 'Cuidado personal', tone: 'beauty',  icon: 'makeup',  aliases: ['belleza'],
-    blurb: 'Maquillaje, skincare, cabello, cuidado corporal y barbería.' },
+  { id: 'cuidado-personal', name: 'Cuidado personal', tone: 'care',    icon: 'body',    aliases: ['belleza'],
+    blurb: 'Skincare, cuidado corporal, cabello y barbería.' },
+  { id: 'maquillaje',       name: 'Maquillaje',       tone: 'beauty',  icon: 'makeup',
+    blurb: 'Bases y cushions, labios, ojos, cejas, mejillas y polvos.' },
   { id: 'tecnologia',       name: 'Tecnología',       tone: 'tech',    icon: 'tech',
     blurb: 'Audio, cables, cargadores, computación, smart y soportes.' },
   { id: 'baterias',         name: 'Baterías',         tone: 'battery', icon: 'battery',
@@ -34,14 +36,15 @@ const DEPARTMENTS = [
 // Categorias (orden = orden en menus). "types": [tipo, palabras del nombre].
 // Gana el primer tipo que encuentra alguna de sus palabras.
 const CATEGORIES = [
-  // ---------- CUIDADO PERSONAL: maquillaje y skincare ----------
-  { id: 'maquillaje', name: 'Maquillaje', dept: 'cuidado-personal', icon: 'makeup', types: [
+  // ---------- MAQUILLAJE ----------
+  { id: 'maquillaje', name: 'Maquillaje', dept: 'maquillaje', icon: 'makeup', types: [
     ['Mejillas',      ['ILLUMIN', 'ILUMUN', 'SPARKLE PARTY', 'BLUSH', 'RUBOR', 'HIGHLIGHT', 'ILUMIN', 'CONTOUR', 'BRONZ', 'SHIMMER', 'GLOW TIME', 'HALO', 'SUNLIT', 'SCULPT', 'SHOW YOUR', 'STARCROSSED', 'FUCHSIA']],
     ['Ojos y cejas',  ['LASTING STROKES', 'LONG LASTING AND', 'BROW', 'LINER', 'MASCARA', 'EYESHAD', 'SOMBRA', 'PALET', 'LASH', 'FLICK', 'EYE']],
     ['Labios',        ['GLASSY', 'LIP', 'LABIAL', 'LABIOS', 'GLOSS', 'TINT', 'BALM', 'POUT', 'KISS', 'ROUGE', 'MARKER', 'GLOW POP', 'ENCHANTED ROSE', 'JELLY MUCH']],
     ['Bases y cushions', ['CUSHION', 'FOUNDATION', 'FUNDATION', 'BASE', 'BB CREAM', 'MASK FIT', 'FIT RED', 'PERFECT COVER']],
     ['Correctores y polvos', ['CORRECTOR', 'POLVO', 'PRIMER', 'SELLADOR', 'SETTING', 'LOOSE', 'BLUR', 'BAKED', 'FLORA MIST']]
   ]},
+  // ---------- CUIDADO PERSONAL ----------
   { id: 'skincare', name: 'Skincare', dept: 'cuidado-personal', icon: 'face', types: [
     ['Sets y kits',       [' SET ', 'KIT', 'SET DE']],
     ['Protección solar',  ['SPF', 'SUN ', 'SOLAR', 'BLOQUE', 'SUNSCREEN']],
@@ -51,7 +54,6 @@ const CATEGORIES = [
     ['Sérums y ampollas', ['SERUM', 'AMPOLLA', 'AMPOULE']],
     ['Cremas e hidratación', ['CREMA', 'CREAM', 'HIDRATANTE', 'GEL', 'CAPSULA', 'PORE']]
   ]},
-  // ---------- CUIDADO PERSONAL: cuerpo, cabello y barberia ----------
   { id: 'cuidado-corporal', name: 'Cuidado corporal', dept: 'cuidado-personal', icon: 'body', types: [
     ['Cuidado de labios',  ['LIP SCRUB', 'LIP MASK', 'SUGAR LIPS', 'SUGARLIPS', 'LIP BUTTER']],
     ['Afeitado',           ['AFEITAR', 'SHAVE']],

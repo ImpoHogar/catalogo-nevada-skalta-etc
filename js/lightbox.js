@@ -87,6 +87,36 @@ function similarProducts(p, n) {
   return list.slice(0, n);
 }
 
+// Misma linea: misma marca y nombre de linea en comun (ej. "Mais
+// Cachos", "Aguacate"). Sale solo de los nombres reales.
+function sameLineProducts(p, n) {
+  if (typeof relWords !== 'function') return [];
+  const w = relWords(p);
+  if (!w.size) return [];
+  return VISIBLE_PRODUCTS.filter(x => x.id !== p.id && x.brand === p.brand && [...relWords(x)].some(t => w.has(t)))
+    .map(x => [x, [...relWords(x)].filter(t => w.has(t)).length])
+    .sort((a, b) => b[1] - a[1] || (stockNum(b[0]) > 0) - (stockNum(a[0]) > 0) || a[0].id - b[0].id)
+    .map(x => x[0]).slice(0, n);
+}
+
+// Datos clave bajo el nombre (categoria, presentacion, tamano...).
+function pdpKeyFacts(p) {
+  const tone = deptTone(p.dept);
+  const out = [['Categoría', p.tipo !== 'Otros' ? p.tipo : catName(p.cat)]];
+  if (tone === 'battery') {
+    if (batterySize(p)) out.push(['Tamaño', batterySize(p)]);
+    if (batteryPack(p)) out.push(['Presentación', batteryPack(p)]);
+  } else if (tone === 'tech' || tone === 'home') {
+    (p._specs || (p._specs = productSpecs(p))).slice(0, 2).forEach(x => out.push([x.label === 'Conexión' ? 'Conectividad' : x.label, x.value]));
+  } else {
+    const size = sizeOf(p);
+    if (size) out.push(['Presentación', size]);
+    const tf = toneFamily(p);
+    if (tf) out.push(['Subtono', tf]);
+  }
+  return out.slice(0, 3);
+}
+
 function sameBrandProducts(p, n) {
   const list = VISIBLE_PRODUCTS.filter(x => x.id !== p.id && x.brand === p.brand);
   return list.sort((a, b) => (b.cat === p.cat) - (a.cat === p.cat) || rankScore(b) - rankScore(a)).slice(0, n);
@@ -99,6 +129,7 @@ function pdpSetQty(v) {
   pdpQty = Math.max(1, parseInt(v) || 1);
   const i = document.getElementById('pdpQty');
   if (i) i.value = pdpQty;
+  document.querySelectorAll('[data-pdp-qty]').forEach(x => { x.value = pdpQty; });
   pdpRefreshHint();
 }
 function pdpRefreshHint() {
@@ -171,8 +202,10 @@ function renderProductPage(pid) {
   const notas = (p.notes && p.notes.length) ? `
     <div class="pdp-block"><h2 class="pdp-h">Detalles</h2><div class="pdp-notes">${p.notes.map(n => `<span>${escapeHtml(n)}</span>`).join('')}</div></div>` : '';
 
-  const suggested = typeof suggestedProducts === 'function' ? suggestedProducts(p, 14) : [];
-  const sugIds = new Set(suggested.map(x => x.id));
+  const line = sameLineProducts(p, 14);
+  const lineIds = new Set(line.map(x => x.id));
+  const suggested = (typeof suggestedProducts === 'function' ? suggestedProducts(p, 20) : []).filter(x => !lineIds.has(x.id)).slice(0, 14);
+  const sugIds = new Set(suggested.map(x => x.id).concat([...lineIds]));
   const similar = similarProducts(p, 20).filter(x => !sugIds.has(x.id)).slice(0, 16);
   const thumbs = lightboxState.images.map((im, i) => `
     <button type="button" class="pdp-thumb${i === lightboxState.index ? ' on' : ''}" onclick="lightboxGoTo(${i}, event)" aria-label="${escapeHtml(im.caption)}">
@@ -207,7 +240,8 @@ function renderProductPage(pid) {
             <span>Código</span><b>${escapeHtml(p.code)}</b>
             <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(p.code)}', this)" aria-label="Copiar código">${ICONS.copy}<span>Copiar</span></button>
           </div>
-          <div class="pdp-path"><span>Categoría</span>${catPath}</div>
+          <div class="pdp-keyfacts">${pdpKeyFacts(p).map(([k, v]) => `<div><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`).join('')}</div>
+          <div class="pdp-path"><span>Ruta</span>${catPath}</div>
           <div class="pdp-avail is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span>${lvl.qty ? `<small>${escapeHtml(lvl.qty)}</small>` : ''}</div>
           ${badges.length ? `<div class="pdp-badges">${badges.join('')}</div>` : ''}
           <div class="pdp-buybox">${buy}</div>
@@ -223,11 +257,22 @@ function renderProductPage(pid) {
         </div>
       </div>
       <div class="pdp-rails">
-        ${railHTML(suggested, { title: 'También te puede interesar', sub: 'Productos que se usan junto con este o lo complementan.', cls: 'rail-sugg' })}
+        ${line.length >= 2 ? railHTML(line, { title: 'De la misma línea', sub: `Otros productos ${p.brand} de la misma línea.`, cls: 'rail-sugg' }) : ''}
+        ${railHTML(suggested, { title: line.length >= 2 ? 'También te puede interesar' : 'Productos relacionados', sub: 'Productos que se usan junto con este o lo complementan.', cls: 'rail-sugg' })}
         ${railHTML(similar, { title: `Otras opciones de ${p.tipo !== 'Otros' ? p.tipo : catName(p.cat)}`, sub: 'Del mismo tipo de producto.', more: c ? '#/c/' + c.id + (p.tipo !== 'Otros' ? '/' + slugify(p.tipo) : '') : '' })}
         ${railHTML(sameBrandProducts(p, 16), { title: `Más de ${p.brand}`, more: brandHash(p.brand), moreLabel: `Ver los ${brandCount}` })}
       </div>
       <div class="home-back-end">${homeBackHTML('is-outline')}</div>
+      ${lvl.key === 'out' ? '' : `
+      <div class="pdp-sticky" aria-label="Agregar al pedido">
+        <div class="pdp-sticky-info"><b>${escapeHtml(prettyName(p))}</b><span class="is-${lvl.key}">${escapeHtml(lvl.qty || lvl.label)}</span></div>
+        <div class="pdp-stepper pdp-stepper-sm" role="group" aria-label="Cantidad a agregar">
+          <button type="button" onclick="pdpQtyChange(-1)" aria-label="Quitar una unidad">−</button>
+          <input type="number" min="1" inputmode="numeric" value="1" data-pdp-qty onchange="pdpSetQty(this.value)" onfocus="this.select()" aria-label="Cantidad a agregar">
+          <button type="button" onclick="pdpQtyChange(1)" aria-label="Agregar una unidad">+</button>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="pdpAddToOrder()">${ICONS.bag}Agregar</button>
+      </div>`}
     </div>`;
   bindZoom();
   document.title = `${prettyName(p)} · ${p.brand} · ImpoHogar Market`;
