@@ -32,7 +32,9 @@ js/products.js          📦 EL CATÁLOGO (generado desde la plantilla Excel)
 js/stock.js             🔢 LAS CANTIDADES (generado desde el inventario)
 js/relacionados.js      Productos relacionados (complemento / alternativa)
 js/data.js              Pega las cantidades a los productos
-js/catalog.js           Tarjetas, filtros, categorías, Nuevos Ingresos
+js/taxonomy.js          Departamentos, categorías, tipos, filtros y buscador
+js/catalog.js           Navegación, inicio, listados, tarjetas y buscador
+js/lightbox.js          Ficha del producto (galería, datos, relacionados)
 js/showcase.js          Vitrina de entrada
 js/cart.js, order.js    Carrito, Excel del pedido, ZIP de fotos, WhatsApp
 js/lightbox.js          Ficha del producto con zoom y código de barras
@@ -145,39 +147,83 @@ vendedor" al generar el pedido (abre WhatsApp con el mensaje del pedido) y al
 pie de la página (abre el chat directo). Para cambiar uno, se edita su línea
 en `SELLERS` y se reemplaza su imagen.
 
-## Diseño (ImpoHogar Market)
+## Diseño y arquitectura (ImpoHogar Market)
 
-Identidad propia, distinta del catálogo de perfumería:
+El catálogo funciona como una tienda grande con secciones, cada una con su
+dirección (se puede usar el botón "atrás" del navegador y compartir el enlace):
 
-- **Tipografía:** Sora (títulos) + Inter (interfaz y productos).
-- **Base:** blanco y gris frío, negro como color de acción, un solo acento
-  coral (`#FF3D71`) para novedades y estados. Modo claro por defecto.
-- **Un tono por mundo** (`css/styles.css`, sección 18): Maquillaje rosa,
-  Skincare verde aloe, Cuidado corporal durazno, Cabello lavanda,
-  Tecnología azul, Hogar y cocina turquesa.
-- **Tarjetas por mundo:** belleza (editorial, tono y tamaño), tecnología (ficha
-  técnica con modelo, conector, potencia…) y cuidado personal (limpia).
-- **Inicio:** bloque de categorías con fotos reales, sección de marcas y
-  carriles por mundo (tecnología en sección oscura). Se ocultan al buscar
-  o filtrar para mostrar los resultados arriba.
+| Dirección | Qué muestra |
+|---|---|
+| `#/` | Inicio: banner, departamentos, categorías, últimas unidades, bloques por departamento, stock para volumen, marcas |
+| `#/todo` | Todo el catálogo |
+| `#/d/belleza` · `#/d/cuidado-personal` · `#/d/tecnologia` · `#/d/hogar` | Departamento |
+| `#/c/audio` · `#/c/audio/parlantes` | Categoría y tipo de producto |
+| `#/marca/tirtir` · `#/marcas` | Una marca / directorio de marcas |
+| `#/buscar/cargador tipo c` | Resultados de búsqueda |
+| `#/col/ultimas` · `#/col/volumen` · `#/col/nuevos` · `#/col/mas-vendidos` | Colecciones comerciales |
+| `#/p/123` | Ficha del producto |
 
-Todo lo que se muestra sale de los datos reales (`js/ui.js`):
+**Departamentos > categorías > tipos** (`js/taxonomy.js`): cada producto se ubica
+leyendo su categoría de la plantilla y palabras de su nombre. Hoy:
 
-- **Nombres legibles** (el Excel del pedido sigue usando el nombre original):
-  sin la marca repetida (ya sale arriba), sin códigos internos al inicio y
-  con tildes (`BRAND_TOKENS` y `ACCENTS` en `js/ui.js`).
-- **Tipo de producto** (Labios, Rostro, Sérums, Audio, Cables…) deducido de
-  palabras del nombre. Reglas en `SUBTYPE_RULES`.
-- **Especificaciones** (tono, tamaño, potencia, conector, mAh…) leídas del
-  nombre.
-- **Disponibilidad:** agotado, "últimas unidades" (12 o menos) o disponible.
+- **Belleza:** Maquillaje (bases y cushions, labios, ojos y cejas, mejillas,
+  correctores y polvos) · Skincare (limpieza, tónicos, sérums, cremas,
+  mascarillas, protección solar, sets).
+- **Cuidado personal:** Cuidado corporal · Cabello · Barbería.
+- **Tecnología:** Audio · Cables y adaptadores · Carga y energía · Baterías y
+  pilas · Computación y gaming · Smart y cámaras · Soportes y accesorios.
+- **Hogar:** Cocina · Cuidado de la ropa.
 
-El listado de productos sale por defecto **por marca** (orden "Por marca"): cada marca
-junta con su encabezado, y dentro de ella los productos agrupados por tipo
-(Labios, Rostro, Sérums, Audio…), sin intercalar. En el filtro "Ordenar" se
-puede cambiar a Destacados, Más disponibles o Nombre.
+Para crecer: se agrega la categoría o el tipo en `CATEGORIES` con las palabras
+que lo identifican. Las categorías sin productos no se muestran. La categoría de
+la plantilla (`categoria` en products.js) no cambia: el script de carga sigue
+igual.
 
-No hay precios porque la plantilla solo trae el costo, que no se publica.
+**Buscador:** busca por nombre, marca, código de barras (exacto o parcial),
+categoría, tipo y sinónimos en español/inglés (audífonos = headphones, pila =
+batería, labial = lip/tint, bloqueador = SPF, tipo C = USB-C…). Un código
+completo abre la ficha directo. Sinónimos en `SYNONYMS` (taxonomy.js).
+
+**Filtros contextuales:** cambian según la sección. Belleza y cuidado
+personal: marca, tipo, subtono (C/N/W), beneficio, presentación. Tecnología:
+marca, tipo, conector, compatibilidad, conexión, potencia. Siempre:
+disponibilidad. Solo aparecen si tienen al menos dos opciones reales.
+
+**Vista lista (pedido rápido):** en cualquier listado, el botón de lista muestra
+filas con código y cantidad para pedir rápido.
+
+### Vitrina comercial (en `js/config.js`)
+
+- `CAMPANA_INICIO`: texto, botón y destino del banner principal. En modo
+  `'auto'`, si hay nuevos ingresos el banner pasa solo a "Descubre lo nuevo".
+- `NUEVOS_INGRESOS`: códigos marcados a mano como nuevos (además de los que el
+  script de carga marca con `dateAdded`).
+- `MAS_VENDIDOS`: códigos de mayor rotación, en orden. **Mientras esté vacío la
+  sección "Más vendidos" no aparece** (no se inventan datos).
+- `MARCAS_DESTACADAS`: orden de las marcas del inicio (vacío = las que más
+  productos tienen).
+- `STOCK_VOLUMEN`: desde cuántas unidades un producto entra en "Stock para
+  volumen".
+- `BUSQUEDAS_POPULARES`: sugerencias del buscador.
+
+"Últimas unidades" sale solo del inventario (12 unidades o menos).
+
+### Fotos extra (galería)
+
+La ficha muestra la foto principal y el código de barras. Para sumar más fotos a
+un producto, se agrega en su línea de products.js el campo
+`"imgs":["<codigo>-2.webp","<codigo>-3.webp"]` con esos archivos en
+`img/productos/`.
+
+### Estilo
+
+Azul de Grupo ImpoHogar como color de acción, blanco y grises neutros, y un
+tono por departamento (belleza rosa empolvado, cuidado personal verde salvia,
+tecnología azul, hogar ámbar). Tarjetas sin bordes, con la foto como
+protagonista; en tecnología muestran datos técnicos (conector, potencia) y en
+belleza tono y tamaño. Tipografía Plus Jakarta Sans + Inter. Modo claro y
+oscuro. En celular: barra inferior (Inicio, Departamentos, Buscar, Marcas,
+Pedido), menú lateral, buscador a pantalla completa y filtros en panel.
 
 ## Al compartir el enlace
 

@@ -66,6 +66,48 @@ const ORDER_HISTORY_LIMIT = 20;
 //  tarjeta mas que cargar antes de que el cliente entre.
 const VITRINA_MAX_POR_FILA = 40;
 
+// ============================================================
+//  VITRINA COMERCIAL DEL INICIO
+// ============================================================
+//  Lo que se edita a mano para "mover" el inicio. Todo usa CODIGOS DE
+//  BARRAS exactos, como en el resto del catalogo.
+// ============================================================
+
+// Banner principal del inicio.
+//   modo 'auto': si hay nuevos ingresos muestra "Descubre lo nuevo" con
+//                esos productos; si no, muestra este texto.
+//   modo 'fijo': siempre muestra este texto.
+//   destino: a donde lleva el boton ('#/todo', '#/col/nuevos',
+//            '#/col/ultimas', '#/c/audio', '#/marca/tirtir', '#/d/belleza'...)
+//   productos: codigos para las fotos del banner (vacio = automatico).
+const CAMPANA_INICIO = {
+  modo: 'auto',
+  etiqueta: 'Catálogo mayorista',
+  titulo: 'Surtido completo para tu negocio, en un solo pedido.',
+  texto: 'Belleza, cuidado personal, tecnología y hogar de las marcas que más se venden. Busca por nombre, marca o código y arma tu pedido en minutos.',
+  boton: 'Explorar el catálogo',
+  destino: '#/todo',
+  productos: []
+};
+
+// Nuevos ingresos marcados a mano (ademas de los que tienen dateAdded en
+// products.js, que pone solo el script de carga). Ej: ["886540006029"]
+const NUEVOS_INGRESOS = [];
+
+// Mas vendidos / alta rotacion, en orden. Mientras este vacio, la
+// seccion "Mas vendidos" no aparece (no se inventa).
+const MAS_VENDIDOS = [];
+
+// Marcas destacadas del inicio, en orden (nombre exacto como en el
+// catalogo). Vacio = las marcas con mas productos.
+const MARCAS_DESTACADAS = [];
+
+// "Stock para volumen": productos con al menos esta cantidad disponible.
+const STOCK_VOLUMEN = 1000;
+
+// Sugerencias del buscador cuando todavia no se escribio nada.
+const BUSQUEDAS_POPULARES = ['Cushion', 'Audífonos', 'Cargador tipo C', 'Exfoliante', 'Licuadora', 'Baterías AA', 'Sérum', 'Shampoo', 'Smartwatch', 'Labial'];
+
 // Habilita el ZIP de fotos del pedido (solo incluye los productos que
 // ya tienen foto en img/productos/).
 const HAS_PHOTOS = true;
