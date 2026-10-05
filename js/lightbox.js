@@ -174,15 +174,13 @@ function renderProductPage(pid) {
   const lvl = stockLevel(p);
   const enPedido = qtyMap[p.id] || 0;
   const brandCount = VISIBLE_PRODUCTS.filter(x => x.brand === p.brand).length;
-  const flags = productFlags(p);
+  const flags = productFlags(p).filter(f => f.key !== 'low');
   const badges = flags.map(f => `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.key === 'new' ? 'Nuevo ingreso' : f.key === 'vol' ? 'Disponible para volumen' : f.badge}</span>`);
   if (isBestSeller(p)) badges.push('<span class="badge badge-best">Más vendido</span>');
   const crumbs = [['#/', 'Inicio']];
   if (d) crumbs.push(['#/d/' + d.id, d.name]);
   if (c) crumbs.push(['#/c/' + c.id, c.name]);
   if (c && p.tipo !== 'Otros') crumbs.push(['#/c/' + c.id + '/' + slugify(p.tipo), p.tipo]);
-  const catPath = [d && `<a href="#/d/${d.id}">${escapeHtml(d.name)}</a>`, c && `<a href="#/c/${c.id}">${escapeHtml(c.name)}</a>`,
-    c && p.tipo !== 'Otros' && `<a href="#/c/${c.id}/${slugify(p.tipo)}">${escapeHtml(p.tipo)}</a>`].filter(Boolean).join(ICONS.chevR);
 
   const buy = lvl.key === 'out'
     ? `<div class="pdp-soldout">${ICONS.warn}<span>Este producto está agotado por ahora. Consulta a tu vendedor por la próxima entrada.</span></div>`
@@ -223,7 +221,6 @@ function renderProductPage(pid) {
         <div class="pdp-gallery">
           <div class="pdp-thumbs">${thumbs}</div>
           <div class="pdp-stage" id="pdpStage">
-            <span class="pc-badges">${cardBadges(p)}</span>
             <img id="lightboxImg" src="${lightboxState.images[lightboxState.index].src}" alt="${escapeHtml(prettyName(p))}">
             ${lightboxState.images.length > 1 ? `
               <button class="pdp-nav prev" type="button" onclick="lightboxNav(-1, event)" aria-label="Imagen anterior">${ICONS.chevL}</button>
@@ -241,7 +238,6 @@ function renderProductPage(pid) {
             <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(p.code)}', this)" aria-label="Copiar código">${ICONS.copy}<span>Copiar</span></button>
           </div>
           <div class="pdp-keyfacts">${pdpKeyFacts(p).map(([k, v]) => `<div><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`).join('')}</div>
-          <div class="pdp-path"><span>Ruta</span>${catPath}</div>
           <div class="pdp-avail is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span>${lvl.qty ? `<small>${escapeHtml(lvl.qty)}</small>` : ''}</div>
           ${badges.length ? `<div class="pdp-badges">${badges.join('')}</div>` : ''}
           <div class="pdp-buybox">${buy}</div>

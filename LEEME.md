@@ -250,6 +250,20 @@ belleza tono y tamaño. Tipografía Plus Jakarta Sans + Inter. Modo claro y
 oscuro. En celular: barra inferior (Inicio, Catálogo, Marcas, Calculadora,
 Mi pedido), buscador fijo arriba, barra fija para agregar en la ficha, menú lateral, buscador a pantalla completa y filtros en panel.
 
+### Buscador: errores de escritura
+
+Si una búsqueda no encuentra nada, el catálogo prueba con la palabra más
+parecida que exista en los productos (ej. "skalla" → SKALA, "audifnos" →
+audífonos) y lo avisa ("No encontramos… te mostramos los resultados para…").
+Si aun así no hay nada, sugiere palabras sueltas, marcas y departamentos.
+No hay que configurar nada: sale de los nombres, marcas y categorías.
+
+### Etiquetas de las tarjetas
+
+Cada tarjeta muestra una sola etiqueta, la más importante: Nuevo >
+Oportunidad > Últimas unidades > Volumen (Agotado reemplaza a todas).
+La disponibilidad se escribe corta: "+100 disponibles", "Quedan 8" o "Agotado".
+
 ## Al compartir el enlace
 
 `img/compartir.jpg` es la imagen que sale al pegar el enlace del catálogo en

@@ -103,7 +103,43 @@ function closeOrderReview() {
 function confirmClearCart() {
   const { products } = cartTotals();
   if (!products) return;
-  if (confirm(`¿Vaciar tu pedido? Se quitarán los ${products} productos.`)) clearCart();
+  if (!confirm(`¿Vaciar tu pedido? Se quitarán los ${products} productos.`)) return;
+  const snapshot = Object.assign({}, qtyMap);
+  clearCart();
+  notifyUndo('Pedido vaciado', () => restoreLines(snapshot));
+}
+
+// Quitar una linea del pedido, con "Deshacer" por si fue sin querer.
+function removeLine(id) {
+  const q = qtyMap[id];
+  if (!q) return;
+  setQty(id, 0);
+  const p = PRODUCTS_BY_ID[id];
+  notifyUndo(`Quitaste ${p ? prettyName(p) : 'el producto'}`, () => restoreLines({ [id]: q }));
+}
+function restoreLines(map) {
+  window.__bulkCart = true;
+  try { Object.keys(map).forEach(id => setQty(Number(id), map[id])); } finally { window.__bulkCart = false; }
+  notify('✓ Listo, lo devolvimos a tu pedido.');
+}
+let _undoFn = null, _undoTimer = null;
+function notifyUndo(msg, fn) {
+  const t = document.getElementById('addToast');
+  if (!t) return;
+  _undoFn = fn;
+  t.innerHTML = `<span class="at-text at-only"><b>${escapeHtml(msg)}</b></span><button type="button" class="at-btn" onclick="runUndo()">Deshacer</button>`;
+  t.classList.add('show');
+  clearTimeout(_undoTimer);
+  if (typeof toastTimer !== 'undefined') clearTimeout(toastTimer);
+  if (typeof _noticeTimer !== 'undefined') clearTimeout(_noticeTimer);
+  _undoTimer = setTimeout(() => { t.classList.remove('show'); _undoFn = null; }, 5000);
+}
+function runUndo() {
+  const fn = _undoFn;
+  _undoFn = null;
+  clearTimeout(_undoTimer);
+  document.getElementById('addToast').classList.remove('show');
+  if (fn) fn();
 }
 
 // Linea del pedido: producto, disponibilidad, cantidad y eliminar.
@@ -119,10 +155,9 @@ function orderLineHTML(p) {
     <div class="order-item${short ? ' is-short' : ''}">
       <a href="#/p/${p.id}" onclick="closeOrderReview()" class="oi-img"><img src="${productImgSrc(p)}" alt="${escapeHtml(prettyName(p))}" loading="lazy"></a>
       <div class="oi-info">
-        <div class="oi-brand">${escapeHtml(p.brand)}</div>
         <a class="oi-name" href="#/p/${p.id}" onclick="closeOrderReview()">${escapeHtml(prettyName(p))}</a>
         <div class="oi-code">Código ${escapeHtml(p.code)}</div>
-        <div class="oi-avail is-${lvl.key}"><i></i>${escapeHtml(lvl.label)}${lvl.qty ? ` · ${escapeHtml(lvl.qty)}` : ''}</div>
+        <div class="oi-avail is-${lvl.key}"><i></i>${escapeHtml(lvl.key === 'ok' ? lvl.qty : lvl.key === 'low' ? lvl.short : lvl.label)}</div>
       </div>
       <div class="oi-side">
         <div class="oi-qty" role="group" aria-label="Cantidad">
@@ -130,7 +165,7 @@ function orderLineHTML(p) {
           <input type="number" min="0" inputmode="numeric" pattern="[0-9]*" value="${q}" onchange="setQty(${p.id}, this.value)" onfocus="this.select()" class="oi-qty-input" aria-label="Cantidad de ${escapeHtml(prettyName(p))}">
           <button type="button" onclick="changeQty(${p.id},1)" aria-label="Agregar una unidad">+</button>
         </div>
-        <button type="button" class="oi-remove" onclick="setQty(${p.id},0)">${ICONS.trash}Eliminar</button>
+        <button type="button" class="oi-remove" onclick="removeLine(${p.id})" aria-label="Eliminar ${escapeHtml(prettyName(p))} del pedido">${ICONS.trash}Eliminar</button>
       </div>
       ${warn}
     </div>`;
