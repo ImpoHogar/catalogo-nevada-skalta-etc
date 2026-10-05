@@ -9,12 +9,17 @@ const qtyMap = {};
 
 function setQty(id, val) {
   const v = Math.max(0, parseInt(val) || 0);
-  const input = document.getElementById(`qty-${id}`);
-  if (input) input.value = v;
-  const card = document.getElementById(`card-${id}`);
-  if (v > 0) { qtyMap[id] = v; if (card) card.classList.add('has-qty'); }
-  else { delete qtyMap[id]; if (card) card.classList.remove('has-qty'); }
-  if (card && v > 0) { card.classList.remove('just-added'); void card.offsetWidth; card.classList.add('just-added'); }
+  const prev = qtyMap[id] || 0;
+  if (v > 0) qtyMap[id] = v; else delete qtyMap[id];
+  // El mismo producto puede estar a la vez en el listado, en carriles y en
+  // la ficha: se actualizan todos.
+  document.querySelectorAll(`[data-qty-for="${id}"]`).forEach(i => { i.value = v; });
+  document.querySelectorAll(`[data-qty-badge="${id}"]`).forEach(b => { b.textContent = v || ''; });
+  document.querySelectorAll(`[data-card="${id}"]`).forEach(card => {
+    card.classList.toggle('has-qty', v > 0);
+    if (v > prev) { card.classList.remove('just-added'); void card.offsetWidth; card.classList.add('just-added'); }
+  });
+  if (v > prev && typeof showAddedToast === 'function') showAddedToast(id, v);
   if (typeof refreshLightboxQty === 'function') refreshLightboxQty(id);
   saveCartToStorage();
   updateOrderBar();
@@ -38,9 +43,12 @@ function restoreCartFromStorage() {
     const saved = localStorage.getItem('impohogar_tec_cart');
     if (!saved) return;
     const savedMap = JSON.parse(saved);
+    // Se carga antes de dibujar el catalogo: basta con llenar el pedido.
     Object.keys(savedMap).forEach(id => {
-      if (PRODUCTS_BY_ID[id]) setQty(Number(id), savedMap[id]);
+      const v = parseInt(savedMap[id]) || 0;
+      if (PRODUCTS_BY_ID[id] && v > 0) qtyMap[Number(id)] = v;
     });
+    updateOrderBar();
   } catch (err) { /* si algo esta corrupto, simplemente no restauramos */ }
 }
 
@@ -58,6 +66,8 @@ function updateOrderBar() {
 
   const bar = document.getElementById('orderBar');
   if (bar) bar.classList.toggle('has-items', ids.length > 0);
+  document.body.classList.toggle('has-order', ids.length > 0);
+  document.querySelectorAll('[data-cart-units]').forEach(b => { b.textContent = units > 99 ? '99+' : units; b.hidden = !units; });
   const badge = document.getElementById('reviewBadge');
   if (units > 0) {
     badge.textContent = units;
