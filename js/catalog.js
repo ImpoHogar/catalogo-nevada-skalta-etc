@@ -68,10 +68,18 @@ function isBestSeller(p) { return !!MAS_VENDIDOS_RANK[p.code]; }
 // y OPORTUNIDADES_AUTO esta encendido, los productos con mas unidades en
 // bodega de cada categoria (stock real).
 const OPORT_RANK = {};
+const OPORT_NOTE = {};
 let OPORT_IS_AUTO = false;
 (function buildOpportunities() {
-  const codes = typeof OPORTUNIDADES !== 'undefined' ? OPORTUNIDADES : [];
-  let list = codes.map(c => VISIBLE_PRODUCTS.find(p => p.code === c)).filter(Boolean);
+  const entries = typeof OPORTUNIDADES !== 'undefined' ? OPORTUNIDADES : [];
+  let list = [];
+  entries.forEach(e => {
+    const code = typeof e === 'string' ? e : (e && (e.codigo || e.code));
+    const p = code && VISIBLE_PRODUCTS.find(x => x.code === String(code));
+    if (!p || list.includes(p)) return;
+    list.push(p);
+    if (e && e.nota) OPORT_NOTE[p.id] = String(e.nota);
+  });
   VISIBLE_PRODUCTS.forEach(p => { if (p.oportunidad === true && !list.includes(p)) list.push(p); });
   if (!list.length && typeof OPORTUNIDADES_AUTO !== 'undefined' && OPORTUNIDADES_AUTO) {
     OPORT_IS_AUTO = true;
@@ -142,7 +150,7 @@ const COLLECTIONS = {
                      empty: 'Por ahora no hay nuevos ingresos marcados. En cuanto entren productos nuevos a bodega aparecerán aquí.' },
   'oportunidades': { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', sub: 'Productos que te recomendamos tener en tu negocio: buena disponibilidad y listos para mover.', icon: 'flame', filter: isOpportunity, sort: 'opp', always: true,
                      empty: 'Pronto vas a encontrar aquí nuestras oportunidades comerciales.' },
-  'volumen':       { title: 'Compra por volumen', eyebrow: 'Pedidos grandes', sub: 'Encuentra rápido los productos con inventario suficiente para pedidos grandes.', icon: 'box', filter: p => stockNum(p) >= VOL_LEVELS[0], sort: 'stock', always: true },
+  'volumen':       { title: 'Stock para volumen', eyebrow: 'Pedidos grandes', sub: 'Encuentra rápido los productos con inventario suficiente para pedidos grandes.', icon: 'box', filter: p => stockNum(p) >= VOL_LEVELS[0], sort: 'stock', always: true },
   'ultimas':       { title: 'Últimas unidades', eyebrow: 'Quedan pocas', sub: `Productos con ${LOW_STOCK} unidades o menos: asegúralos antes de que se agoten.`, icon: 'bolt', filter: isLowStock, sort: 'stock-asc' },
   'mas-vendidos':  { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Los productos que más piden nuestros clientes.', icon: 'tag', filter: isBestSeller, sort: 'bestseller' },
   'dia-nino':      { title: 'Día del Niño', eyebrow: 'Temporada', sub: 'Productos seleccionados para la temporada.', icon: 'spark', filter: p => DIA_DEL_NINO_CATEGORIES.includes(p.brand), sort: 'brand' }
@@ -278,7 +286,8 @@ function renderNav() {
       <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
       <a class="dn-link dn-nuevos" href="#/col/nuevos" data-route="col-nuevos">${ICONS.spark}Nuevos ingresos</a>
       <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="col-oportunidades">${ICONS.flame}Oportunidades</a>
-      <a class="dn-link dn-vol" href="#/col/volumen" data-route="col-volumen">${ICONS.box}<span class="dn-long">Compra por volumen</span><span class="dn-short">Volumen</span></a>
+      <a class="dn-link dn-low" href="#/col/ultimas" data-route="col-ultimas">${ICONS.bolt}<span class="dn-long">Últimas unidades</span><span class="dn-short">Últimas</span></a>
+      <a class="dn-link dn-vol" href="#/col/volumen" data-route="col-volumen">${ICONS.box}<span class="dn-long">Stock para volumen</span><span class="dn-short">Volumen</span></a>
       ${nino}
       <span class="dn-spacer"></span>
       <button type="button" class="dn-tool dn-calc" onclick="openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
@@ -418,7 +427,7 @@ function updateMobileTabs() {
   document.querySelectorAll('.tabbar a, .tabbar button').forEach(t => t.classList.remove('active'));
   let id = '';
   if (r.view === 'home') id = 'tabHome';
-  else if (r.view === 'listing' && r.kind === 'search') id = 'tabSearch';
+  else if (r.view === 'brands' || r.kind === 'brand') id = 'tabBrands';
   else if (r.view === 'listing' || r.view === 'brands' || r.view === 'product') id = 'tabCatalog';
   const el = id && document.getElementById(id);
   if (el) el.classList.add('active');
@@ -472,6 +481,13 @@ function qtyControlHTML(p, compact) {
     </div>`;
 }
 
+// Estado comercial principal de la tarjeta (una sola marca de color sutil:
+// recien llegado, oportunidad, pocas unidades o volumen).
+function primaryFlag(p) {
+  const f = productFlags(p)[0];
+  return f ? f.key : '';
+}
+
 function cardHTML(p) {
   const tone = deptTone(p.dept);
   const name = prettyName(p);
@@ -479,7 +495,9 @@ function cardHTML(p) {
   const lvl = stockLevel(p);
   const qty = qtyMap[p.id] || 0;
   const specs = keySpec(p);
+  const flag = primaryFlag(p);
   const classes = ['pc', `tone-${tone}`];
+  if (flag) classes.push('f-' + flag);
   if (qty > 0) classes.push('has-qty');
   if (lvl.key === 'out') classes.push('is-out');
   if (!p.img) classes.push('no-photo');
@@ -496,6 +514,7 @@ function cardHTML(p) {
         <div class="pc-code" title="Código de barras">Código: <b>${escapeHtml(p.code)}</b></div>
         ${availHTML(p)}
         ${isVolume(p) ? `<span class="pc-vol">${ICONS.box}Disponible para volumen</span>` : ''}
+        ${OPORT_NOTE[p.id] ? `<span class="pc-note">${ICONS.flame}${escapeHtml(OPORT_NOTE[p.id])}</span>` : ''}
         ${typeof dupePanelHTML === 'function' ? dupePanelHTML(p.id) : ''}
         <div class="pc-action">${qtyControlHTML(p, true)}</div>
       </div>
@@ -590,8 +609,7 @@ function deptBrands(deptId, n) {
   return Object.keys(c).sort((a, b) => c[b] - c[a]).slice(0, n);
 }
 
-// Encabezado del inicio: "¿Que quieres comprar hoy?" + buscador + los
-// cuatro grandes accesos.
+// Encabezado del inicio: "¿Que estas buscando?" + buscador.
 function renderHero() {
   const el = document.getElementById('homeHero');
   if (!el) return;
@@ -601,31 +619,38 @@ function renderHero() {
   el.innerHTML = `
     <div class="wh-head">
       <span class="wh-eyebrow">${escapeHtml(cfg.etiqueta || 'Catálogo mayorista')}</span>
-      <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué quieres comprar hoy?')}</h1>
+      <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué estás buscando?')}</h1>
       ${text ? `<p class="wh-text">${escapeHtml(text)}</p>` : ''}
       ${bigSearchHTML('homeSearch', 'Busca por producto, marca o código de barras')}
       ${popular.length ? `<div class="wh-pop"><span>Más buscado:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
-    </div>
-    <div class="dept-access">${deptsWithProducts().map(deptAccessHTML).join('')}</div>`;
+    </div>`;
+}
+
+// "Compra por departamento": los cinco grandes accesos.
+function renderDeptAccess() {
+  const el = document.getElementById('homeDepts');
+  if (el) el.innerHTML = deptsWithProducts().map(deptAccessHTML).join('');
 }
 
 function deptAccessHTML(d) {
   const pics = mixedPick(catsOfDept(d.id).map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 2)), 3);
   if (pics.length < 3) pics.push(...photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id && !pics.includes(p)), 3 - pics.length));
-  const brands = deptBrands(d.id, 5);
+  const brands = deptBrands(d.id, 4);
   const cats = catsOfDept(d.id);
-  const sub = cats.length > 1 ? cats.map(c => c.name).join(' · ') : typesOfCat(cats[0].id).filter(t => t.label !== 'Otros').map(t => t.label).join(' · ');
+  const sub = cats.length > 1 ? cats.map(c => c.name).join(' · ') : typesOfCat(cats[0].id).filter(t => t.label !== 'Otros').slice(0, 5).map(t => t.label).join(' · ');
   return `
     <a class="da-card tone-${d.tone}" href="#/d/${d.id}">
       <span class="da-top">
         <span class="da-icon">${iconSVG(d.icon)}</span>
-        <span class="da-count">${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
+        <span class="da-txt">
+          <span class="da-name">${escapeHtml(d.name)}</span>
+          <span class="da-count">${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
+        </span>
       </span>
-      <span class="da-name">${escapeHtml(d.name)}</span>
-      <span class="da-sub">${escapeHtml(sub)}</span>
       <span class="da-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</span>
+      <span class="da-sub">${escapeHtml(sub)}</span>
       <span class="da-brands">${brands.map(b => `<i>${escapeHtml(b)}</i>`).join('')}</span>
-      <span class="da-go">Entrar a ${escapeHtml(d.name)} ${ICONS.arrow}</span>
+      <span class="da-go">Ver ${escapeHtml(d.name)} ${ICONS.arrow}</span>
     </a>`;
 }
 
@@ -753,12 +778,16 @@ function brandTileHTML(b) {
   const mainDept = Object.keys(b.depts).sort((x, y) => b.depts[y] - b.depts[x])[0];
   const thumbs = photoPick(b.items, 3);
   const cats = Object.keys(b.cats).sort((x, y) => b.cats[y] - b.cats[x]).map(catName);
+  const disp = b.items.filter(p => stockNum(p) > 0).length;
+  const nuevos = b.items.filter(isInNuevosIngresosView).length;
+  const vol = b.items.filter(isVolume).length;
   return `
     <a class="brand-tile tone-${deptTone(mainDept)}" href="${brandHash(b.name)}" data-brand="${escapeHtml(normText(b.name))}">
-      ${brandMarkHTML(b.name, 'bt-word')}
+      <span class="bt-mark">${brandMarkHTML(b.name, 'bt-word')}</span>
       <span class="bt-cats">${escapeHtml(cats.slice(0, 3).join(' · '))}</span>
       <span class="bt-thumbs" aria-hidden="true">${thumbs.map(p => `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">`).join('')}</span>
-      <span class="bt-foot"><span class="bt-meta">${fmt(b.count)} productos</span><span class="bt-go">Ver productos ${ICONS.arrow}</span></span>
+      <span class="bt-stats"><span><b>${fmt(b.count)}</b> productos</span><span><b>${fmt(disp)}</b> con stock</span>${nuevos ? `<span class="bt-new"><b>${nuevos}</b> nuevos</span>` : ''}${vol ? `<span class="bt-vol"><b>${vol}</b> para volumen</span>` : ''}</span>
+      <span class="bt-go">Ver productos ${ICONS.arrow}</span>
     </a>`;
 }
 
@@ -777,45 +806,129 @@ function volLevelChipsHTML(active, onclickFn) {
   }).join('');
 }
 
-function renderHomeRails() {
-  const top = document.getElementById('homeRailsTop');
-  const vol = document.getElementById('homeVolume');
-  const nuevos = VISIBLE_PRODUCTS.filter(isInNuevosIngresosView).sort((a, b) => rankScore(b) - rankScore(a));
-  const opp = VISIBLE_PRODUCTS.filter(isOpportunity).sort((a, b) => OPORT_RANK[a.id] - OPORT_RANK[b.id]);
-  const mas = VISIBLE_PRODUCTS.filter(isBestSeller).sort((a, b) => MAS_VENDIDOS_RANK[a.code] - MAS_VENDIDOS_RANK[b.code]);
-  if (top) top.innerHTML =
-    railHTML(nuevos.slice(0, 18), { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', icon: 'spark', sub: 'Productos recién incorporados al catálogo.', more: '#/col/nuevos', moreLabel: `Ver los ${nuevos.length}`, cls: 'rail-new' }) +
-    railHTML(opp.slice(0, 18), { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', icon: 'flame', sub: COLLECTIONS.oportunidades.sub, more: '#/col/oportunidades', moreLabel: `Ver las ${opp.length}`, cls: 'rail-opp' }) +
-    railHTML(mas.slice(0, 18), { title: 'Más vendidos', eyebrow: 'Alta rotación', icon: 'tag', sub: 'Lo que más piden nuestros clientes.', more: '#/col/mas-vendidos', cls: 'rail-best' });
+// ------------------------------------------------------------
+//  ESCAPARATES COMERCIALES DEL INICIO
+// ------------------------------------------------------------
+//  Nuevos ingresos, Oportunidades, Ultimas unidades y Stock para
+//  volumen. Cada uno con su mensaje, sus pestanas (por departamento o
+//  por cantidad minima) y tarjetas completas con "Agregar". Todo sale
+//  de los datos; un escaparate sin productos no se muestra.
+const SHOWCASE_MAX = 16;
+const SHOWCASES = [
+  { id: 'nuevos', col: 'nuevos', icon: 'spark', claim: 'Esto acaba de llegar', title: 'Nuevos ingresos',
+    sub: 'Lo más reciente que entró a bodega, por departamento.', tabs: 'dept',
+    list: () => VISIBLE_PRODUCTS.filter(isInNuevosIngresosView), sort: 'recent' },
+  { id: 'oportunidades', col: 'oportunidades', icon: 'flame', claim: 'Selección ImpoHogar', title: 'Oportunidades',
+    sub: 'Productos que te recomendamos tener: buena disponibilidad y listos para mover.', tabs: 'dept',
+    list: () => VISIBLE_PRODUCTS.filter(isOpportunity), sort: 'opp' },
+  { id: 'ultimas', col: 'ultimas', icon: 'bolt', claim: 'Quedan pocas unidades', title: 'Últimas unidades',
+    sub: `Productos con ${LOW_STOCK} unidades o menos. Asegúralos antes de que se agoten.`, tabs: 'dept',
+    list: () => VISIBLE_PRODUCTS.filter(isLowStock), sort: 'stock-asc' },
+  { id: 'volumen', col: 'volumen', icon: 'box', claim: 'Mucho inventario', title: 'Stock para volumen',
+    sub: 'Elige la cantidad mínima que necesitas y te mostramos lo que tiene inventario suficiente.', tabs: 'level',
+    list: () => VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVELS[0]), sort: 'stock' },
+  { id: 'mas-vendidos', col: 'mas-vendidos', icon: 'tag', claim: 'Alta rotación', title: 'Más vendidos',
+    sub: 'Lo que más piden nuestros clientes.', tabs: 'dept',
+    list: () => VISIBLE_PRODUCTS.filter(isBestSeller), sort: 'bestseller' }
+];
+const SC_STATE = {};
 
-  if (vol) {
-    const ultimasList = VISIBLE_PRODUCTS.filter(isLowStock);
-    const volList = VISIBLE_PRODUCTS.filter(isVolume);
-    const promos = [];
-    if (volList.length) promos.push({ cls: 'promo-alt', href: '#/col/volumen/' + VOL_LEVEL_START, icon: 'box', title: 'Disponibles para volumen', sub: `Más de ${fmt(VOLUMEN_MIN)} unidades de cada uno.`, n: volList.length,
-      items: mixedPick(deptsWithProducts().map(d => volList.filter(p => p.dept === d.id && p.img).sort((x, y) => stockNum(y) - stockNum(x)).slice(0, 5)), 14) });
-    if (ultimasList.length) promos.push({ cls: 'promo-low', href: '#/col/ultimas', icon: 'bolt', title: 'Últimas unidades', sub: 'Quedan pocas: asegúralas hoy.', n: ultimasList.length,
-      items: mixedPick(deptsWithProducts().map(d => topWithPhoto(ultimasList.filter(p => p.dept === d.id && p.img), 5)), 14) });
-    vol.innerHTML = `
-      <div class="sec-head">
-        <div>
-          <span class="sec-eyebrow">${ICONS.box}Pedidos grandes</span>
-          <h2 class="sec-title">Compra por volumen</h2>
-          <p class="sec-sub">Elige cuántas unidades necesitas como mínimo y te mostramos los productos con inventario suficiente.</p>
-        </div>
-        <div class="sec-actions"><a class="sec-more" href="#/col/volumen">Ver compra por volumen ${ICONS.arrow}</a></div>
-      </div>
-      <div class="vol-levels">${volLevelChipsHTML()}</div>
-      <div class="vol-promos">${promos.map(promoCarouselHTML).join('')}</div>`;
-  }
+function showcaseItems(sc) {
+  const st = SC_STATE[sc.id];
+  let list = sc.list();
+  if (sc.tabs === 'level') list = list.filter(p => stockNum(p) >= st);
+  else if (st) list = list.filter(p => p.dept === st);
+  list = sortList(list, sc.sort);
+  // Con fotos primero; en "Todos" se alternan departamentos para variar.
+  const withImg = list.filter(p => p.img).concat(list.filter(p => !p.img));
+  if (sc.tabs === 'dept' && !st && sc.sort !== 'opp') return mixedPick(deptsWithProducts().map(d => withImg.filter(p => p.dept === d.id)), SHOWCASE_MAX);
+  if (sc.tabs === 'level') return mixedPick(deptsWithProducts().map(d => withImg.filter(p => p.dept === d.id)), SHOWCASE_MAX);
+  return withImg.slice(0, SHOWCASE_MAX);
 }
+
+function showcaseTabsHTML(sc) {
+  const st = SC_STATE[sc.id];
+  if (sc.tabs === 'level') {
+    return VOL_LEVELS.map(n => {
+      const c = VISIBLE_PRODUCTS.filter(p => stockNum(p) >= n).length;
+      return `<button type="button" class="sc-tab${st === n ? ' on' : ''}" onclick="showcaseTab('${sc.id}', ${n})"><b>${n}+</b> unidades<small>${fmt(c)}</small></button>`;
+    }).join('');
+  }
+  const all = sc.list();
+  const depts = deptsWithProducts().map(d => ({ d, n: all.filter(p => p.dept === d.id).length })).filter(x => x.n);
+  if (depts.length < 2) return '';
+  return `<button type="button" class="sc-tab${!st ? ' on' : ''}" onclick="showcaseTab('${sc.id}', '')">Todos<small>${fmt(all.length)}</small></button>` +
+    depts.map(x => `<button type="button" class="sc-tab${st === x.d.id ? ' on' : ''}" onclick="showcaseTab('${sc.id}', '${x.d.id}')">${escapeHtml(x.d.name)}<small>${fmt(x.n)}</small></button>`).join('');
+}
+
+function showcaseMoreHref(sc) {
+  const st = SC_STATE[sc.id];
+  if (sc.tabs === 'level') return '#/col/volumen/' + st;
+  return '#/col/' + sc.col;
+}
+
+function showcaseHTML(sc) {
+  const total = sc.list().length;
+  const n = sc.tabs === 'level' ? VISIBLE_PRODUCTS.filter(p => stockNum(p) >= SC_STATE[sc.id]).length : total;
+  return `
+    <section class="showcase sc-${sc.id}" id="sc-${sc.id}" aria-labelledby="sct-${sc.id}">
+      <div class="sc-head">
+        <span class="sc-icon">${iconSVG(sc.icon)}</span>
+        <div class="sc-copy">
+          <span class="sc-claim">${escapeHtml(sc.claim)}</span>
+          <h2 class="sc-title" id="sct-${sc.id}">${escapeHtml(sc.title)}</h2>
+          <p class="sc-sub">${escapeHtml(sc.sub)}</p>
+        </div>
+        <a class="sc-more" href="${showcaseMoreHref(sc)}" data-sc-more>Ver ${sc.id === 'oportunidades' || sc.id === 'ultimas' ? 'las' : 'los'} ${fmt(n)} ${ICONS.arrow}</a>
+      </div>
+      <div class="sc-bar">
+        <div class="sc-tabs" role="group" aria-label="Filtrar ${escapeHtml(sc.title)}">${showcaseTabsHTML(sc)}</div>
+        <div class="rail-arrows">
+          <button type="button" class="rail-arrow" onclick="scrollShowcase('${sc.id}',-1)" aria-label="Anteriores">${ICONS.chevL}</button>
+          <button type="button" class="rail-arrow" onclick="scrollShowcase('${sc.id}',1)" aria-label="Siguientes">${ICONS.chevR}</button>
+        </div>
+      </div>
+      <div class="sc-track" id="sctrack-${sc.id}">${showcaseItems(sc).map(cardHTML).join('')}</div>
+    </section>`;
+}
+
+function showcaseTab(id, v) {
+  const sc = SHOWCASES.find(x => x.id === id);
+  if (!sc) return;
+  SC_STATE[id] = v;
+  const el = document.getElementById('sc-' + id);
+  if (!el) return;
+  el.querySelector('.sc-tabs').innerHTML = showcaseTabsHTML(sc);
+  const track = el.querySelector('.sc-track');
+  track.innerHTML = showcaseItems(sc).map(cardHTML).join('');
+  track.scrollLeft = 0;
+  const more = el.querySelector('[data-sc-more]');
+  const n = sc.tabs === 'level' ? VISIBLE_PRODUCTS.filter(p => stockNum(p) >= v).length : sc.list().filter(p => !v || p.dept === v).length;
+  more.href = showcaseMoreHref(sc);
+  more.innerHTML = `Ver ${sc.id === 'oportunidades' || sc.id === 'ultimas' ? 'las' : 'los'} ${fmt(n)} ${ICONS.arrow}`;
+}
+
+function scrollShowcase(id, dir) {
+  const track = document.getElementById('sctrack-' + id);
+  if (track) track.scrollBy({ left: dir * track.clientWidth * 0.85, behavior: 'smooth' });
+}
+
+function renderShowcases() {
+  const el = document.getElementById('homeShowcases');
+  if (!el) return;
+  SHOWCASES.forEach(sc => { if (!(sc.id in SC_STATE)) SC_STATE[sc.id] = sc.tabs === 'level' ? VOL_LEVEL_START : ''; });
+  el.innerHTML = SHOWCASES.filter(sc => sc.list().length).map(showcaseHTML).join('');
+}
+// Compatibilidad: el inicio anterior llamaba a esta funcion.
+function renderHomeRails() { renderShowcases(); }
 
 function renderHome() {
   renderHero();
-  renderTrustBar();
+  renderDeptAccess();
+  renderShowcases();
   renderNeeds();
-  renderHomeRails();
   renderHomeBrands();
+  renderTrustBar();
   renderDeptBlocks();
   bindSearchBox('homeSearch');
 }
@@ -929,8 +1042,8 @@ const FACETS = [
   { id: 'avail',   label: 'Disponibilidad', get: p => stockLevel(p).label, order: AVAIL_ORDER, keep: true },
   { id: 'flags',   label: 'Tipo de producto', get: p => productFlags(p).map(f => f.facet), order: FLAG_ORDER, keep: true },
   // Cuidado personal y maquillaje
-  { id: 'size',    label: 'Presentación',   get: sizeBucket, tones: ['beauty'], order: SIZE_ORDER },
-  { id: 'benefit', label: 'Beneficio',      get: productBenefits, tones: ['beauty'] },
+  { id: 'size',    label: 'Presentación',   get: sizeBucket, tones: ['beauty', 'care'], order: SIZE_ORDER },
+  { id: 'benefit', label: 'Beneficio',      get: productBenefits, tones: ['beauty', 'care'] },
   { id: 'tone',    label: 'Subtono',        get: toneFamily, tones: ['beauty'] },
   // Tecnologia
   { id: 'compat',  label: 'Compatibilidad', get: productCompat, tones: ['tech'] },
@@ -951,10 +1064,11 @@ FACETS.forEach(f => { FACET_BY_ID[f.id] = f; });
 
 // Orden de los filtros segun el departamento (lo que mas importa primero).
 const FACET_ORDER = {
-  beauty:  ['cat', 'tipo', 'brand', 'size', 'benefit', 'tone', 'flags', 'avail', 'dept'],
-  tech:    ['cat', 'tipo', 'compat', 'conector', 'conn', 'power', 'brand', 'avail', 'flags', 'dept'],
+  beauty:  ['tipo', 'brand', 'avail', 'flags', 'tone', 'size', 'benefit', 'cat', 'dept'],
+  care:    ['cat', 'tipo', 'brand', 'avail', 'flags', 'size', 'benefit', 'dept'],
+  tech:    ['cat', 'tipo', 'brand', 'avail', 'flags', 'compat', 'conector', 'conn', 'power', 'dept'],
   battery: ['bsize', 'bchem', 'bpack', 'volt', 'tipo', 'brand', 'avail', 'flags', 'cat', 'dept'],
-  home:    ['cat', 'tipo', 'cap', 'power', 'speeds', 'brand', 'avail', 'flags', 'dept'],
+  home:    ['cat', 'tipo', 'brand', 'avail', 'flags', 'cap', 'power', 'speeds', 'dept'],
   mixed:   ['dept', 'cat', 'tipo', 'brand', 'avail', 'flags']
 };
 
@@ -1072,16 +1186,16 @@ function brandChipsHTML(r) {
   const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
   const selT = listingState.facets.tipo || new Set();
   const selF = listingState.facets.flags || new Set();
-  const flagChips = FLAG_DEFS.filter(f => f.key === 'new' || f.key === 'opp').map(f => ({ f, n: list.filter(f.test).length })).filter(x => x.n);
+  const flagChips = [];
   if (keys.length < 2 && !flagChips.length) return '';
   return `<div class="brand-chips" role="group" aria-label="Filtrar ${escapeHtml(r.brand)}">
-    <button type="button" class="fchip${!selT.size && !selF.size ? ' on' : ''}" onclick="brandChip('', '')">Todos<small>${list.length}</small></button>
+    <button type="button" class="fchip${!selT.size ? ' on' : ''}" onclick="brandChip('', '')">Todos<small>${list.length}</small></button>
     ${keys.length > 1 ? keys.map(k => `<button type="button" class="fchip${selT.has(k) && selT.size === 1 ? ' on' : ''}" data-v="${escapeHtml(k)}" onclick="brandChip('tipo', this.dataset.v)">${escapeHtml(tipoName(k))}<small>${counts[k]}</small></button>`).join('') : ''}
     ${flagChips.map(x => `<button type="button" class="fchip fchip-${x.f.key}${selF.has(x.f.facet) ? ' on' : ''}" data-v="${escapeHtml(x.f.facet)}" onclick="brandChip('flags', this.dataset.v)">${ICONS[x.f.icon]}${x.f.key === 'new' ? 'Nuevos' : 'Oportunidades'}<small>${x.n}</small></button>`).join('')}
   </div>`;
 }
 function brandChip(id, v) {
-  if (!id) { delete listingState.facets.tipo; delete listingState.facets.flags; }
+  if (!id) { delete listingState.facets.tipo; }
   else {
     const cur = listingState.facets[id];
     if (cur && cur.size === 1 && cur.has(v)) delete listingState.facets[id];
@@ -1094,17 +1208,44 @@ function brandHeadHTML(r) {
   const list = VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
   const cats = [...new Set(list.map(p => p.cat))].sort((a, b) => catIndex({ cat: a }) - catIndex({ cat: b }));
   const pics = photoPick(list, 4);
-  const disp = list.filter(p => stockNum(p) > 0).length;
   return `
     <div class="brand-hero tone-${deptTone(list[0] ? list[0].dept : '')}">
       <div class="bh-copy">
+        <span class="page-eyebrow">Marca · ${fmt(list.length)} productos</span>
         ${brandMarkHTML(r.brand, 'bh-mark')}
         <p>${escapeHtml(listingMeta(r).sub)}</p>
-        <div class="bh-stats"><span><b>${fmt(list.length)}</b> productos</span><span><b>${fmt(disp)}</b> disponibles</span><span><b>${cats.length}</b> ${cats.length === 1 ? 'categoría' : 'categorías'}</span></div>
-        <div class="bh-cats">${cats.map(c => `<a href="#/c/${c}">${escapeHtml(catName(c))}</a>`).join('')}</div>
+        <div class="bh-cats">${cats.map(c => `<a href="#/c/${c}">${escapeHtml(catName(c))}<small>${list.filter(p => p.cat === c).length}</small></a>`).join('')}</div>
       </div>
       <div class="bh-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</div>
-    </div>`;
+    </div>
+    <div class="bh-stats" id="brandStats"></div>`;
+}
+
+// Datos de la marca que tambien filtran (Disponibles, Nuevos, Volumen...).
+const BRAND_STATS = [
+  { key: '', label: 'Todos los productos', test: () => true },
+  { key: 'avail:Disponible', label: 'Disponibles', test: p => stockLevel(p).key === 'ok', cls: 'is-ok' },
+  { key: 'flags:Nuevo ingreso', label: 'Nuevos ingresos', test: isProductNew, cls: 'is-new' },
+  { key: 'flags:Oportunidad', label: 'Oportunidades', test: isOpportunity, cls: 'is-opp' },
+  { key: 'flags:Compra por volumen', label: 'Para volumen', test: isVolume, cls: 'is-vol' },
+  { key: 'flags:Últimas unidades', label: 'Últimas unidades', test: isLowStock, cls: 'is-low' }
+];
+function brandStatsHTML(r) {
+  const list = VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
+  const active = (() => {
+    const ids = Object.keys(listingState.facets).filter(id => id !== 'tipo');
+    if (ids.length !== 1) return ids.length ? null : '';
+    const sel = listingState.facets[ids[0]];
+    return sel.size === 1 ? ids[0] + ':' + [...sel][0] : null;
+  })();
+  return BRAND_STATS.map(st => ({ st, n: list.filter(st.test).length })).filter(x => x.n || !x.st.key).map(x =>
+    `<button type="button" class="bh-stat ${x.st.cls || ''}${active === x.st.key ? ' on' : ''}" data-k="${escapeHtml(x.st.key)}" onclick="brandStat(this.dataset.k)"><b>${fmt(x.n)}</b><span>${x.st.label}</span></button>`).join('');
+}
+function brandStat(k) {
+  const tipo = listingState.facets.tipo;
+  listingState.facets = tipo ? { tipo } : {};
+  if (k) { const [id, v] = [k.slice(0, k.indexOf(':')), k.slice(k.indexOf(':') + 1)]; listingState.facets[id] = new Set([v]); }
+  renderListing(false);
 }
 
 function deptHeadHTML(r) {
@@ -1212,6 +1353,28 @@ function facetGroupsHTML() {
   }).join('');
 }
 
+// Filtros rapidos arriba de los productos (los mismos filtros del panel).
+const QUICK_FILTERS = [
+  { f: 'avail', v: 'Disponible', label: 'Disponible', dot: 'ok' },
+  { f: 'flags', v: 'Nuevo ingreso', label: 'Nuevo', icon: 'spark', cls: 'qf-new' },
+  { f: 'flags', v: 'Oportunidad', label: 'Oportunidad', icon: 'flame', cls: 'qf-opp' },
+  { f: 'flags', v: 'Compra por volumen', label: 'Volumen', icon: 'box', cls: 'qf-vol' },
+  { f: 'flags', v: 'Últimas unidades', label: 'Últimas unidades', icon: 'bolt', cls: 'qf-low' }
+];
+function quickFiltersHTML() {
+  const scope = currentScope();
+  const r = currentRoute;
+  return QUICK_FILTERS.map(q => {
+    const sel = (listingState.facets[q.f] || new Set()).has(q.v);
+    const f = FACET_BY_ID[q.f];
+    const n = scope.filter(p => matchesFacets(p, q.f) && valuesOf(f, p).includes(q.v)).length;
+    // En la coleccion de ese mismo tipo el filtro no aporta nada.
+    if (r.kind === 'col' && ((r.col === 'ultimas' && q.v === 'Últimas unidades') || (r.col === 'oportunidades' && q.v === 'Oportunidad') || (r.col === 'nuevos' && q.v === 'Nuevo ingreso'))) return '';
+    if (!n && !sel) return '';
+    return `<button type="button" class="qf ${q.cls || ''}${sel ? ' on' : ''}" data-f="${q.f}" data-v="${escapeHtml(q.v)}" onclick="toggleFacet(this.dataset.f, this.dataset.v)" aria-pressed="${sel}">${q.dot ? `<i class="fdot is-${q.dot}"></i>` : ICONS[q.icon]}${escapeHtml(q.label)}<small>${fmt(n)}</small></button>`;
+  }).join('');
+}
+
 function toggleFacet(id, v) {
   const s = listingState.facets[id] || (listingState.facets[id] = new Set());
   if (s.has(v)) s.delete(v); else s.add(v);
@@ -1253,7 +1416,7 @@ function listingHeadHTML(r, meta) {
   const crumbs = `<nav class="crumbs" aria-label="Ruta">${meta.crumbs.map(([h, l]) => h ? `<a href="${h}">${escapeHtml(l)}</a>${ICONS.chevR}` : `<span aria-current="page">${escapeHtml(l)}</span>`).join('')}</nav>`;
   if (r.kind === 'all') return `${homeBackHTML()}${crumbs}${catalogHeadHTML()}`;
   if (r.kind === 'dept') return `${homeBackHTML()}${crumbs}${deptHeadHTML(r)}${quickNavHTML(r)}`;
-  if (r.kind === 'brand') return `${homeBackHTML()}${crumbs}${brandHeadHTML(r)}<div id="brandChips"></div>`;
+  if (r.kind === 'brand') return `${homeBackHTML()}${crumbs}${brandHeadHTML(r)}<h2 class="plp-title">Todos los productos de ${escapeHtml(r.brand)}</h2><div id="brandChips"></div>`;
   const colIcon = r.kind === 'col' ? `<span class="col-icon col-${r.col}">${iconSVG(COLLECTIONS[r.col].icon)}</span>` : '';
   return `${homeBackHTML()}${crumbs}
     <div class="page-title-row${colIcon ? ' has-icon' : ''}">${colIcon}<div>
@@ -1302,6 +1465,7 @@ function renderListing(full, keepScroll) {
               <button type="button" id="vmList" onclick="setViewMode('list')" aria-label="Ver en lista (pedido rápido)" title="Lista (pedido rápido)">${ICONS.list}</button>
             </div>
           </div>
+          <div class="quick-filters" id="quickFilters" role="group" aria-label="Filtros rápidos"></div>
           <div class="active-chips" id="activeFilters"></div>
           <div class="grid" id="grid"></div>
           <div class="load-more-wrap">
@@ -1320,6 +1484,10 @@ function renderListing(full, keepScroll) {
   ['minSel', 'minSelM'].forEach(id => { const s = document.getElementById(id); if (s) s.innerHTML = minStockOptionsHTML(); });
   const bc = document.getElementById('brandChips');
   if (bc) bc.innerHTML = brandChipsHTML(r);
+  const bs = document.getElementById('brandStats');
+  if (bs) bs.innerHTML = brandStatsHTML(r);
+  const qf = document.getElementById('quickFilters');
+  if (qf) qf.innerHTML = quickFiltersHTML();
   document.getElementById('facetGroups').innerHTML = facetGroupsHTML();
   document.getElementById('activeFilters').innerHTML = activeChipsHTML();
   document.getElementById('filtersCount').textContent = nFacets || '';

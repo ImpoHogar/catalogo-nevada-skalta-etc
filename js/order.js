@@ -223,7 +223,7 @@ function refreshDonePhotos() {
   if (!btn) return;
   btn.hidden = !donePhotosExpected;
   btn.disabled = !pendingPhotosZip;
-  btn.querySelector('span').textContent = pendingPhotosZip ? `Descargar fotos (${donePhotosExpected})` : 'Preparando fotos…';
+  btn.querySelector('span').textContent = pendingPhotosZip ? `Descargar imágenes (${donePhotosExpected})` : 'Preparando imágenes…';
 }
 function closeOrderDone() {
   document.getElementById('doneModal').classList.remove('open');

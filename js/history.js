@@ -51,23 +51,29 @@ function renderOrderHistory() {
   }
   list.innerHTML = history.map((order, idx) => {
     const units = order.totalUnits || order.items.reduce((s, it) => s + it.qty, 0);
+    let na = 0;
     const itemsHtml = order.items.map(it => {
       const p = PRODUCTS.find(x => x.code === it.code);
       const ok = p && !p.hidden && (parseInt(p.stock) || 0) > 0;
-      return `<div class="history-line${ok ? '' : ' is-na'}"><b>${it.qty}×</b><span>${escapeHtml(p ? prettyName(p) : it.name)}</span>${ok ? '' : '<em>No disponible</em>'}</div>`;
+      if (!ok) na++;
+      return `<div class="history-line${ok ? '' : ' is-na'}"><b>${it.qty}×</b><span>${escapeHtml(p ? prettyName(p) : it.name)}</span>${ok ? '' : `<em>${p && !p.hidden ? 'Agotado' : 'Ya no está'}</em>`}</div>`;
     }).join('');
+    // Estado: si hoy se puede repetir completo o cuantos productos faltan.
+    const estado = na
+      ? `<span class="history-state is-warn">${ICONS.warn}${na} ${na === 1 ? 'producto no disponible' : 'productos no disponibles'}</span>`
+      : `<span class="history-state is-ok">${ICONS.check}Todo disponible para repetir</span>`;
     return `
       <div class="history-item">
         <div class="history-top">
           <span class="history-ic">${ICONS.file}</span>
           <div class="history-head">
-            <div class="history-date">Pedido ${formatHistoryDate(order.date)}</div>
-            <div class="history-meta">${escapeHtml(order.name || 'Sin nombre')}${order.phone ? ' · ' + escapeHtml(order.phone) : ''}</div>
+            <div class="history-date">Pedido ${escapeHtml(new Date(order.date).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }))}</div>
+            <div class="history-meta">${escapeHtml(new Date(order.date).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }))} · ${escapeHtml(order.name || 'Sin nombre')}${order.phone ? ' · ' + escapeHtml(order.phone) : ''}</div>
           </div>
         </div>
-        <div class="history-stats"><span><b>${order.items.length.toLocaleString('es-CR')}</b> ${order.items.length === 1 ? 'producto' : 'productos'}</span><span><b>${units.toLocaleString('es-CR')}</b> ${units === 1 ? 'unidad' : 'unidades'}</span></div>
+        <div class="history-stats"><span><b>${order.items.length.toLocaleString('es-CR')}</b> ${order.items.length === 1 ? 'producto' : 'productos'}</span><span><b>${units.toLocaleString('es-CR')}</b> ${units === 1 ? 'unidad' : 'unidades'}</span>${estado}</div>
         <div class="history-actions">
-          <button type="button" class="btn btn-outline" onclick="toggleHistoryLines(this)" aria-expanded="false">${ICONS.eye}<span>Ver pedido</span></button>
+          <button type="button" class="btn btn-outline" onclick="toggleHistoryLines(this)" aria-expanded="false">${ICONS.eye}<span>Ver</span></button>
           <button type="button" class="btn btn-primary history-repeat" onclick="repeatOrder(${idx})">${ICONS.repeat}Repetir pedido</button>
         </div>
         <div class="history-lines" hidden>${itemsHtml}</div>
@@ -79,7 +85,7 @@ function toggleHistoryLines(btn) {
   const lines = btn.closest('.history-item').querySelector('.history-lines');
   lines.hidden = !lines.hidden;
   btn.setAttribute('aria-expanded', String(!lines.hidden));
-  btn.querySelector('span').textContent = lines.hidden ? 'Ver pedido' : 'Ocultar';
+  btn.querySelector('span').textContent = lines.hidden ? 'Ver' : 'Ocultar';
 }
 
 // ------------------------------------------------------------

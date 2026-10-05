@@ -154,9 +154,9 @@ su dirección (se puede usar el botón "atrás" del navegador y compartir el enl
 
 | Dirección | Qué muestra |
 |---|---|
-| `#/` | Inicio: "¿Qué quieres comprar hoy?", buscador, 4 grandes accesos, "¿Qué estás buscando?" (por necesidad), nuevos ingresos, oportunidades, compra por volumen, marcas y departamentos |
+| `#/` | Inicio: "¿Qué estás buscando?" (buscador) > Compra por departamento (5) > escaparates Nuevos ingresos, Oportunidades, Últimas unidades y Stock para volumen > compra por necesidad > marcas |
 | `#/todo` | Catálogo: buscador grande, comprar por categoría, filtros y orden |
-| `#/d/cuidado-personal` · `#/d/tecnologia` · `#/d/baterias` · `#/d/hogar` | Departamento (`#/d/belleza` sigue funcionando) |
+| `#/d/cuidado-personal` · `#/d/maquillaje` · `#/d/tecnologia` · `#/d/baterias` · `#/d/hogar` | Departamento (`#/d/belleza` sigue funcionando) |
 | `#/c/audio` · `#/c/audio/parlantes` | Categoría y subcategoría |
 | `#/marca/skala` · `#/marcas` | Página de una marca (con chips por tipo) / directorio con buscador |
 | `#/buscar/cargador tipo c` | Resultados de búsqueda |
@@ -165,7 +165,8 @@ su dirección (se puede usar el botón "atrás" del navegador y compartir el enl
 
 **Departamentos > categorías > subcategorías** (`js/taxonomy.js`):
 
-- **Cuidado personal:** Maquillaje · Skincare · Cuidado corporal · Cabello · Barbería.
+- **Cuidado personal:** Skincare · Cuidado corporal · Cabello · Barbería.
+- **Maquillaje:** bases y cushions, labios, ojos y cejas, mejillas, correctores y polvos.
 - **Tecnología:** Audio · Cables y adaptadores · Carga y energía · Computación
   y gaming · Smart y cámaras · Soportes y accesorios.
 - **Baterías:** Pilas AAA, AA, C, D, batería 9V, botón de litio, recargables.
@@ -176,6 +177,15 @@ tarjetas y orden de los filtros (cuidado personal: presentación, beneficio,
 subtono; tecnología: compatibilidad, conector, conectividad, potencia;
 baterías: tamaño, tipo, presentación, voltaje; hogar: capacidad, velocidades).
 Todo sale del nombre del producto: si un dato no está, no se muestra.
+
+**Escaparates del inicio:** Nuevos ingresos, Oportunidades, Últimas unidades
+y Stock para volumen, con pestañas por departamento (o por cantidad mínima en
+volumen) y tarjetas con "Agregar". Un escaparate sin productos no aparece.
+Las tarjetas llevan una línea de color según su estado principal (nuevo,
+oportunidad, pocas unidades, volumen).
+
+**Filtros rápidos:** Disponible, Nuevo, Oportunidad, Volumen y Últimas unidades,
+arriba de los productos. En celular el panel de filtros ocupa toda la pantalla.
 
 **Disponibilidad:** 🟢 Disponible · 🟡 Pocas unidades (12 o menos) · 🔴 Agotado,
 con la cantidad real de `stock.js` ("8 disponibles"; por encima de
@@ -209,9 +219,9 @@ contactar vendedor. La ficha tiene "Descargar foto" y "Consultar con vendedor".
   script de carga, y de `"nuevo":true` en products.js). Vacío = la sección no
   aparece en el inicio.
 - `OPORTUNIDADES`: códigos que ImpoHogar quiere impulsar (o `"oportunidad":true`
-  en products.js). Con `OPORTUNIDADES_AUTO = true` y la lista vacía se muestran
+  en products.js). Cada uno puede llevar una nota: `{ codigo: "…", nota: "…" }`. Con `OPORTUNIDADES_AUTO = true` y la lista vacía se muestran
   los productos con más unidades de cada categoría.
-- `STOCK_VOLUMEN`, `VOLUMEN_NIVELES` (5+, 10+, 25+, 50+, 100+),
+- `STOCK_VOLUMEN`, `VOLUMEN_NIVELES` (5+, 10+, 25+, 50+),
   `VOLUMEN_NIVEL_INICIAL`, `STOCK_TOPE_VISIBLE`.
 - `NECESIDADES`: accesos de "¿Qué estás buscando?".
 - `MARCAS_INFO`: logo (en `img/marcas/`) y descripción de cada marca. Sin logo
@@ -237,8 +247,8 @@ tono por departamento (cuidado personal rosa, tecnología azul, baterías verde
 azulado, hogar ámbar). Tarjetas sin bordes, con la foto como
 protagonista; en tecnología muestran datos técnicos (conector, potencia) y en
 belleza tono y tamaño. Tipografía Plus Jakarta Sans + Inter. Modo claro y
-oscuro. En celular: barra inferior (Inicio, Catálogo, Buscar, Calculadora,
-Mi pedido), menú lateral, buscador a pantalla completa y filtros en panel.
+oscuro. En celular: barra inferior (Inicio, Catálogo, Marcas, Calculadora,
+Mi pedido), buscador fijo arriba, barra fija para agregar en la ficha, menú lateral, buscador a pantalla completa y filtros en panel.
 
 ## Al compartir el enlace
 
