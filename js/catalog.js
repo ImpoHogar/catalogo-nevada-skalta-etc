@@ -188,6 +188,11 @@ function router() {
 
 function goHome() { navigate('#/'); }
 
+// Boton grande para volver al inicio (arriba y al final de cada seccion).
+function homeBackHTML(extra) {
+  return `<a class="home-back${extra ? ' ' + extra : ''}" href="#/">${ICONS.home2}<span>Volver a la página principal</span></a>`;
+}
+
 // Compatibilidad con llamadas anteriores
 function selectBrand(b) { navigate(brandHash(b)); }
 function selectCategoria(cat) { navigate('#/todo'); }
@@ -496,11 +501,16 @@ function renderHero() {
   const cta = useNew ? 'Ver nuevos ingresos' : (cfg.boton || 'Explorar el catálogo');
   const dest = useNew ? '#/col/nuevos' : (cfg.destino || '#/todo');
 
-  const ultimas = collectionCount('ultimas');
-  const volumen = collectionCount('volumen');
-  const promo2 = collectionActive('mas-vendidos')
-    ? { href: '#/col/mas-vendidos', icon: 'flame', k: 'Alta rotación', t: 'Más vendidos', d: 'Lo que más piden nuestros clientes.' }
-    : { href: '#/col/volumen', icon: 'box', k: `${volumen.toLocaleString('es-CR')} productos`, t: 'Stock para volumen', d: `Más de ${VOLUMEN_MIN.toLocaleString('es-CR')} unidades disponibles.` };
+  const ultimasList = VISIBLE_PRODUCTS.filter(COLLECTIONS.ultimas.filter);
+  const volList = VISIBLE_PRODUCTS.filter(COLLECTIONS.volumen.filter);
+  const masList = VISIBLE_PRODUCTS.filter(isBestSeller);
+  const promos = [];
+  if (ultimasList.length) promos.push({ cls: 'promo-low', href: '#/col/ultimas', icon: 'clock', title: 'Últimas unidades', sub: 'Quedan pocas: asegúralas hoy.', n: ultimasList.length,
+    items: mixedPick(deptsWithProducts().map(d => topWithPhoto(ultimasList.filter(p => p.dept === d.id && p.img), 5)), 14) });
+  if (masList.length) promos.push({ cls: 'promo-alt', href: '#/col/mas-vendidos', icon: 'flame', title: 'Más vendidos', sub: 'Lo que más piden nuestros clientes.', n: masList.length,
+    items: masList.filter(p => p.img).sort((x, y) => MAS_VENDIDOS_RANK[x.code] - MAS_VENDIDOS_RANK[y.code]).slice(0, 14) });
+  else if (volList.length) promos.push({ cls: 'promo-alt', href: '#/col/volumen', icon: 'box', title: 'Stock para volumen', sub: `Más de ${VOLUMEN_MIN.toLocaleString('es-CR')} unidades de cada uno.`, n: volList.length,
+    items: mixedPick(deptsWithProducts().map(d => volList.filter(p => p.dept === d.id && p.img).sort((x, y) => stockNum(y) - stockNum(x)).slice(0, 5)), 14) });
 
   el.innerHTML = `
     <a class="hero-main" href="${escapeHtml(dest)}">
@@ -512,15 +522,32 @@ function renderHero() {
       </div>
       <div class="hero-pics" aria-hidden="true">${pics.slice(0, 4).map((p, i) => `<span class="hero-pic hp-${i}"><img src="${productImgSrc(p)}" alt="" ${i < 2 ? 'fetchpriority="high"' : 'loading="lazy"'}></span>`).join('')}</div>
     </a>
-    <div class="hero-side">
-      ${ultimas ? `<a class="hero-promo promo-low" href="#/col/ultimas">
-        <span class="hp-k">${ICONS.clock}${ultimas.toLocaleString('es-CR')} productos</span>
-        <b>Últimas unidades</b><span class="hp-d">Quedan pocas: asegúralas hoy.</span><span class="hp-go">Ver ${ICONS.arrow}</span>
-      </a>` : ''}
-      <a class="hero-promo promo-alt" href="${promo2.href}">
-        <span class="hp-k">${iconSVG(promo2.icon)}${escapeHtml(promo2.k)}</span>
-        <b>${escapeHtml(promo2.t)}</b><span class="hp-d">${escapeHtml(promo2.d)}</span><span class="hp-go">Ver ${ICONS.arrow}</span>
+    <div class="hero-side">${promos.map(promoCarouselHTML).join('')}</div>`;
+}
+
+// Tarjeta lateral del banner con un carrusel de sus productos (se mueve
+// solo, se detiene al pasar el mouse y se puede deslizar con el dedo).
+function promoCarouselHTML(pr) {
+  const item = p => {
+    const lvl = stockLevel(p);
+    return `<a class="pm-item" href="#/p/${p.id}" title="${escapeHtml(prettyName(p))}">
+      <span class="pm-pic"><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>
+      <span class="pm-name">${escapeHtml(prettyName(p))}</span>
+      <span class="pm-stock is-${lvl.key}">${escapeHtml(lvl.short)}</span>
+    </a>`;
+  };
+  const list = pr.items.map(item).join('');
+  return `
+    <div class="hero-promo ${pr.cls}">
+      <a class="pm-head" href="${pr.href}">
+        <span class="hp-k">${iconSVG(pr.icon)}${pr.n.toLocaleString('es-CR')} productos</span>
+        <b>${escapeHtml(pr.title)}</b>
+        <span class="hp-d">${escapeHtml(pr.sub)}</span>
       </a>
+      <div class="pm-viewport">
+        <div class="pm-track" style="--pm-dur:${Math.max(24, pr.items.length * 3.2)}s">${list}<span class="pm-dup" aria-hidden="true">${list}</span></div>
+      </div>
+      <a class="hp-go" href="${pr.href}">Ver los ${pr.n.toLocaleString('es-CR')} ${ICONS.arrow}</a>
     </div>`;
 }
 
@@ -672,6 +699,7 @@ function renderBrandsDirectory() {
   const list = (brandsDeptFilter ? all.filter(b => b.depts[brandsDeptFilter]) : all).slice().sort((a, b) => a.name.localeCompare(b.name, 'es'));
   el.innerHTML = `
     <div class="page-head">
+      ${homeBackHTML()}
       <nav class="crumbs" aria-label="Ruta"><a href="#/">Inicio</a>${ICONS.chevR}<span>Marcas</span></nav>
       <h1 class="page-title">Nuestras marcas</h1>
       <p class="page-sub">${all.length} marcas con todo su surtido disponible. Entra a una marca para ver todos sus productos.</p>
@@ -680,7 +708,8 @@ function renderBrandsDirectory() {
         ${deptsWithProducts().map(d => `<button type="button" class="fchip${brandsDeptFilter === d.id ? ' on' : ''}" onclick="brandsDeptFilter='${d.id}';renderBrandsDirectory()">${escapeHtml(d.name)}</button>`).join('')}
       </div>
     </div>
-    <div class="brand-dir">${list.map(brandTileHTML).join('')}</div>`;
+    <div class="brand-dir">${list.map(brandTileHTML).join('')}</div>
+    <div class="home-back-end">${homeBackHTML('is-outline')}</div>`;
 }
 
 // ============================================================
@@ -947,6 +976,7 @@ function renderListing(full, keepScroll) {
   if (full) {
     sec.innerHTML = `
       <div class="page-head">
+        ${homeBackHTML()}
         <nav class="crumbs" aria-label="Ruta">${meta.crumbs.map(([h, l], i) => h ? `<a href="${h}">${escapeHtml(l)}</a>${ICONS.chevR}` : `<span aria-current="page">${escapeHtml(l)}</span>`).join('')}</nav>
         ${meta.eyebrow ? `<span class="page-eyebrow">${escapeHtml(meta.eyebrow)}</span>` : ''}
         <h1 class="page-title">${escapeHtml(meta.title)}</h1>
@@ -978,6 +1008,7 @@ function renderListing(full, keepScroll) {
             <button id="loadMoreBtn" type="button" class="btn btn-outline load-more-btn" onclick="renderPage(false)">Cargar más</button>
             <div id="loadSentinel" aria-hidden="true"></div>
           </div>
+          <div class="home-back-end">${homeBackHTML('is-outline')}</div>
         </div>
       </div>`;
     observeSentinel();
