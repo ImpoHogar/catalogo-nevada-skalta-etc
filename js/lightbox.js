@@ -131,7 +131,8 @@ function renderProductPage(pid) {
   el.innerHTML = `
     <div class="pdp tone-${tone}">
       <div class="pdp-top">
-        <button type="button" class="pdp-back" onclick="closeLightbox()">${ICONS.chevL}Volver</button>
+        ${homeBackHTML()}
+        <button type="button" class="pdp-back" onclick="closeLightbox()">${ICONS.chevL}Volver atrás</button>
         <nav class="crumbs" aria-label="Ruta">${crumbs.map(([h, l]) => `<a href="${h}">${escapeHtml(l)}</a>${ICONS.chevR}`).join('')}<span aria-current="page">${escapeHtml(prettyName(p))}</span></nav>
       </div>
       <div class="pdp-grid">
@@ -170,6 +171,7 @@ function renderProductPage(pid) {
         ${railHTML(similarProducts(p, 16), { title: `Similares en ${p.tipo !== 'Otros' ? p.tipo : catName(p.cat)}`, sub: 'Otras opciones del mismo tipo de producto.', more: c ? '#/c/' + c.id + (p.tipo !== 'Otros' ? '/' + slugify(p.tipo) : '') : '' })}
         ${railHTML(sameBrandProducts(p, 16), { title: `Más de ${p.brand}`, more: brandHash(p.brand), moreLabel: `Ver los ${brandCount}` })}
       </div>
+      <div class="home-back-end">${homeBackHTML('is-outline')}</div>
     </div>`;
   bindZoom();
   document.title = `${prettyName(p)} · ${p.brand} · ImpoHogar Market`;
