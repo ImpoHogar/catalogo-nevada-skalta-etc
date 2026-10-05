@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20261008a">
+<link rel="stylesheet" href="css/styles.css?v=20261012a">
 </head>
 <body>
 <noscript>
@@ -186,9 +186,9 @@
     <section class="home-sec" aria-labelledby="needsTitle">
       <div class="sec-head">
         <div>
-          <span class="sec-eyebrow">Compra por necesidad</span>
-          <h2 class="sec-title" id="needsTitle">¿No conoces nuestras marcas?</h2>
-          <p class="sec-sub">Empieza por lo que necesitas.</p>
+          <span class="sec-eyebrow">Atajos</span>
+          <h2 class="sec-title" id="needsTitle">Compra por necesidad</h2>
+          <p class="sec-sub">¿No conoces nuestras marcas? Empieza por lo que necesitas.</p>
         </div>
       </div>
       <div class="needs" id="homeNeeds"></div>
@@ -300,10 +300,15 @@
     <h3 class="done-title" id="doneTitle">Pedido generado</h3>
     <p class="done-ok">✓ Pedido preparado correctamente.</p>
     <div class="done-summary" id="doneSummary"></div>
-    <p class="thanks-note">El Excel ya se descargó en tu dispositivo. Envíaselo a tu vendedor por WhatsApp para que te confirme el pedido.</p>
+    <!-- Lo que ya paso y lo que falta: el cliente nunca tiene que adivinar -->
+    <ol class="done-steps">
+      <li class="is-done"><span class="ds-n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="ds-tx"><b>Productos y cantidades listos</b><small id="doneStepSum">Con tus productos y cantidades</small></span></li>
+      <li class="is-done"><span class="ds-n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="ds-tx"><b>Excel descargado</b><small id="doneFile">Revisa tus descargas</small></span><button class="ds-link" type="button" onclick="downloadLastExcel()">Descargar de nuevo</button></li>
+      <li class="is-next"><span class="ds-n">3</span><span class="ds-tx"><b>Envíalo a tu vendedor por WhatsApp</b><small>Eliges a tu vendedor y adjuntas el Excel en el chat.</small></span></li>
+    </ol>
     <div class="done-actions">
+      <button class="thanks-btn btn-wa done-wa" type="button" onclick="doneSendWhatsApp()"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-fill"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>Enviar por WhatsApp</button>
       <button class="thanks-btn thanks-btn-ghost" type="button" onclick="downloadLastExcel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg>Descargar Excel</button>
-      <button class="thanks-btn btn-wa" type="button" onclick="doneSendWhatsApp()"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-fill"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>Enviar por WhatsApp</button>
       <button class="thanks-btn thanks-btn-ghost" type="button" id="donePhotosBtn" onclick="downloadPendingPhotosZip()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.5-2.5h7L17 8.5h3V19H4z"/><circle cx="12" cy="13.3" r="3.3"/></svg><span>Descargar imágenes</span></button>
       <button class="thanks-btn thanks-btn-text" type="button" onclick="doneKeepShopping()">Seguir comprando</button>
     </div>
@@ -464,24 +469,24 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
-<script defer src="js/config.js?v=20261008a"></script>
-<script defer src="js/products.js?v=20261008a"></script>
-<script defer src="js/stock.js?v=20261008a"></script>
-<script defer src="js/data.js?v=20261008a"></script>
-<script defer src="js/utils.js?v=20261008a"></script>
-<script defer src="js/ui.js?v=20261008a"></script>
-<script defer src="js/taxonomy.js?v=20261008a"></script>
-<script defer src="js/relacionados.js?v=20261008a"></script>
-<script defer src="js/catalog.js?v=20261008a"></script>
-<script defer src="js/cart.js?v=20261008a"></script>
-<script defer src="js/theme.js?v=20261008a"></script>
-<script defer src="js/order.js?v=20261008a"></script>
-<script defer src="js/history.js?v=20261008a"></script>
-<script defer src="js/calculator.js?v=20261008a"></script>
-<script defer src="js/lightbox.js?v=20261008a"></script>
-<script defer src="js/showcase.js?v=20261008a"></script>
-<script defer src="js/gate.js?v=20261008a"></script>
-<script defer src="js/feedback.js?v=20261008a"></script>
-<script defer src="js/main.js?v=20261008a"></script>
+<script defer src="js/config.js?v=20261012a"></script>
+<script defer src="js/products.js?v=20261012a"></script>
+<script defer src="js/stock.js?v=20261012a"></script>
+<script defer src="js/data.js?v=20261012a"></script>
+<script defer src="js/utils.js?v=20261012a"></script>
+<script defer src="js/ui.js?v=20261012a"></script>
+<script defer src="js/taxonomy.js?v=20261012a"></script>
+<script defer src="js/relacionados.js?v=20261012a"></script>
+<script defer src="js/catalog.js?v=20261012a"></script>
+<script defer src="js/cart.js?v=20261012a"></script>
+<script defer src="js/theme.js?v=20261012a"></script>
+<script defer src="js/order.js?v=20261012a"></script>
+<script defer src="js/history.js?v=20261012a"></script>
+<script defer src="js/calculator.js?v=20261012a"></script>
+<script defer src="js/lightbox.js?v=20261012a"></script>
+<script defer src="js/showcase.js?v=20261012a"></script>
+<script defer src="js/gate.js?v=20261012a"></script>
+<script defer src="js/feedback.js?v=20261012a"></script>
+<script defer src="js/main.js?v=20261012a"></script>
 </body>
 </html>

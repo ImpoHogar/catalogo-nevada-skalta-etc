@@ -77,6 +77,44 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (err) {
     console.error(err);
     const main = document.getElementById('homeView');
-    if (main) main.insertAdjacentHTML('afterbegin', `<p style="padding:24px;color:#B42318">Error cargando catálogo: ${escapeHtml(err.message)}</p>`);
+    // Mensaje claro para el cliente (el detalle tecnico queda en la consola).
+    if (main) main.insertAdjacentHTML('afterbegin', `
+      <div class="load-error" role="alert">
+        <b>No pudimos cargar el catálogo</b>
+        <span>Revisa tu conexión a internet y vuelve a intentarlo. Si sigue pasando, escríbenos por WhatsApp.</span>
+        <div><button type="button" class="btn btn-primary" onclick="location.reload()">Volver a cargar</button>
+        <a class="btn btn-outline" href="https://wa.me/50684116868" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>
+      </div>`);
   }
 });
+
+// ============================================================
+//  ACCESIBILIDAD DE LAS VENTANAS
+// ============================================================
+//  Al abrir una ventana (pedido, confirmacion, historial, calculadora...)
+//  el foco entra en ella; al cerrarla vuelve al boton que la abrio. Asi
+//  se puede usar todo con teclado o lector de pantalla.
+(function initModalFocus() {
+  if (!('MutationObserver' in window)) return;
+  const obs = new MutationObserver(ms => ms.forEach(m => {
+    const el = m.target;
+    const open = el.classList.contains('open');
+    if (open && !el._wasOpen) {
+      el._wasOpen = true;
+      el._opener = document.activeElement;
+      setTimeout(() => {
+        if (el.contains(document.activeElement)) return;
+        // En celular no se abre el teclado solo: tapa el resumen.
+        const empty = window.matchMedia('(hover: hover)').matches && Array.from(el.querySelectorAll('input.field-input')).find(i => !i.value);
+        const target = empty || el.querySelector('.icon-btn, button:not([disabled])');
+        if (target) target.focus({ preventScroll: true });
+      }, 80);
+    } else if (!open && el._wasOpen) {
+      el._wasOpen = false;
+      const o = el._opener;
+      el._opener = null;
+      if (o && o !== document.body && document.contains(o) && !document.querySelector('.order-modal.open, .thanks-modal.open')) o.focus({ preventScroll: true });
+    }
+  }));
+  document.querySelectorAll('.order-modal, .thanks-modal').forEach(m => obs.observe(m, { attributes: true, attributeFilter: ['class'] }));
+})();

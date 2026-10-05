@@ -214,6 +214,10 @@ function showOrderDone(nPhotos) {
   const s = lastOrderSummary;
   document.getElementById('doneSummary').innerHTML =
     `<span><b>${s.totalProducts.toLocaleString('es-CR')}</b> ${s.totalProducts === 1 ? 'producto' : 'productos'}</span><span><b>${s.totalUnits.toLocaleString('es-CR')}</b> ${s.totalUnits === 1 ? 'unidad' : 'unidades'}</span>`;
+  const sum = document.getElementById('doneStepSum');
+  if (sum) sum.textContent = `${plural(s.totalProducts, 'producto', 'productos')} · ${plural(s.totalUnits, 'unidad', 'unidades')}${s.name ? ' · ' + s.name : ''}`;
+  const file = document.getElementById('doneFile');
+  if (file && lastExcel) file.textContent = lastExcel.filename;
   refreshDonePhotos();
   closeOrderReview();
   document.getElementById('doneModal').classList.add('open');
@@ -331,8 +335,8 @@ function openSellerModal(mode, pid) {
     t.textContent = 'Contacta a tu vendedor';
     n.textContent = 'Toca a tu vendedor para escribirle por WhatsApp.';
   } else {
-    t.textContent = 'Elige tu vendedor para enviarle tu pedido por WhatsApp';
-    n.textContent = 'Se abrirá un chat de WhatsApp con el mensaje listo: solo adjunta ahí el Excel que se acaba de descargar.';
+    t.textContent = 'Último paso: elige tu vendedor';
+    n.innerHTML = `Se abrirá WhatsApp con el mensaje listo. Ahí adjunta el Excel${lastExcel ? ` <b>${escapeHtml(lastExcel.filename)}</b>` : ''} que se descargó en tu dispositivo.`;
   }
   renderSellers();
   document.getElementById('sellerModal').classList.add('open');
@@ -361,4 +365,5 @@ function sendToSeller(key) {
   try { localStorage.setItem(SELLER_KEY, key); } catch (e) {}
   window.open(url, '_blank');
   closeSellerModal();
+  if (sellerMode === 'pedido') notify(`✓ WhatsApp abierto con ${seller.name.split(' ')[0]}. Adjunta el Excel en el chat.`);
 }

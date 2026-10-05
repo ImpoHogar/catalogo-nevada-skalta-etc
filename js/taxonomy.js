@@ -463,3 +463,65 @@ function searchScore(p, tokens) {
   if (p.img) score += 3;
   return score;
 }
+
+// ------------------------------------------------------------
+//  Correccion de escritura
+// ------------------------------------------------------------
+// Si una palabra no aparece en ningun producto se busca la palabra del
+// catalogo mas parecida: 1 letra de diferencia (2 en palabras largas).
+// Ej. "skalla" -> "skala", "audifnos" -> "audifonos", "licudora" ->
+// "licuadora". Solo se usa cuando la busqueda no encuentra nada.
+let _searchVocab = null;
+function searchVocab() {
+  if (_searchVocab) return _searchVocab;
+  const freq = {};
+  VISIBLE_PRODUCTS.forEach(p => productHaystack(p).split(' ').forEach(w => {
+    if (w.length >= 3 && !/\d/.test(w)) freq[w] = (freq[w] || 0) + 1;
+  }));
+  return (_searchVocab = freq);
+}
+// Distancia entre dos palabras (cambios, letras de mas o de menos y dos
+// letras al reves). Se corta en cuanto supera "max".
+function editDistance(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev2 = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2] + 1);
+      cur.push(v);
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+    prev2 = prev; prev = cur;
+  }
+  return prev[b.length];
+}
+function tokenHasHits(t) { return VISIBLE_PRODUCTS.some(p => searchScore(p, [t]) > 0); }
+function correctToken(t) {
+  if (t.length < 4 || /\d/.test(t)) return t;
+  const vocab = searchVocab();
+  const max = t.length >= 7 ? 2 : 1;
+  let best = '', bestD = max + 1, bestF = 0;
+  for (const w in vocab) {
+    const d = editDistance(t, w, max);
+    if (d < bestD || (d === bestD && d <= max && vocab[w] > bestF)) { best = w; bestD = d; bestF = vocab[w]; }
+  }
+  return bestD <= max ? best : t;
+}
+// Devuelve la busqueda corregida (solo si encuentra productos) o ''.
+function correctedQuery(q) {
+  const tokens = queryTokensOf(q);
+  if (!tokens.length) return '';
+  const fixed = tokens.map(t => tokenHasHits(t) ? t : correctToken(t));
+  if (fixed.every((t, i) => t === tokens[i])) return '';
+  if (!VISIBLE_PRODUCTS.some(p => searchScore(p, fixed) > 0)) return '';
+  // Se corrige sobre lo que escribio el cliente ("cargadr tipo c" ->
+  // "cargador tipo c"), no sobre la forma interna.
+  let out = normText(q).trim();
+  tokens.forEach((t, i) => { if (fixed[i] !== t) out = out.replace(new RegExp('\\b' + t + '\\b'), fixed[i]); });
+  return out;
+}

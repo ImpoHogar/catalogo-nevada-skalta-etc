@@ -46,7 +46,8 @@ function renderOrderHistory() {
   const list = document.getElementById('historyList');
   const history = getOrderHistory();
   if (history.length === 0) {
-    list.innerHTML = `<div class="order-empty">${ICONS.clock}<b>Todavía no has generado ningún pedido</b>Cuando generes uno, va a quedar guardado aquí para verlo o repetirlo.</div>`;
+    list.innerHTML = `<div class="order-empty">${ICONS.clock}<b>Todavía no has generado ningún pedido</b>Cuando generes uno, va a quedar guardado aquí para verlo o repetirlo con un toque.
+      <div class="oe-actions"><a class="btn btn-primary" href="#/todo" onclick="closeOrderHistory()">Ir al catálogo</a></div></div>`;
     return;
   }
   list.innerHTML = history.map((order, idx) => {
@@ -110,6 +111,7 @@ function repeatOrder(idx) {
   document.getElementById('repeatBody').innerHTML = `
     <p class="form-intro">Pedido del ${escapeHtml(formatHistoryDate(order.date))}</p>
     <div class="confirm-stats"><div><b>${ok.length.toLocaleString('es-CR')}</b><span>${ok.length === 1 ? 'producto' : 'productos'} para agregar</span></div><div><b>${units.toLocaleString('es-CR')}</b><span>unidades</span></div></div>
+    ${ok.length ? `<div class="repeat-list" aria-label="Productos que se van a agregar">${ok.map(x => `<div class="repeat-line"><img src="${productImgSrc(x.p)}" alt="" loading="lazy"><span><b>${escapeHtml(prettyName(x.p))}</b><small>${escapeHtml(x.p.brand)} · ${escapeHtml(x.p.code)}</small></span><em>${x.qty.toLocaleString('es-CR')} uds</em></div>`).join('')}</div>` : ''}
     ${Object.keys(qtyMap).length ? '<p class="repeat-note">Tu pedido actual ya tiene productos: las cantidades se suman.</p>' : ''}
     ${na.length ? `<div class="order-alert">${ICONS.warn}<span><b>${na.length} ${na.length === 1 ? 'producto no se puede agregar' : 'productos no se pueden agregar'}</b> (se agregan los demás):
       <ul class="repeat-na">${na.map(x => `<li>${escapeHtml(x.name)} <em>${escapeHtml(x.why)}</em></li>`).join('')}</ul></span></div>` : ''}`;

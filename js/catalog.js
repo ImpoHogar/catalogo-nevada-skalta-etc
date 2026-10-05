@@ -436,10 +436,12 @@ function updateMobileTabs() {
 // ============================================================
 //  TARJETAS
 // ============================================================
+// Una sola etiqueta por tarjeta (la mas importante: Nuevo > Oportunidad >
+// Ultimas unidades > Volumen). Agotado manda sobre todas.
 function cardBadges(p) {
-  const out = productFlags(p).slice(0, 2).map(f => `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.badge}</span>`);
-  if (stockLevel(p).key === 'out') out.unshift('<span class="badge badge-out">Agotado</span>');
-  return out.slice(0, 2).join('');
+  if (stockLevel(p).key === 'out') return '<span class="badge badge-out">Agotado</span>';
+  const f = productFlags(p)[0];
+  return f ? `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.badge}</span>` : '';
 }
 
 // Datos clave de la tarjeta segun el departamento: cada uno muestra lo
@@ -463,8 +465,12 @@ function sizeOf(p) {
   return m ? m[1].replace(',', '.') + ' ' + m[2].toLowerCase().replace('gr', 'g') : '';
 }
 
+// Disponibilidad corta: "+100 disponibles", "Quedan 8" o "Agotado"
+// (la palabra "Disponible" ya la dice la cantidad).
 function availHTML(p, cls) {
   const lvl = stockLevel(p);
+  if (lvl.key === 'ok') return `<span class="${cls || 'pc-stock'} is-ok"><i></i><b>${escapeHtml(lvl.qty)}</b></span>`;
+  if (lvl.key === 'low') return `<span class="${cls || 'pc-stock'} is-low" title="Pocas unidades"><i></i><b>${escapeHtml(lvl.short)}</b></span>`;
   return `<span class="${cls || 'pc-stock'} is-${lvl.key}"><i></i><b>${lvl.label}</b>${lvl.qty ? `<span>${escapeHtml(lvl.qty)}</span>` : ''}</span>`;
 }
 
@@ -513,7 +519,7 @@ function cardHTML(p) {
         <div class="pc-meta"><span class="pc-type">${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span>${specs.map(s => `<span class="pc-spec">${escapeHtml(s)}</span>`).join('')}</div>
         <div class="pc-code" title="Código de barras">Código: <b>${escapeHtml(p.code)}</b></div>
         ${availHTML(p)}
-        ${isVolume(p) ? `<span class="pc-vol">${ICONS.box}Disponible para volumen</span>` : ''}
+        ${isVolume(p) && flag !== 'vol' ? `<span class="pc-vol">${ICONS.box}Disponible para volumen</span>` : ''}
         ${OPORT_NOTE[p.id] ? `<span class="pc-note">${ICONS.flame}${escapeHtml(OPORT_NOTE[p.id])}</span>` : ''}
         ${typeof dupePanelHTML === 'function' ? dupePanelHTML(p.id) : ''}
         <div class="pc-action">${qtyControlHTML(p, true)}</div>
@@ -988,9 +994,15 @@ function scopeOf(r) {
     case 'brand': return VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
     case 'col': return VISIBLE_PRODUCTS.filter(COLLECTIONS[r.col].filter);
     case 'search': {
-      const t = queryTokensOf(r.q);
-      VISIBLE_PRODUCTS.forEach(p => { p._score = searchScore(p, t); });
-      return VISIBLE_PRODUCTS.filter(p => p._score > 0);
+      // Si no hay nada, se intenta con la escritura corregida.
+      listingState.corrected = '';
+      const run = q => { const t = queryTokensOf(q); VISIBLE_PRODUCTS.forEach(p => { p._score = searchScore(p, t); }); return VISIBLE_PRODUCTS.filter(p => p._score > 0); };
+      let list = run(r.q);
+      if (!list.length) {
+        const fixed = correctedQuery(r.q);
+        if (fixed) { listingState.corrected = fixed; list = run(fixed); }
+      }
+      return list;
     }
     default: return VISIBLE_PRODUCTS.slice();
   }
@@ -1150,6 +1162,8 @@ function listingMeta(r) {
     crumbs.push(['', c.title]); title = c.title; sub = c.sub; eyebrow = c.eyebrow;
   } else if (r.kind === 'search') {
     crumbs.push(['', 'Búsqueda']); title = `“${r.q}”`; sub = 'Resultados por nombre, marca, código, categoría y palabras relacionadas.'; eyebrow = 'Resultados de búsqueda';
+    if (r === currentRoute && !currentScope().length) sub = 'No hay productos con esa búsqueda, pero te ayudamos a encontrar lo que necesitas.';
+    if (listingState.corrected) { title = `“${listingState.corrected}”`; sub = `No encontramos “${r.q}”: te mostramos los resultados para “${listingState.corrected}”.`; }
   } else {
     crumbs.push(['', 'Catálogo']);
   }
@@ -1422,7 +1436,7 @@ function listingHeadHTML(r, meta) {
     <div class="page-title-row${colIcon ? ' has-icon' : ''}">${colIcon}<div>
       ${meta.eyebrow ? `<span class="page-eyebrow">${escapeHtml(meta.eyebrow)}</span>` : ''}
       <h1 class="page-title">${escapeHtml(meta.title)}</h1>
-      <p class="page-sub">${escapeHtml(meta.sub)}</p>
+      <p class="page-sub${r.kind === 'search' && listingState.corrected ? ' is-fix' : ''}">${escapeHtml(meta.sub)}</p>
     </div></div>
     ${r.kind === 'col' && r.col === 'volumen' ? volumeHeadHTML() : ''}
     ${r.kind === 'col' && r.col === 'oportunidades' && OPORT_IS_AUTO ? '<p class="page-note">Productos con la mayor disponibilidad en bodega de cada categoría.</p>' : ''}
@@ -1434,14 +1448,15 @@ function renderListing(full, keepScroll) {
   const sec = document.getElementById('catalogo');
   if (!sec || r.view !== 'listing') return;
   if (full) scopeCache.key = '';
+  const scopeList = currentScope();
   const meta = listingMeta(r);
   filteredProducts = computeFiltered();
   const total = filteredProducts.length;
   const sorts = SORT_OPTIONS.filter(o => o[2](r));
   const nFacets = Object.values(listingState.facets).reduce((s, x) => s + x.size, 0) + (listingState.minStock && !(r.kind === 'col' && r.col === 'volumen') ? 1 : 0);
-  const scopeN = currentScope().length;
+  const scopeN = scopeList.length;
 
-  sec.className = 'listing' + (meta.tone ? ' tone-' + meta.tone : '');
+  sec.className = 'listing' + (meta.tone ? ' tone-' + meta.tone : '') + (scopeN ? '' : ' is-empty-scope');
   if (full) {
     sec.innerHTML = `
       <div class="page-head">${listingHeadHTML(r, meta)}</div>
@@ -1526,8 +1541,30 @@ function groupHeadersHTML(p) {
   return html;
 }
 
+// Busqueda sin resultados: ayuda a seguir (escritura, palabras sueltas,
+// marcas y departamentos), nunca un simple "no hay resultados".
+function searchEmptyHTML(q) {
+  const tokens = queryTokensOf(q);
+  const parts = tokens.length > 1 ? tokens.map(t => ({ t, n: VISIBLE_PRODUCTS.filter(p => searchScore(p, [t]) > 0).length })).filter(x => x.n) : [];
+  const brands = featuredBrands().slice(0, 10);
+  return `
+    <div class="empty-state empty-search">
+      <div class="empty-icon">${ICONS.search}</div>
+      <div class="empty-state-title">No encontramos “${escapeHtml(q)}”</div>
+      <ul class="empty-tips">
+        <li>Revisa cómo está escrito o usa menos palabras.</li>
+        <li>Busca por marca, tipo de producto (ej. “cargador”) o código de barras.</li>
+      </ul>
+      ${parts.length ? `<div class="empty-block"><span>Prueba con una sola palabra</span><div class="empty-chips">${parts.map(x => `<button type="button" class="fchip" data-q="${escapeHtml(x.t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(x.t)}<small>${fmt(x.n)}</small></button>`).join('')}</div></div>` : ''}
+      <div class="empty-block"><span>Buscar por marca</span><div class="empty-chips">${brands.map(b => `<a class="fchip" href="${brandHash(b.name)}">${escapeHtml(b.name)}<small>${fmt(b.count)}</small></a>`).join('')}<a class="fchip fchip-more" href="#/marcas">Todas las marcas ${ICONS.arrow}</a></div></div>
+      <div class="empty-block"><span>Explorar departamentos</span><div class="empty-chips">${deptsWithProducts().map(d => `<a class="fchip tone-${d.tone}" href="#/d/${d.id}">${iconSVG(d.icon)}${escapeHtml(d.name)}</a>`).join('')}</div></div>
+      <div class="empty-actions"><a class="btn btn-primary" href="#/todo">Ver todo el catálogo</a></div>
+    </div>`;
+}
+
 function emptyListingHTML() {
   const r = currentRoute;
+  if (r.kind === 'search' && !currentScope().length) return searchEmptyHTML(r.q);
   const col = r.kind === 'col' ? COLLECTIONS[r.col] : null;
   const filtered = Object.keys(listingState.facets).length || (listingState.minStock && !(col && r.col === 'volumen'));
   let text = 'Ningún producto cumple todos los filtros elegidos.';
@@ -1655,7 +1692,7 @@ function renderSearchResults(ctx) {
   const box = ctx.box, input = ctx.input;
   if (!box || !input) return;
   const q = input.value.trim();
-  const tokens = queryTokensOf(q);
+  let tokens = queryTokensOf(q);
   searchActiveIndex = -1;
   const run = `runSearch(this.dataset.q, '${ctx.id}')`;
   if (!q) {
@@ -1671,7 +1708,11 @@ function renderSearchResults(ctx) {
     openSearchResults(ctx);
     return;
   }
-  const matches = VISIBLE_PRODUCTS.map(p => [searchScore(p, tokens), p]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0] || rankScore(b[1]) - rankScore(a[1])).map(x => x[1]);
+  const findAll = tk => VISIBLE_PRODUCTS.map(p => [searchScore(p, tk), p]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0] || rankScore(b[1]) - rankScore(a[1])).map(x => x[1]);
+  let matches = findAll(tokens);
+  // Error de escritura: se muestran los resultados de la palabra corregida.
+  const fixed = !matches.length && q.length >= 4 ? correctedQuery(q) : '';
+  if (fixed) { tokens = queryTokensOf(fixed); matches = findAll(tokens); }
   const brandHits = BRANDS.filter(b => tokens.length && tokens.every(t => normText(b).includes(t) || normText(b).replace(/\s/g, '').includes(t))).slice(0, 3);
   const taxo = taxoSuggestions(tokens);
   const sugg = taxo.map(s => `<a class="sr-sugg" role="option" href="${s.href}">${ICONS.search}<span><b>${escapeHtml(s.label)}</b> <em>en ${escapeHtml(s.where)}</em></span><small>${s.count}</small></a>`)
@@ -1688,9 +1729,10 @@ function renderSearchResults(ctx) {
       ${lvl.key === 'out' ? '' : `<button type="button" class="sr-add" onclick="event.stopPropagation();changeQty(${p.id},1)" aria-label="Agregar ${escapeHtml(prettyName(p))} al pedido">${ICONS.plus}<b data-qty-badge="${p.id}">${qty || ''}</b></button>`}
     </div>`;
   });
-  box.innerHTML = (sugg.length ? `<div class="sr-label">Sugerencias</div><div class="sr-group">${sugg.join('')}</div>` : '') +
-    (rows.length ? `<div class="sr-label">Productos</div>${rows.join('')}` : `<div class="sr-empty">Sin coincidencias para “${escapeHtml(q)}”. Prueba con otra palabra, la marca o el código.</div>`) +
-    (matches.length ? `<button type="button" class="sr-all" onclick="submitSearch(searchCtxOf('${ctx.id}'))">Ver los ${fmt(matches.length)} resultados para “${escapeHtml(q)}” ${ICONS.arrow}</button>` : '');
+  box.innerHTML = (fixed ? `<div class="sr-fix">${ICONS.search}<span>¿Quisiste decir <button type="button" data-q="${escapeHtml(fixed)}" onclick="${run}">${escapeHtml(fixed)}</button>?</span></div>` : '') +
+    (sugg.length ? `<div class="sr-label">Sugerencias</div><div class="sr-group">${sugg.join('')}</div>` : '') +
+    (rows.length ? `<div class="sr-label">Productos</div>${rows.join('')}` : `<div class="sr-empty"><b>Sin coincidencias para “${escapeHtml(q)}”.</b>Revisa la escritura, usa menos palabras o busca por marca o código de barras.<a href="#/marcas">Ver todas las marcas ${ICONS.arrow}</a></div>`) +
+    (matches.length ? `<button type="button" class="sr-all" onclick="submitSearch(searchCtxOf('${ctx.id}'))">Ver los ${fmt(matches.length)} resultados para “${escapeHtml(fixed || q)}” ${ICONS.arrow}</button>` : '');
   openSearchResults(ctx);
 }
 
