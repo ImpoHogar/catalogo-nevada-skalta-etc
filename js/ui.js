@@ -51,7 +51,16 @@ const ICONS = {
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>',
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
-  user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>'
+  user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>',
+  calc: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01"/></svg>',
+  download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg>',
+  help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7M12 17h.01"/></svg>',
+  dots: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12h.01M12 12h.01M18.5 12h.01" stroke-width="3"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17h.01"/></svg>',
+  repeat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a7.5 7.5 0 0 1 13-5.1L19.5 9.5M19.5 4.5v5h-5M20 12a7.5 7.5 0 0 1-13 5.1L4.5 14.5M4.5 19.5v-5h5"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"/></svg>',
+  wa: '<svg viewBox="0 0 24 24" aria-hidden="true" class="ic-fill"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>'
 };
 
 // Grupo = "mundo" visual al que pertenece la categoria:
@@ -295,12 +304,22 @@ function productSpecs(p) {
 // ------------------------------------------------------------
 //  Disponibilidad
 // ------------------------------------------------------------
+// Estados: Disponible (verde), Pocas unidades (amarillo, LOW_STOCK o
+// menos) y Agotado (rojo). La cantidad sale tal cual de stock.js; por
+// encima de STOCK_TOPE_VISIBLE (config.js) se muestra "+100 disponibles".
 const LOW_STOCK = 12;
+function stockQtyText(s) {
+  const tope = typeof STOCK_TOPE_VISIBLE !== 'undefined' ? STOCK_TOPE_VISIBLE : 100;
+  if (s <= 0) return '';
+  if (s > tope) return `+${tope.toLocaleString('es-CR')} disponibles`;
+  return `${s.toLocaleString('es-CR')} ${s === 1 ? 'disponible' : 'disponibles'}`;
+}
 function stockLevel(p) {
   const s = parseInt(p.stock) || 0;
-  if (s <= 0) return { key: 'out', label: 'Agotado', short: 'Agotado' };
-  if (s <= LOW_STOCK) return { key: 'low', label: s === 1 ? 'Última unidad' : `Últimas ${s} unidades`, short: s === 1 ? 'Queda 1' : `Quedan ${s}` };
-  return { key: 'ok', label: `${s.toLocaleString('es-CR')} disponibles`, short: `${s.toLocaleString('es-CR')} disp.` };
+  if (s <= 0) return { key: 'out', label: 'Agotado', qty: '', short: 'Agotado' };
+  const qty = stockQtyText(s);
+  if (s <= LOW_STOCK) return { key: 'low', label: 'Pocas unidades', qty, short: s === 1 ? 'Queda 1' : `Quedan ${s}` };
+  return { key: 'ok', label: 'Disponible', qty, short: qty.replace('disponibles', 'disp.') };
 }
 
 // Orden "destacado": con stock primero, luego con foto, luego mas stock.

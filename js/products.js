@@ -12,7 +12,9 @@
 //  ceros), name, categoria (una de CATEGORIAS en config.js),
 //  img (nombre del archivo en img/productos/ o false),
 //  dateAdded (opcional: lo pone "Nuevos ingresos"),
-//  notes (opcional: detalles que se muestran en la ficha).
+//  notes (opcional: detalles que se muestran en la ficha),
+//  imgs (opcional: fotos extra), tags (opcional: palabras extra
+//  para el buscador), nuevo / oportunidad (opcional: true).
 // ============================================================
 const PRODUCTS = [
   {"id":1,"brand":"MAXELL","code":"025215721113","name":"721150 BATERIA ALCALINA 9 V","categoria":"Tecnología","img":"025215721113.webp"},

@@ -27,15 +27,19 @@ function initHeaderScroll() {
   update();
 }
 
-// Tecla Escape: cierra lo que este abierto (pedido, datos, calculadora,
-// historial, filtros, menus, buscador). No toca los avisos de "gracias".
+// Tecla Escape: cierra lo que este abierto (pedido, confirmacion,
+// calculadora, historial, vendedores, ayuda, filtros, menus, buscador).
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   const abiertos = {
     orderModal: typeof closeOrderReview === 'function' ? closeOrderReview : null,
     customerModal: typeof closeCustomerModal === 'function' ? closeCustomerModal : null,
     calcModal: typeof closeCalculator === 'function' ? closeCalculator : null,
-    historyModal: typeof closeOrderHistory === 'function' ? closeOrderHistory : null
+    historyModal: typeof closeOrderHistory === 'function' ? closeOrderHistory : null,
+    repeatModal: typeof closeRepeatModal === 'function' ? closeRepeatModal : null,
+    doneModal: typeof closeOrderDone === 'function' ? closeOrderDone : null,
+    sellerModal: typeof closeSellerModal === 'function' ? closeSellerModal : null,
+    helpModal: typeof closeHelp === 'function' ? closeHelp : null
   };
   Object.keys(abiertos).forEach(id => {
     const el = document.getElementById(id);
@@ -44,6 +48,7 @@ document.addEventListener('keydown', e => {
   if (document.body.classList.contains('sheet-open')) toggleFilterSheet(false);
   if (document.body.classList.contains('menu-open')) closeMobileMenu();
   if (document.body.classList.contains('mega-open')) closeMegaMenu();
+  if (document.body.classList.contains('more-open')) closeMoreMenu();
   if (document.body.classList.contains('search-open')) closeSearchOverlay();
   const fb = document.getElementById('fbModal');
   if (fb && fb.classList.contains('open') && typeof closeFeedback === 'function') closeFeedback();

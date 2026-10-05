@@ -149,64 +149,79 @@ en `SELLERS` y se reemplaza su imagen.
 
 ## Diseño y arquitectura (ImpoHogar Market)
 
-El catálogo funciona como una tienda grande con secciones, cada una con su
-dirección (se puede usar el botón "atrás" del navegador y compartir el enlace):
+El catálogo funciona como una herramienta mayorista con secciones, cada una con
+su dirección (se puede usar el botón "atrás" del navegador y compartir el enlace):
 
 | Dirección | Qué muestra |
 |---|---|
-| `#/` | Inicio: banner, departamentos, categorías, últimas unidades, bloques por departamento, stock para volumen, marcas |
-| `#/todo` | Todo el catálogo |
-| `#/d/belleza` · `#/d/cuidado-personal` · `#/d/tecnologia` · `#/d/hogar` | Departamento |
-| `#/c/audio` · `#/c/audio/parlantes` | Categoría y tipo de producto |
-| `#/marca/tirtir` · `#/marcas` | Una marca / directorio de marcas |
+| `#/` | Inicio: "¿Qué quieres comprar hoy?", buscador, 4 grandes accesos, "¿Qué estás buscando?" (por necesidad), nuevos ingresos, oportunidades, compra por volumen, marcas y departamentos |
+| `#/todo` | Catálogo: buscador grande, comprar por categoría, filtros y orden |
+| `#/d/cuidado-personal` · `#/d/tecnologia` · `#/d/baterias` · `#/d/hogar` | Departamento (`#/d/belleza` sigue funcionando) |
+| `#/c/audio` · `#/c/audio/parlantes` | Categoría y subcategoría |
+| `#/marca/skala` · `#/marcas` | Página de una marca (con chips por tipo) / directorio con buscador |
 | `#/buscar/cargador tipo c` | Resultados de búsqueda |
-| `#/col/ultimas` · `#/col/volumen` · `#/col/nuevos` · `#/col/mas-vendidos` | Colecciones comerciales |
+| `#/col/nuevos` · `#/col/oportunidades` · `#/col/volumen` · `#/col/volumen/25` · `#/col/ultimas` | Colecciones comerciales |
 | `#/p/123` | Ficha del producto |
 
-**Departamentos > categorías > tipos** (`js/taxonomy.js`): cada producto se ubica
-leyendo su categoría de la plantilla y palabras de su nombre. Hoy:
+**Departamentos > categorías > subcategorías** (`js/taxonomy.js`):
 
-- **Belleza:** Maquillaje (bases y cushions, labios, ojos y cejas, mejillas,
-  correctores y polvos) · Skincare (limpieza, tónicos, sérums, cremas,
-  mascarillas, protección solar, sets).
-- **Cuidado personal:** Cuidado corporal · Cabello · Barbería.
-- **Tecnología:** Audio · Cables y adaptadores · Carga y energía · Baterías y
-  pilas · Computación y gaming · Smart y cámaras · Soportes y accesorios.
+- **Cuidado personal:** Maquillaje · Skincare · Cuidado corporal · Cabello · Barbería.
+- **Tecnología:** Audio · Cables y adaptadores · Carga y energía · Computación
+  y gaming · Smart y cámaras · Soportes y accesorios.
+- **Baterías:** Pilas AAA, AA, C, D, batería 9V, botón de litio, recargables.
 - **Hogar:** Cocina · Cuidado de la ropa.
 
-Para crecer: se agrega la categoría o el tipo en `CATEGORIES` con las palabras
-que lo identifican. Las categorías sin productos no se muestran. La categoría de
-la plantilla (`categoria` en products.js) no cambia: el script de carga sigue
-igual.
+Cada departamento tiene su propia experiencia: colores, datos que muestran las
+tarjetas y orden de los filtros (cuidado personal: presentación, beneficio,
+subtono; tecnología: compatibilidad, conector, conectividad, potencia;
+baterías: tamaño, tipo, presentación, voltaje; hogar: capacidad, velocidades).
+Todo sale del nombre del producto: si un dato no está, no se muestra.
 
-**Buscador:** busca por nombre, marca, código de barras (exacto o parcial),
-categoría, tipo y sinónimos en español/inglés (audífonos = headphones, pila =
-batería, labial = lip/tint, bloqueador = SPF, tipo C = USB-C…). Un código
-completo abre la ficha directo. Sinónimos en `SYNONYMS` (taxonomy.js).
+**Disponibilidad:** 🟢 Disponible · 🟡 Pocas unidades (12 o menos) · 🔴 Agotado,
+con la cantidad real de `stock.js` ("8 disponibles"; por encima de
+`STOCK_TOPE_VISIBLE` dice "+100 disponibles").
 
-**Filtros contextuales:** cambian según la sección. Belleza y cuidado
-personal: marca, tipo, subtono (C/N/W), beneficio, presentación. Tecnología:
-marca, tipo, conector, compatibilidad, conexión, potencia. Siempre:
-disponibilidad. Solo aparecen si tienen al menos dos opciones reales.
+**Etiquetas automáticas:** NUEVO (nuevo ingreso), OPORTUNIDAD, VOLUMEN (al menos
+`STOCK_VOLUMEN` unidades) y ÚLTIMAS UNIDADES.
 
-**Vista lista (pedido rápido):** en cualquier listado, el botón de lista muestra
-filas con código y cantidad para pedir rápido.
+**Buscador:** resultados mientras se escribe (con botón para agregar al pedido),
+por nombre, marca, código de barras (exacto o parcial), categoría, tipo,
+sinónimos (`SYNONYMS` en taxonomy.js) y el campo opcional `"tags"` de cada
+producto. Un código completo abre la ficha directo.
 
-### Vitrina comercial (en `js/config.js`)
+**Mi pedido:** líneas agrupadas por marca con disponibilidad, aviso de
+"Disponibilidad limitada" si se pide más de lo que hay, totales de productos y
+unidades, "¿Todo listo?" antes de generar y "Pedido generado" con Excel, fotos,
+WhatsApp y seguir comprando. El Excel mantiene su formato (Código de barras,
+Descripción, Cantidad).
 
-- `CAMPANA_INICIO`: texto, botón y destino del banner principal. En modo
-  `'auto'`, si hay nuevos ingresos el banner pasa solo a "Descubre lo nuevo".
-- `NUEVOS_INGRESOS`: códigos marcados a mano como nuevos (además de los que el
-  script de carga marca con `dateAdded`).
-- `MAS_VENDIDOS`: códigos de mayor rotación, en orden. **Mientras esté vacío la
-  sección "Más vendidos" no aparece** (no se inventan datos).
-- `MARCAS_DESTACADAS`: orden de las marcas del inicio (vacío = las que más
-  productos tienen).
-- `STOCK_VOLUMEN`: desde cuántas unidades un producto entra en "Stock para
-  volumen".
-- `BUSQUEDAS_POPULARES`: sugerencias del buscador.
+**Historial:** ver pedido y "Repetir pedido" (pregunta antes, suma las
+cantidades e informa los productos que ya no están o están agotados).
 
-"Últimas unidades" sale solo del inventario (12 unidades o menos).
+**Herramientas:** la Calculadora está siempre visible (menú principal y barra
+inferior del celular). En "Más": historial, descargar fotos del pedido, ayuda y
+contactar vendedor. La ficha tiene "Descargar foto" y "Consultar con vendedor".
+
+### Datos comerciales (en `js/config.js`)
+
+- `INICIO`: textos del encabezado del inicio.
+- `NUEVOS_INGRESOS`: códigos nuevos (además de `dateAdded`, que pone solo el
+  script de carga, y de `"nuevo":true` en products.js). Vacío = la sección no
+  aparece en el inicio.
+- `OPORTUNIDADES`: códigos que ImpoHogar quiere impulsar (o `"oportunidad":true`
+  en products.js). Con `OPORTUNIDADES_AUTO = true` y la lista vacía se muestran
+  los productos con más unidades de cada categoría.
+- `STOCK_VOLUMEN`, `VOLUMEN_NIVELES` (5+, 10+, 25+, 50+, 100+),
+  `VOLUMEN_NIVEL_INICIAL`, `STOCK_TOPE_VISIBLE`.
+- `NECESIDADES`: accesos de "¿Qué estás buscando?".
+- `MARCAS_INFO`: logo (en `img/marcas/`) y descripción de cada marca. Sin logo
+  se muestra el nombre escrito.
+- `MAS_VENDIDOS`: códigos de mayor rotación. Vacío = la sección no aparece.
+- `MARCAS_DESTACADAS`, `BUSQUEDAS_POPULARES`.
+
+**Relacionados** (`js/relacionados.js`): `RELACIONES` (a mano, por código) y
+`RELACION_POR_TIPO` (qué subcategorías complementan a cuál: cargador → cables y
+power banks, pila AA → otras presentaciones AA, shampoo → tratamientos…).
 
 ### Fotos extra (galería)
 
@@ -218,12 +233,12 @@ un producto, se agrega en su línea de products.js el campo
 ### Estilo
 
 Azul de Grupo ImpoHogar como color de acción, blanco y grises neutros, y un
-tono por departamento (belleza rosa empolvado, cuidado personal verde salvia,
-tecnología azul, hogar ámbar). Tarjetas sin bordes, con la foto como
+tono por departamento (cuidado personal rosa, tecnología azul, baterías verde
+azulado, hogar ámbar). Tarjetas sin bordes, con la foto como
 protagonista; en tecnología muestran datos técnicos (conector, potencia) y en
 belleza tono y tamaño. Tipografía Plus Jakarta Sans + Inter. Modo claro y
-oscuro. En celular: barra inferior (Inicio, Departamentos, Buscar, Marcas,
-Pedido), menú lateral, buscador a pantalla completa y filtros en panel.
+oscuro. En celular: barra inferior (Inicio, Catálogo, Buscar, Calculadora,
+Mi pedido), menú lateral, buscador a pantalla completa y filtros en panel.
 
 ## Al compartir el enlace
 

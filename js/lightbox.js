@@ -2,9 +2,10 @@
 //  FICHA DEL PRODUCTO (pagina #/p/<id>)
 // ============================================================
 //  Galeria (foto, fotos extra si el producto trae "imgs" en
-//  products.js, y codigo de barras) con zoom, informacion adaptada al
-//  tipo de producto, cantidad para el pedido y carriles de
-//  relacionados, similares y de la misma marca.
+//  products.js, y codigo de barras) con zoom y descarga de la foto,
+//  disponibilidad, caracteristicas segun el departamento, cantidad para
+//  el pedido, consulta al vendedor por WhatsApp y los carriles
+//  "Tambien te puede interesar", otras opciones y misma marca.
 //  Solo presenta datos que YA existen en el catalogo.
 //
 //  Se mantienen los nombres openLightbox / closeLightbox /
@@ -48,15 +49,22 @@ function closeLightbox() {
 
 function onProductViewLeave() { lightboxState.pid = null; }
 
-// Datos de la ficha segun el tipo de producto
+// Caracteristicas de la ficha segun el departamento. Solo datos que
+// salen del nombre / la estructura del catalogo (nada inventado).
 function productFacts(p) {
   const tone = deptTone(p.dept);
   const specs = p._specs || (p._specs = productSpecs(p));
   const model = modelCode(p);
   const rows = [['Marca', p.brand], ['Categoría', catName(p.cat)], ['Tipo de producto', p.tipo !== 'Otros' ? p.tipo : catName(p.cat)]];
-  if (tone === 'tech' || tone === 'home') {
+  if (tone === 'battery') {
+    if (batterySize(p)) rows.push(['Tamaño', batterySize(p)]);
+    if (batteryChem(p)) rows.push(['Tipo de batería', batteryChem(p)]);
+    if (batteryVolt(p)) rows.push(['Voltaje', batteryVolt(p)]);
+    if (batteryPack(p)) rows.push(['Presentación', batteryPack(p)]);
     if (model) rows.push(['Modelo', model]);
-    specs.forEach(s => rows.push([s.label, s.value]));
+  } else if (tone === 'tech' || tone === 'home') {
+    if (model) rows.push(['Modelo', model]);
+    specs.forEach(s => rows.push([s.label === 'Conexión' ? 'Conectividad' : s.label, s.value]));
     const comp = productCompat(p);
     if (comp.length) rows.push(['Compatibilidad', comp.join(', ')]);
   } else {
@@ -84,6 +92,43 @@ function sameBrandProducts(p, n) {
   return list.sort((a, b) => (b.cat === p.cat) - (a.cat === p.cat) || rankScore(b) - rankScore(a)).slice(0, n);
 }
 
+// Cantidad elegida en la ficha (antes de agregar al pedido).
+let pdpQty = 1;
+function pdpQtyChange(delta) { pdpSetQty(pdpQty + delta); }
+function pdpSetQty(v) {
+  pdpQty = Math.max(1, parseInt(v) || 1);
+  const i = document.getElementById('pdpQty');
+  if (i) i.value = pdpQty;
+  pdpRefreshHint();
+}
+function pdpRefreshHint() {
+  const p = PRODUCTS_BY_ID[lightboxState.pid];
+  const h = document.getElementById('pdpQtyHint');
+  if (!p || !h) return;
+  const st = parseInt(p.stock) || 0;
+  const total = pdpQty + (qtyMap[p.id] || 0);
+  h.hidden = total <= st;
+  h.innerHTML = `${ICONS.warn}Disponibilidad limitada: hay ${st.toLocaleString('es-CR')} ${st === 1 ? 'unidad' : 'unidades'}. Puedes pedirlas igual y tu vendedor te confirma.`;
+}
+function pdpAddToOrder() {
+  const p = PRODUCTS_BY_ID[lightboxState.pid];
+  if (!p) return;
+  setQty(p.id, (qtyMap[p.id] || 0) + pdpQty);
+  pdpSetQty(1);
+}
+
+function pdpInCartHTML(p) {
+  const q = qtyMap[p.id] || 0;
+  return `${ICONS.check}<span>En tu pedido:</span>
+    <div class="pdp-mini-stepper" role="group" aria-label="Cantidad en tu pedido">
+      <button type="button" onclick="changeQty(${p.id},-1)" aria-label="Quitar una unidad">−</button>
+      <input type="number" min="0" inputmode="numeric" value="${q}" data-qty-for="${p.id}" onchange="setQty(${p.id}, this.value)" onfocus="this.select()" aria-label="Cantidad en tu pedido">
+      <button type="button" onclick="changeQty(${p.id},1)" aria-label="Agregar una unidad">+</button>
+    </div>
+    <span>${q === 1 ? 'unidad' : 'unidades'}</span>
+    <button type="button" class="link-btn" onclick="openOrderReview()">Ver pedido</button>`;
+}
+
 function renderProductPage(pid) {
   const el = document.getElementById('productView');
   const p = PRODUCTS_BY_ID[pid];
@@ -91,38 +136,44 @@ function renderProductPage(pid) {
   lightboxState.pid = pid;
   lightboxState.images = getProductImages(p);
   if (!lightboxState.images[lightboxState.index]) lightboxState.index = 0;
+  pdpQty = 1;
   const tone = deptTone(p.dept);
   const d = DEPARTMENT_BY_ID[p.dept];
   const c = CATEGORY_BY_ID[p.cat];
   const lvl = stockLevel(p);
   const enPedido = qtyMap[p.id] || 0;
   const brandCount = VISIBLE_PRODUCTS.filter(x => x.brand === p.brand).length;
-  const badges = [];
-  if (isProductNew(p)) badges.push('<span class="badge badge-new">Nuevo ingreso</span>');
+  const flags = productFlags(p);
+  const badges = flags.map(f => `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.key === 'new' ? 'Nuevo ingreso' : f.key === 'vol' ? 'Disponible para volumen' : f.badge}</span>`);
   if (isBestSeller(p)) badges.push('<span class="badge badge-best">Más vendido</span>');
-  if (lvl.key === 'low') badges.push('<span class="badge badge-low">Últimas unidades</span>');
-  if (stockNum(p) >= VOLUMEN_MIN) badges.push('<span class="badge badge-vol">Stock para volumen</span>');
   const crumbs = [['#/', 'Inicio']];
   if (d) crumbs.push(['#/d/' + d.id, d.name]);
   if (c) crumbs.push(['#/c/' + c.id, c.name]);
   if (c && p.tipo !== 'Otros') crumbs.push(['#/c/' + c.id + '/' + slugify(p.tipo), p.tipo]);
+  const catPath = [d && `<a href="#/d/${d.id}">${escapeHtml(d.name)}</a>`, c && `<a href="#/c/${c.id}">${escapeHtml(c.name)}</a>`,
+    c && p.tipo !== 'Otros' && `<a href="#/c/${c.id}/${slugify(p.tipo)}">${escapeHtml(p.tipo)}</a>`].filter(Boolean).join(ICONS.chevR);
 
   const buy = lvl.key === 'out'
-    ? `<div class="pdp-soldout">Este producto está agotado por ahora. Consulta a tu vendedor por la próxima entrada.</div>`
-    : `<div class="pdp-buy">
-        <div class="pdp-stepper" role="group" aria-label="Cantidad">
-          <button type="button" onclick="changeQty(${p.id},-1)" aria-label="Quitar una unidad">−</button>
-          <input type="number" min="0" inputmode="numeric" value="${enPedido}" data-qty-for="${p.id}" onchange="setQty(${p.id}, this.value)" onfocus="this.select()" aria-label="Cantidad">
-          <button type="button" onclick="changeQty(${p.id},1)" aria-label="Agregar una unidad">+</button>
+    ? `<div class="pdp-soldout">${ICONS.warn}<span>Este producto está agotado por ahora. Consulta a tu vendedor por la próxima entrada.</span></div>`
+    : `<div class="pdp-qty-label">Cantidad</div>
+      <div class="pdp-buy">
+        <div class="pdp-stepper" role="group" aria-label="Cantidad a agregar">
+          <button type="button" onclick="pdpQtyChange(-1)" aria-label="Quitar una unidad">−</button>
+          <input type="number" min="1" inputmode="numeric" value="1" id="pdpQty" onchange="pdpSetQty(this.value)" onfocus="this.select()" aria-label="Cantidad a agregar">
+          <button type="button" onclick="pdpQtyChange(1)" aria-label="Agregar una unidad">+</button>
         </div>
-        <button type="button" class="btn btn-primary pdp-add" id="pdpAdd" onclick="changeQty(${p.id},1)">${ICONS.bag}<span>${enPedido ? 'Agregar otra unidad' : 'Agregar al pedido'}</span></button>
+        <button type="button" class="btn btn-primary pdp-add" id="pdpAdd" onclick="pdpAddToOrder()">${ICONS.bag}<span>Agregar al pedido</span></button>
       </div>
-      <div class="pdp-incart" id="pdpInCart"${enPedido ? '' : ' hidden'}>${ICONS.check}En tu pedido: <b>${enPedido} ${enPedido === 1 ? 'unidad' : 'unidades'}</b> · <button type="button" class="link-btn" onclick="openOrderReview()">Ver pedido</button></div>`;
+      <div class="pdp-quick">${[6, 12, 24, 48].map(n => `<button type="button" onclick="pdpSetQty(${n})">${n}</button>`).join('')}<span>Cantidades rápidas</span></div>
+      <div class="pdp-qty-hint" id="pdpQtyHint" hidden></div>
+      <div class="pdp-incart" id="pdpInCart"${enPedido ? '' : ' hidden'}>${pdpInCartHTML(p)}</div>`;
 
   const notas = (p.notes && p.notes.length) ? `
     <div class="pdp-block"><h2 class="pdp-h">Detalles</h2><div class="pdp-notes">${p.notes.map(n => `<span>${escapeHtml(n)}</span>`).join('')}</div></div>` : '';
 
-  const rels = (typeof getRelatedProducts === 'function') ? getRelatedProducts(p.id).map(r => r.product) : [];
+  const suggested = typeof suggestedProducts === 'function' ? suggestedProducts(p, 14) : [];
+  const sugIds = new Set(suggested.map(x => x.id));
+  const similar = similarProducts(p, 20).filter(x => !sugIds.has(x.id)).slice(0, 16);
   const thumbs = lightboxState.images.map((im, i) => `
     <button type="button" class="pdp-thumb${i === lightboxState.index ? ' on' : ''}" onclick="lightboxGoTo(${i}, event)" aria-label="${escapeHtml(im.caption)}">
       ${im.kind === 'barras' ? `<span class="pdp-thumb-bc">${ICONS.list}<small>Código</small></span>` : `<img src="${im.src}" alt="">`}
@@ -139,36 +190,41 @@ function renderProductPage(pid) {
         <div class="pdp-gallery">
           <div class="pdp-thumbs">${thumbs}</div>
           <div class="pdp-stage" id="pdpStage">
-            <span class="pc-badges">${badges.slice(0, 2).join('')}</span>
+            <span class="pc-badges">${cardBadges(p)}</span>
             <img id="lightboxImg" src="${lightboxState.images[lightboxState.index].src}" alt="${escapeHtml(prettyName(p))}">
             ${lightboxState.images.length > 1 ? `
               <button class="pdp-nav prev" type="button" onclick="lightboxNav(-1, event)" aria-label="Imagen anterior">${ICONS.chevL}</button>
               <button class="pdp-nav next" type="button" onclick="lightboxNav(1, event)" aria-label="Imagen siguiente">${ICONS.chevR}</button>` : ''}
             <span class="pdp-hint">Toca la imagen para hacer zoom</span>
           </div>
+          ${p.img ? `<button type="button" class="pdp-dl" onclick="downloadProductPhoto(${p.id}, this)">${ICONS.download}Descargar foto</button>` : ''}
         </div>
         <div class="pdp-info">
           <a class="pdp-brand" href="${brandHash(p.brand)}">${escapeHtml(p.brand)}<small>Ver sus ${brandCount} productos ${ICONS.arrow}</small></a>
           <h1 class="pdp-name">${escapeHtml(prettyName(p))}</h1>
           <div class="pdp-raw">${escapeHtml(p.name)}</div>
-          ${badges.length ? `<div class="pdp-badges">${badges.join('')}</div>` : ''}
           <div class="pdp-code">
             <span>Código</span><b>${escapeHtml(p.code)}</b>
             <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(p.code)}', this)" aria-label="Copiar código">${ICONS.copy}<span>Copiar</span></button>
           </div>
-          <div class="pdp-avail is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span></div>
-          ${buy}
-          <p class="pdp-note">${ICONS.chat}Pedido mayorista: agrega las unidades que necesitas, genera tu pedido en Excel y tu vendedor te confirma por WhatsApp.</p>
+          <div class="pdp-path"><span>Categoría</span>${catPath}</div>
+          <div class="pdp-avail is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span>${lvl.qty ? `<small>${escapeHtml(lvl.qty)}</small>` : ''}</div>
+          ${badges.length ? `<div class="pdp-badges">${badges.join('')}</div>` : ''}
+          <div class="pdp-buybox">${buy}</div>
+          <div class="pdp-help">
+            <span>${ICONS.chat}<b>¿Tienes dudas sobre este producto?</b></span>
+            <button type="button" class="btn btn-wa" onclick="openSellerModal('consulta', ${p.id})">${ICONS.wa}Consultar con vendedor</button>
+          </div>
           <div class="pdp-block">
-            <h2 class="pdp-h">${tone === 'tech' || tone === 'home' ? 'Ficha técnica' : 'Detalles del producto'}</h2>
+            <h2 class="pdp-h">Características</h2>
             <dl class="pdp-facts">${productFacts(p).map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd${k === 'Código de barras' || k === 'Modelo' ? ' class="mono"' : ''}>${escapeHtml(v)}</dd></div>`).join('')}</dl>
           </div>
           ${notas}
         </div>
       </div>
       <div class="pdp-rails">
-        ${railHTML(rels, { title: 'Productos relacionados', sub: 'Se usan junto con este producto o lo reemplazan.' })}
-        ${railHTML(similarProducts(p, 16), { title: `Similares en ${p.tipo !== 'Otros' ? p.tipo : catName(p.cat)}`, sub: 'Otras opciones del mismo tipo de producto.', more: c ? '#/c/' + c.id + (p.tipo !== 'Otros' ? '/' + slugify(p.tipo) : '') : '' })}
+        ${railHTML(suggested, { title: 'También te puede interesar', sub: 'Productos que se usan junto con este o lo complementan.', cls: 'rail-sugg' })}
+        ${railHTML(similar, { title: `Otras opciones de ${p.tipo !== 'Otros' ? p.tipo : catName(p.cat)}`, sub: 'Del mismo tipo de producto.', more: c ? '#/c/' + c.id + (p.tipo !== 'Otros' ? '/' + slugify(p.tipo) : '') : '' })}
         ${railHTML(sameBrandProducts(p, 16), { title: `Más de ${p.brand}`, more: brandHash(p.brand), moreLabel: `Ver los ${brandCount}` })}
       </div>
       <div class="home-back-end">${homeBackHTML('is-outline')}</div>
@@ -190,10 +246,10 @@ function refreshLightboxQty(id) {
   const inCart = document.getElementById('pdpInCart');
   if (inCart) {
     inCart.hidden = !q;
-    inCart.innerHTML = `${ICONS.check}En tu pedido: <b>${q} ${q === 1 ? 'unidad' : 'unidades'}</b> · <button type="button" class="link-btn" onclick="openOrderReview()">Ver pedido</button>`;
+    const input = inCart.querySelector('input');
+    if (!input || document.activeElement !== input) inCart.innerHTML = pdpInCartHTML(PRODUCTS_BY_ID[id]);
   }
-  const add = document.querySelector('#pdpAdd span');
-  if (add) add.textContent = q ? 'Agregar otra unidad' : 'Agregar al pedido';
+  pdpRefreshHint();
 }
 
 function updateLightbox() {
