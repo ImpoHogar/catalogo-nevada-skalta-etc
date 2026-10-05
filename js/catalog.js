@@ -5,18 +5,19 @@
 //  direccion (se puede volver atras con el boton del navegador y
 //  compartir el enlace):
 //
-//    #/                      Inicio (descubrimiento)
-//    #/todo                  Todos los productos
-//    #/d/<departamento>      Belleza, Cuidado personal, Tecnologia, Hogar
+//    #/                      Inicio ("¿Que quieres comprar hoy?")
+//    #/todo                  Catalogo completo (buscar, filtrar, ordenar)
+//    #/d/<departamento>      Cuidado personal, Tecnologia, Baterias, Hogar
 //    #/c/<categoria>[/<tipo>]  Ej. #/c/audio/parlantes
-//    #/marca/<marca>         Todo de una marca
+//    #/marca/<marca>         Pagina de una marca
 //    #/marcas                Directorio de marcas
 //    #/buscar/<texto>        Resultados de busqueda
-//    #/col/<coleccion>       nuevos, mas-vendidos, ultimas, volumen, dia-nino
+//    #/col/<coleccion>       nuevos, oportunidades, volumen[/<minimo>],
+//                            ultimas, mas-vendidos, dia-nino
 //    #/p/<id>                Ficha del producto (lightbox.js)
 //
-//  Todo sale de products.js / stock.js y de la estructura de
-//  taxonomy.js: no se inventa ningun dato.
+//  Todo sale de products.js / stock.js, de config.js y de la
+//  estructura de taxonomy.js: no se inventa ningun dato.
 // ============================================================
 
 // ---------- Estado ----------
@@ -24,7 +25,7 @@ let filteredProducts = [];
 let renderedCount = 0;
 let currentRoute = { view: 'home' };
 let lastListingHash = '#/todo';
-const listingState = { key: '', facets: {}, sort: '', q: '' };
+const listingState = { key: '', facets: {}, sort: '', q: '', minStock: 0 };
 let viewMode = 'grid';
 try { viewMode = localStorage.getItem('impohogar_tec_view') === 'list' ? 'list' : 'grid'; } catch (e) {}
 
@@ -37,12 +38,18 @@ const NUEVOS_SET = new Set(typeof NUEVOS_INGRESOS !== 'undefined' ? NUEVOS_INGRE
 const MAS_VENDIDOS_LIST = (typeof MAS_VENDIDOS !== 'undefined' ? MAS_VENDIDOS : []);
 const MAS_VENDIDOS_RANK = {};
 MAS_VENDIDOS_LIST.forEach((c, i) => { MAS_VENDIDOS_RANK[c] = i + 1; });
-const VOLUMEN_MIN = typeof STOCK_VOLUMEN !== 'undefined' ? STOCK_VOLUMEN : 1000;
+const VOLUMEN_MIN = typeof STOCK_VOLUMEN !== 'undefined' ? STOCK_VOLUMEN : 500;
+const VOL_LEVELS = (typeof VOLUMEN_NIVELES !== 'undefined' && VOLUMEN_NIVELES.length) ? VOLUMEN_NIVELES.slice().sort((a, b) => a - b) : [5, 10, 25, 50];
+const VOL_LEVEL_START = typeof VOLUMEN_NIVEL_INICIAL !== 'undefined' ? VOLUMEN_NIVEL_INICIAL : VOL_LEVELS[VOL_LEVELS.length - 1];
 
 function stockNum(p) { return parseInt(p.stock) || 0; }
+function fmt(n) { return Number(n).toLocaleString('es-CR'); }
 
+// ------------------------------------------------------------
+//  Marcas comerciales de cada producto (salen de los datos)
+// ------------------------------------------------------------
 function isProductNew(p) {
-  if (NUEVOS_SET.has(p.code)) return true;
+  if (NUEVOS_SET.has(p.code) || p.nuevo === true) return true;
   if (!MOSTRAR_ETIQUETA_NUEVO) return false;
   if (!p.dateAdded) return false;
   const added = new Date(p.dateAdded + 'T00:00:00');
@@ -51,11 +58,43 @@ function isProductNew(p) {
   return diffDays >= 0 && diffDays <= NEW_PRODUCT_DAYS;
 }
 
-// Nuevo ingreso (dateAdded o lista manual) O lote de baja rotacion activo.
+// Nuevo ingreso (dateAdded, "nuevo":true o lista) O lote de baja rotacion activo.
 function isInNuevosIngresosView(p) {
   return isProductNew(p) || (typeof isLowRotationActive === 'function' && isLowRotationActive(p));
 }
 function isBestSeller(p) { return !!MAS_VENDIDOS_RANK[p.code]; }
+
+// Oportunidades: lista de config.js / "oportunidad":true. Si no hay ninguna
+// y OPORTUNIDADES_AUTO esta encendido, los productos con mas unidades en
+// bodega de cada categoria (stock real).
+const OPORT_RANK = {};
+let OPORT_IS_AUTO = false;
+(function buildOpportunities() {
+  const codes = typeof OPORTUNIDADES !== 'undefined' ? OPORTUNIDADES : [];
+  let list = codes.map(c => VISIBLE_PRODUCTS.find(p => p.code === c)).filter(Boolean);
+  VISIBLE_PRODUCTS.forEach(p => { if (p.oportunidad === true && !list.includes(p)) list.push(p); });
+  if (!list.length && typeof OPORTUNIDADES_AUTO !== 'undefined' && OPORTUNIDADES_AUTO) {
+    OPORT_IS_AUTO = true;
+    const n = typeof OPORTUNIDADES_AUTO_CANTIDAD !== 'undefined' ? OPORTUNIDADES_AUTO_CANTIDAD : 24;
+    const byCat = CATEGORIES.map(c => VISIBLE_PRODUCTS.filter(p => p.cat === c.id && p.img && stockNum(p) > LOW_STOCK)
+      .sort((a, b) => stockNum(b) - stockNum(a)).slice(0, 4)).filter(g => g.length);
+    list = [];
+    while (list.length < n && byCat.some(g => g.length)) byCat.forEach(g => { if (g.length && list.length < n) list.push(g.shift()); });
+  }
+  list.forEach((p, i) => { OPORT_RANK[p.id] = i + 1; });
+})();
+function isOpportunity(p) { return !!OPORT_RANK[p.id]; }
+function isVolume(p) { return stockNum(p) >= VOLUMEN_MIN; }
+function isLowStock(p) { const s = stockNum(p); return s > 0 && s <= LOW_STOCK; }
+
+// Etiquetas automaticas (badge corto + nombre en filtros)
+const FLAG_DEFS = [
+  { key: 'new',  badge: 'Nuevo',            facet: 'Nuevo ingreso',      icon: 'spark', test: isProductNew },
+  { key: 'opp',  badge: 'Oportunidad',      facet: 'Oportunidad',        icon: 'flame', test: isOpportunity },
+  { key: 'low',  badge: 'Últimas unidades', facet: 'Últimas unidades',   icon: 'bolt',  test: isLowStock },
+  { key: 'vol',  badge: 'Volumen',          facet: 'Compra por volumen', icon: 'box',   test: isVolume }
+];
+function productFlags(p) { return FLAG_DEFS.filter(f => f.test(p)); }
 
 function productImgSrc(p) {
   return p.img ? `img/productos/${encodeURIComponent(p.img)}?v=${IMG_VERSION}` : placeholderImg(p.brand, p.categoria);
@@ -74,25 +113,39 @@ function topWithPhoto(list, n) {
   return list.slice().sort((a, b) => featuredScore(b) - featuredScore(a)).slice(0, n);
 }
 
-// Destacados: con stock, con foto, mas vendido, nuevo, y luego mas stock.
+// Orden interno para elegir fotos de portada: con stock, con foto, mas
+// vendido, nuevo, oportunidad y luego mas stock.
 function rankScore(p) {
   const s = stockNum(p);
   return (s > 0 ? 4e7 : 0) + (p.img ? 2e7 : 0) + (isBestSeller(p) ? 1e7 - MAS_VENDIDOS_RANK[p.code] : 0) +
-    (isProductNew(p) ? 5e6 : 0) + Math.min(s, 4e6);
+    (isProductNew(p) ? 5e6 : 0) + (isOpportunity(p) ? 4e6 : 0) + Math.min(s, 3e6);
 }
 
 // Marcas
 const BRAND_BY_SLUG = {};
 BRANDS.forEach(b => { BRAND_BY_SLUG[slugify(b)] = b; });
 function brandHash(b) { return '#/marca/' + slugify(b); }
+function brandInfo(b) {
+  const info = (typeof MARCAS_INFO !== 'undefined' && (MARCAS_INFO[b] || MARCAS_INFO[String(b).toUpperCase()])) || {};
+  return { logo: info.logo ? 'img/marcas/' + info.logo : '', text: info.descripcion || '' };
+}
+function brandMarkHTML(b, cls) {
+  const info = brandInfo(b);
+  return info.logo
+    ? `<span class="${cls} has-logo"><img src="${escapeHtml(info.logo)}" alt="${escapeHtml(b)}" loading="lazy"></span>`
+    : `<span class="${cls}">${escapeHtml(b)}</span>`;
+}
 
 // ---------- Colecciones comerciales ----------
 const COLLECTIONS = {
-  'nuevos':       { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', sub: 'Lo más reciente que llegó a bodega.', icon: 'spark', filter: isInNuevosIngresosView, sort: 'featured' },
-  'mas-vendidos': { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Los productos que más piden nuestros clientes.', icon: 'flame', filter: isBestSeller, sort: 'bestseller' },
-  'ultimas':      { title: 'Últimas unidades', eyebrow: 'Quedan pocas', sub: `Productos con ${LOW_STOCK} unidades o menos: asegúralos antes de que se agoten.`, icon: 'clock', filter: p => { const s = stockNum(p); return s > 0 && s <= LOW_STOCK; }, sort: 'stock-asc' },
-  'volumen':      { title: 'Stock para volumen', eyebrow: 'Pedidos grandes', sub: `Más de ${VOLUMEN_MIN.toLocaleString('es-CR')} unidades disponibles: listos para surtir en cantidad.`, icon: 'box', filter: p => stockNum(p) >= VOLUMEN_MIN, sort: 'stock' },
-  'dia-nino':     { title: 'Día del Niño', eyebrow: 'Temporada', sub: 'Productos seleccionados para la temporada.', icon: 'spark', filter: p => DIA_DEL_NINO_CATEGORIES.includes(p.brand), sort: 'featured' }
+  'nuevos':        { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', sub: 'Productos recién incorporados al catálogo.', icon: 'spark', filter: isInNuevosIngresosView, sort: 'recent', always: true,
+                     empty: 'Por ahora no hay nuevos ingresos marcados. En cuanto entren productos nuevos a bodega aparecerán aquí.' },
+  'oportunidades': { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', sub: 'Productos que te recomendamos tener en tu negocio: buena disponibilidad y listos para mover.', icon: 'flame', filter: isOpportunity, sort: 'opp', always: true,
+                     empty: 'Pronto vas a encontrar aquí nuestras oportunidades comerciales.' },
+  'volumen':       { title: 'Compra por volumen', eyebrow: 'Pedidos grandes', sub: 'Encuentra rápido los productos con inventario suficiente para pedidos grandes.', icon: 'box', filter: p => stockNum(p) >= VOL_LEVELS[0], sort: 'stock', always: true },
+  'ultimas':       { title: 'Últimas unidades', eyebrow: 'Quedan pocas', sub: `Productos con ${LOW_STOCK} unidades o menos: asegúralos antes de que se agoten.`, icon: 'bolt', filter: isLowStock, sort: 'stock-asc' },
+  'mas-vendidos':  { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Los productos que más piden nuestros clientes.', icon: 'tag', filter: isBestSeller, sort: 'bestseller' },
+  'dia-nino':      { title: 'Día del Niño', eyebrow: 'Temporada', sub: 'Productos seleccionados para la temporada.', icon: 'spark', filter: p => DIA_DEL_NINO_CATEGORIES.includes(p.brand), sort: 'brand' }
 };
 function collectionActive(id) {
   if (id === 'dia-nino') {
@@ -110,13 +163,16 @@ function navigate(hash) {
   if (location.hash === hash) router(); else location.hash = hash;
 }
 
-function parseHash() {
-  const raw = location.hash.replace(/^#\/?/, '');
+function parseHash(hashStr) {
+  const raw = String(hashStr === undefined ? location.hash : hashStr).replace(/^#\/?/, '');
   const parts = raw.split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch (e) { return x; } });
   const [a, b, c] = parts;
   if (!a) return { view: 'home' };
   if (a === 'todo') return { view: 'listing', kind: 'all' };
-  if (a === 'd' && DEPARTMENT_BY_ID[b]) return { view: 'listing', kind: 'dept', dept: b };
+  if (a === 'd') {
+    const id = DEPARTMENT_BY_ID[b] ? b : DEPT_ALIAS[b];
+    if (id) return { view: 'listing', kind: 'dept', dept: id };
+  }
   if (a === 'c' && CATEGORY_BY_ID[b]) {
     const type = c ? (typesOfCat(b).find(t => slugify(t.label) === c) || {}).label : '';
     return { view: 'listing', kind: 'cat', cat: b, type: type || '' };
@@ -124,7 +180,7 @@ function parseHash() {
   if (a === 'marca' && BRAND_BY_SLUG[b]) return { view: 'listing', kind: 'brand', brand: BRAND_BY_SLUG[b] };
   if (a === 'marcas') return { view: 'brands' };
   if (a === 'buscar') return { view: 'listing', kind: 'search', q: parts.slice(1).join('/') };
-  if (a === 'col' && COLLECTIONS[b]) return { view: 'listing', kind: 'col', col: b };
+  if (a === 'col' && COLLECTIONS[b]) return { view: 'listing', kind: 'col', col: b, min: parseInt(c) || 0 };
   if (a === 'p' && PRODUCTS_BY_ID[b]) return { view: 'product', id: Number(b) };
   return { view: 'home' };
 }
@@ -148,17 +204,19 @@ function router() {
   r.hash = location.hash || '#/';
   const prev = currentRoute;
   currentRoute = r;
-  closeMegaMenu(); closeSearchResults(); closeMobileMenu(); toggleFilterSheet(false);
+  closeMegaMenu(); closeAllSearchResults(); closeMobileMenu(); toggleFilterSheet(false); closeMoreMenu();
   document.body.classList.remove('search-open');
 
   if (r.view !== 'product' && typeof onProductViewLeave === 'function') onProductViewLeave();
 
   if (r.view === 'home') {
     showView('home');
+    document.title = 'ImpoHogar Market · Catálogo mayorista';
     window.scrollTo(0, scrollMemory[r.hash] || 0);
   } else if (r.view === 'brands') {
     renderBrandsDirectory();
     showView('brands');
+    document.title = 'Marcas · ImpoHogar Market';
     window.scrollTo(0, 0);
   } else if (r.view === 'listing') {
     const key = r.hash;
@@ -169,9 +227,11 @@ function router() {
       listingState.facets = {};
       listingState.q = r.q || '';
       listingState.sort = defaultSort(r);
+      listingState.minStock = (r.kind === 'col' && r.col === 'volumen') ? (r.min || VOL_LEVEL_START) : 0;
       renderListing(true);
     }
     showView('listing');
+    document.title = listingMeta(r).title.replace(/[“”]/g, '') + ' · ImpoHogar Market';
     // Al volver desde una ficha se recupera la posicion.
     window.scrollTo(0, same && prev.view === 'product' ? (scrollMemory[key] || 0) : 0);
   } else if (r.view === 'product') {
@@ -205,25 +265,54 @@ function clearAllFilters() {
 }
 
 // ============================================================
-//  ENCABEZADO: departamentos (menu grande) y navegacion movil
+//  ENCABEZADO: menu principal, departamentos y navegacion movil
 // ============================================================
 function renderNav() {
   const nav = document.getElementById('deptNav');
   if (nav) {
-    const depts = deptsWithProducts().map(d =>
-      `<a class="dn-link" href="#/d/${d.id}" data-dept="${d.id}" onmouseenter="openMegaMenu('${d.id}', true)">${escapeHtml(d.name)}</a>`).join('');
-    const cols = ['nuevos', 'mas-vendidos', 'ultimas'].filter(collectionActive).map(id =>
-      `<a class="dn-link dn-col dn-${id}" href="#/col/${id}">${escapeHtml(COLLECTIONS[id].title)}</a>`).join('');
     const nino = collectionActive('dia-nino') ? `<a class="dn-link dn-col" href="#/col/dia-nino">Día del Niño</a>` : '';
     nav.innerHTML = `
       <button type="button" class="dn-all" id="megaBtn" onclick="toggleMegaMenu()" aria-expanded="false" aria-controls="megaMenu">${ICONS.menu}<span>Departamentos</span></button>
-      ${depts}
-      <a class="dn-link" href="#/marcas">Marcas</a>
-      <span class="dn-sep" aria-hidden="true"></span>
-      ${cols}${nino}`;
+      <a class="dn-link" href="#/" data-route="home">Inicio</a>
+      <a class="dn-link" href="#/todo" data-route="all">Catálogo</a>
+      <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
+      <a class="dn-link dn-nuevos" href="#/col/nuevos" data-route="col-nuevos">${ICONS.spark}Nuevos ingresos</a>
+      <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="col-oportunidades">${ICONS.flame}Oportunidades</a>
+      <a class="dn-link dn-vol" href="#/col/volumen" data-route="col-volumen">${ICONS.box}<span class="dn-long">Compra por volumen</span><span class="dn-short">Volumen</span></a>
+      ${nino}
+      <span class="dn-spacer"></span>
+      <button type="button" class="dn-tool dn-calc" onclick="openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
+      <div class="dn-more">
+        <button type="button" class="dn-tool" id="moreBtn" onclick="toggleMoreMenu(event)" aria-expanded="false" aria-controls="moreMenu">${ICONS.dots}<span>Más</span>${ICONS.chevD}</button>
+        <div class="more-menu" id="moreMenu" role="menu">${toolsMenuHTML()}</div>
+      </div>`;
   }
   renderMegaMenu();
   renderMobileMenu();
+}
+
+// Herramientas secundarias (menu "Mas" y menu movil). La calculadora
+// tiene su propio boton visible y no se esconde aqui.
+function toolsMenuHTML() {
+  return `
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openOrderHistory()">${ICONS.clock}<span>Historial de pedidos<small>Ver y repetir pedidos anteriores</small></span></button>
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();downloadCartPhotos()">${ICONS.download}<span>Descargar fotos<small>Las fotos de los productos de tu pedido</small></span></button>
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openHelp()">${ICONS.help}<span>Ayuda<small>Cómo armar y enviar tu pedido</small></span></button>
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openSellerModal('contacto')">${ICONS.chat}<span>Contactar vendedor<small>Escríbenos por WhatsApp</small></span></button>
+    <button type="button" role="menuitem" onclick="toggleTheme()">${ICONS.spark}<span>Modo claro / oscuro</span></button>`;
+}
+function toggleMoreMenu(e) {
+  if (e) e.stopPropagation();
+  const open = !document.body.classList.contains('more-open');
+  document.body.classList.toggle('more-open', open);
+  const b = document.getElementById('moreBtn');
+  if (b) b.setAttribute('aria-expanded', String(open));
+  if (open) closeMegaMenu();
+}
+function closeMoreMenu() {
+  document.body.classList.remove('more-open');
+  const b = document.getElementById('moreBtn');
+  if (b) b.setAttribute('aria-expanded', 'false');
 }
 
 function megaColumnHTML(d) {
@@ -234,7 +323,7 @@ function megaColumnHTML(d) {
       ${cats.map(c => `
         <div class="mm-cat">
           <a class="mm-cat-link" href="#/c/${c.id}">${escapeHtml(c.name)}</a>
-          <ul>${typesOfCat(c.id).filter(t => t.label !== 'Otros').slice(0, 6).map(t =>
+          <ul>${typesOfCat(c.id).filter(t => t.label !== 'Otros').slice(0, 7).map(t =>
             `<li><a href="#/c/${c.id}/${slugify(t.label)}">${escapeHtml(t.label)}</a></li>`).join('')}</ul>
         </div>`).join('')}
     </div>`;
@@ -243,14 +332,14 @@ function megaColumnHTML(d) {
 function renderMegaMenu() {
   const mm = document.getElementById('megaMenu');
   if (!mm) return;
-  const colLinks = ['nuevos', 'mas-vendidos', 'ultimas', 'volumen'].filter(collectionActive).map(id =>
+  const colLinks = ['nuevos', 'oportunidades', 'volumen', 'ultimas', 'mas-vendidos'].filter(id => COLLECTIONS[id].always || collectionActive(id)).map(id =>
     `<a href="#/col/${id}" class="mm-pill">${iconSVG(COLLECTIONS[id].icon)}${escapeHtml(COLLECTIONS[id].title)}<small>${collectionCount(id)}</small></a>`).join('');
   mm.innerHTML = `
     <div class="mm-inner">
       <div class="mm-cols">${deptsWithProducts().map(megaColumnHTML).join('')}</div>
       <div class="mm-foot">
         <div class="mm-pills">${colLinks}<a href="#/marcas" class="mm-pill">${ICONS.tag}Todas las marcas<small>${BRANDS.length}</small></a></div>
-        <a href="#/todo" class="mm-all">Ver todo el catálogo · ${VISIBLE_PRODUCTS.length.toLocaleString('es-CR')} productos ${ICONS.arrow}</a>
+        <a href="#/todo" class="mm-all">Ver todo el catálogo · ${fmt(VISIBLE_PRODUCTS.length)} productos ${ICONS.arrow}</a>
       </div>
     </div>`;
 }
@@ -263,6 +352,7 @@ function openMegaMenu(deptId, fromHover) {
     megaTimer = setTimeout(() => openMegaMenu(deptId, false), 160);
     return;
   }
+  closeMoreMenu();
   document.body.classList.add('mega-open');
   const btn = document.getElementById('megaBtn');
   if (btn) btn.setAttribute('aria-expanded', 'true');
@@ -282,10 +372,17 @@ function toggleMegaMenu() {
 function renderMobileMenu() {
   const el = document.getElementById('mobileMenuBody');
   if (!el) return;
-  const cols = ['nuevos', 'mas-vendidos', 'ultimas', 'volumen', 'dia-nino'].filter(collectionActive).map(id =>
-    `<a class="mmb-col" href="#/col/${id}">${iconSVG(COLLECTIONS[id].icon)}<span>${escapeHtml(COLLECTIONS[id].title)}</span><small>${collectionCount(id)}</small></a>`).join('');
+  const cols = ['nuevos', 'oportunidades', 'volumen', 'ultimas', 'mas-vendidos', 'dia-nino'].filter(id => (COLLECTIONS[id].always && id !== 'dia-nino') || collectionActive(id)).map(id =>
+    `<a class="mmb-col mmb-${id}" href="#/col/${id}">${iconSVG(COLLECTIONS[id].icon)}<span>${escapeHtml(COLLECTIONS[id].title)}</span><small>${collectionCount(id)} productos</small></a>`).join('');
   el.innerHTML = `
+    <div class="mmb-main">
+      <a class="mmb-row" href="#/">${ICONS.home2}<span>Inicio</span></a>
+      <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Catálogo completo</span><small>${fmt(VISIBLE_PRODUCTS.length)}</small></a>
+      <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Marcas</span><small>${BRANDS.length}</small></a>
+      <button type="button" class="mmb-row" onclick="closeMobileMenu();openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
+    </div>
     <div class="mmb-cols">${cols}</div>
+    <div class="mmb-label">Departamentos</div>
     ${deptsWithProducts().map(d => `
       <details class="mmb-dept tone-${d.tone}">
         <summary>${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span><small>${TAXO_COUNTS.dept[d.id]}</small>${ICONS.chevD}</summary>
@@ -297,36 +394,33 @@ function renderMobileMenu() {
               `<a href="#/c/${c.id}/${slugify(t.label)}">${escapeHtml(t.label)}</a>`).join('')}</div>
           </div>`).join('')}
       </details>`).join('')}
-    <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Todas las marcas</span><small>${BRANDS.length}</small></a>
-    <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Todo el catálogo</span><small>${VISIBLE_PRODUCTS.length}</small></a>
-    <div class="mmb-tools">
-      <button type="button" onclick="closeMobileMenu();openOrderHistory()">${ICONS.clock}<span>Historial de pedidos</span></button>
-      <button type="button" onclick="closeMobileMenu();openCalculator()">${ICONS.file}<span>Calculadora</span></button>
-      <button type="button" onclick="toggleTheme()">${ICONS.spark}<span>Modo claro / oscuro</span></button>
-    </div>`;
+    <div class="mmb-label">Herramientas</div>
+    <div class="mmb-tools">${toolsMenuHTML()}</div>`;
 }
-function openMobileMenu() { document.body.classList.add('menu-open'); }
+function openMobileMenu() { closeMoreMenu(); document.body.classList.add('menu-open'); }
 function closeMobileMenu() { document.body.classList.remove('menu-open'); }
 
+function routeKey(r) {
+  if (r.view === 'home') return 'home';
+  if (r.view === 'brands' || r.kind === 'brand') return 'brands';
+  if (r.kind === 'all') return 'all';
+  if (r.kind === 'col') return 'col-' + r.col;
+  return '';
+}
 function updateNavActive() {
   const r = currentRoute;
-  let dept = '';
-  if (r.kind === 'dept') dept = r.dept;
-  else if (r.kind === 'cat') dept = CATEGORY_BY_ID[r.cat].dept;
-  else if (r.view === 'product') { const p = PRODUCTS_BY_ID[r.id]; if (p) dept = p.dept; }
-  document.querySelectorAll('#deptNav .dn-link').forEach(a => {
-    const h = a.getAttribute('href');
-    a.classList.toggle('active', (a.dataset.dept && a.dataset.dept === dept) || h === r.hash || (h === '#/marcas' && (r.view === 'brands' || r.kind === 'brand')));
-  });
+  const key = routeKey(r);
+  document.querySelectorAll('#deptNav .dn-link').forEach(a => a.classList.toggle('active', !!key && a.dataset.route === key));
 }
 
 function updateMobileTabs() {
   const r = currentRoute;
-  const map = { home: 'tabHome', brands: 'tabBrands' };
   document.querySelectorAll('.tabbar a, .tabbar button').forEach(t => t.classList.remove('active'));
-  let id = map[r.view] || (r.kind === 'brand' ? 'tabBrands' : 'tabExplore');
-  if (r.view === 'listing' && r.kind === 'search') id = 'tabSearch';
-  const el = document.getElementById(id);
+  let id = '';
+  if (r.view === 'home') id = 'tabHome';
+  else if (r.view === 'listing' && r.kind === 'search') id = 'tabSearch';
+  else if (r.view === 'listing' || r.view === 'brands' || r.view === 'product') id = 'tabCatalog';
+  const el = id && document.getElementById(id);
   if (el) el.classList.add('active');
 }
 
@@ -334,26 +428,35 @@ function updateMobileTabs() {
 //  TARJETAS
 // ============================================================
 function cardBadges(p) {
-  const lvl = stockLevel(p);
-  const out = [];
-  if (isProductNew(p)) out.push('<span class="badge badge-new">Nuevo</span>');
-  if (isBestSeller(p)) out.push('<span class="badge badge-best">Más vendido</span>');
-  if (lvl.key === 'low') out.push('<span class="badge badge-low">Últimas unidades</span>');
-  if (lvl.key === 'out') out.push('<span class="badge badge-out">Agotado</span>');
+  const out = productFlags(p).slice(0, 2).map(f => `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.badge}</span>`);
+  if (stockLevel(p).key === 'out') out.unshift('<span class="badge badge-out">Agotado</span>');
   return out.slice(0, 2).join('');
 }
 
-// Dato clave que se muestra en la tarjeta segun el tipo de producto.
+// Datos clave de la tarjeta segun el departamento: cada uno muestra lo
+// que importa para decidir (nunca datos inventados).
 function keySpec(p) {
   const specs = p._specs || (p._specs = productSpecs(p));
   const tone = deptTone(p.dept);
-  if (tone === 'tech' || tone === 'home') {
-    const pick = ['Conector', 'Potencia', 'Batería', 'Video', 'Conexión', 'Capacidad', 'Largo', 'Empaque'];
-    const found = pick.map(l => specs.find(s => s.label === l)).filter(Boolean).slice(0, 2);
-    return found.map(s => s.value);
-  }
-  const pick = ['Tono', 'Tamaño', 'Protección', 'Contenido'];
-  return pick.map(l => specs.find(s => s.label === l)).filter(Boolean).slice(0, 2).map(s => (s.label === 'Tono' ? 'Tono ' : '') + s.value);
+  const get = l => (specs.find(s => s.label === l) || {}).value;
+  if (tone === 'battery') return [batterySize(p) && 'Tamaño ' + batterySize(p), batteryPack(p), batteryVolt(p)].filter(Boolean).slice(0, 2);
+  if (tone === 'tech') return [get('Conector'), get('Conexión'), get('Potencia'), get('Batería'), get('Video'), get('Largo')].filter(Boolean).slice(0, 2);
+  if (tone === 'home') return [get('Capacidad'), get('Potencia'), get('Velocidades'), get('Conexión')].filter(Boolean).slice(0, 2);
+  const size = sizeOf(p);
+  return [get('Tono') && 'Tono ' + get('Tono'), size, get('Protección'), get('Contenido')].filter(Boolean).slice(0, 2);
+}
+// Presentacion / tamano tal como viene en el nombre (ej. "250 ml").
+function sizeOf(p) {
+  const specs = p._specs || (p._specs = productSpecs(p));
+  const s = specs.find(x => x.label === 'Tamaño');
+  if (s) return s.value;
+  const m = String(p.name).toUpperCase().match(/(\d+(?:[.,]\d+)?)\s?(ML|GR|G|OZ|KG|L)\b/);
+  return m ? m[1].replace(',', '.') + ' ' + m[2].toLowerCase().replace('gr', 'g') : '';
+}
+
+function availHTML(p, cls) {
+  const lvl = stockLevel(p);
+  return `<span class="${cls || 'pc-stock'} is-${lvl.key}"><i></i><b>${lvl.label}</b>${lvl.qty ? `<span>${escapeHtml(lvl.qty)}</span>` : ''}</span>`;
 }
 
 function qtyControlHTML(p, compact) {
@@ -390,10 +493,9 @@ function cardHTML(p) {
         <a class="pc-brand" href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a>
         <a class="pc-name" href="#/p/${p.id}" title="${escapeHtml(p.name)}">${safeName}</a>
         <div class="pc-meta"><span class="pc-type">${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span>${specs.map(s => `<span class="pc-spec">${escapeHtml(s)}</span>`).join('')}</div>
-        <div class="pc-foot">
-          <span class="pc-stock is-${lvl.key}"><i></i>${escapeHtml(lvl.label)}</span>
-          <span class="pc-code" title="Código de barras">${escapeHtml(p.code)}</span>
-        </div>
+        <div class="pc-code" title="Código de barras">Código: <b>${escapeHtml(p.code)}</b></div>
+        ${availHTML(p)}
+        ${isVolume(p) ? `<span class="pc-vol">${ICONS.box}Disponible para volumen</span>` : ''}
         ${typeof dupePanelHTML === 'function' ? dupePanelHTML(p.id) : ''}
         <div class="pc-action">${qtyControlHTML(p, true)}</div>
       </div>
@@ -414,7 +516,7 @@ function rowHTML(p) {
         <span class="pr-type">${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}${keySpec(p).map(s => ' · ' + escapeHtml(s)).join('')}</span>
       </div>
       <span class="pr-code">${escapeHtml(p.code)}</span>
-      <span class="pc-stock is-${lvl.key}"><i></i>${escapeHtml(lvl.short)}</span>
+      ${availHTML(p)}
       <div class="pr-action pc-action">${qtyControlHTML(p, true)}</div>
     </article>`;
 }
@@ -435,7 +537,7 @@ function railCardHTML(p) {
         <span class="rc-brand">${escapeHtml(p.brand)}</span>
         <span class="rc-name">${name}</span>
         <span class="rc-meta">${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}${specs[0] ? ' · ' + escapeHtml(specs[0]) : ''}</span>
-        <span class="rc-stock is-${lvl.key}"><i></i>${escapeHtml(lvl.short)}</span>
+        ${availHTML(p, 'rc-stock')}
       </a>
       ${lvl.key === 'out' ? '' : `<button type="button" class="rc-add" onclick="changeQty(${p.id},1)" aria-label="Agregar ${name} al pedido">${ICONS.plus}<b data-qty-badge="${p.id}">${qty || ''}</b></button>`}
     </article>`;
@@ -474,7 +576,7 @@ function scrollRail(btn, dir) {
 // ============================================================
 function photoPick(list, n) { return topWithPhoto(list.filter(p => p.img && stockNum(p) > 0), n); }
 
-// Un producto por categoria, alternando, para que los carriles sean variados.
+// Un producto por grupo, alternando, para que los carriles sean variados.
 function mixedPick(groups, n) {
   const lists = groups.map(g => g.slice());
   const out = [];
@@ -482,72 +584,84 @@ function mixedPick(groups, n) {
   return out;
 }
 
+function deptBrands(deptId, n) {
+  const c = {};
+  VISIBLE_PRODUCTS.forEach(p => { if (p.dept === deptId) c[p.brand] = (c[p.brand] || 0) + 1; });
+  return Object.keys(c).sort((a, b) => c[b] - c[a]).slice(0, n);
+}
+
+// Encabezado del inicio: "¿Que quieres comprar hoy?" + buscador + los
+// cuatro grandes accesos.
 function renderHero() {
   const el = document.getElementById('homeHero');
   if (!el) return;
-  const cfg = typeof CAMPANA_INICIO !== 'undefined' ? CAMPANA_INICIO : {};
-  const nuevos = VISIBLE_PRODUCTS.filter(isInNuevosIngresosView);
-  const useNew = cfg.modo !== 'fijo' && nuevos.length > 0;
-  let pics = [];
-  if (!useNew && cfg.productos && cfg.productos.length) pics = cfg.productos.map(c => PRODUCTS_BY_CODE[c]).filter(Boolean);
-  if (useNew) pics = photoPick(nuevos, 4);
-  if (pics.length < 4) {
-    const extra = mixedPick(deptsWithProducts().map(d => photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id && !pics.includes(p)), 3)), 4 - pics.length);
-    pics = pics.concat(extra);
-  }
-  const eyebrow = useNew ? 'Nuevos ingresos' : (cfg.etiqueta || 'Catálogo mayorista');
-  const title = useNew ? 'Descubre lo nuevo en bodega.' : (cfg.titulo || 'Surtido completo para tu negocio.');
-  const text = useNew ? `${nuevos.length} ${nuevos.length === 1 ? 'producto recién llegado' : 'productos recién llegados'} de nuestras marcas. Sé el primero en ofrecerlos en tu tienda.` : (cfg.texto || '');
-  const cta = useNew ? 'Ver nuevos ingresos' : (cfg.boton || 'Explorar el catálogo');
-  const dest = useNew ? '#/col/nuevos' : (cfg.destino || '#/todo');
-
-  const ultimasList = VISIBLE_PRODUCTS.filter(COLLECTIONS.ultimas.filter);
-  const volList = VISIBLE_PRODUCTS.filter(COLLECTIONS.volumen.filter);
-  const masList = VISIBLE_PRODUCTS.filter(isBestSeller);
-  const promos = [];
-  if (ultimasList.length) promos.push({ cls: 'promo-low', href: '#/col/ultimas', icon: 'clock', title: 'Últimas unidades', sub: 'Quedan pocas: asegúralas hoy.', n: ultimasList.length,
-    items: mixedPick(deptsWithProducts().map(d => topWithPhoto(ultimasList.filter(p => p.dept === d.id && p.img), 5)), 14) });
-  if (masList.length) promos.push({ cls: 'promo-alt', href: '#/col/mas-vendidos', icon: 'flame', title: 'Más vendidos', sub: 'Lo que más piden nuestros clientes.', n: masList.length,
-    items: masList.filter(p => p.img).sort((x, y) => MAS_VENDIDOS_RANK[x.code] - MAS_VENDIDOS_RANK[y.code]).slice(0, 14) });
-  else if (volList.length) promos.push({ cls: 'promo-alt', href: '#/col/volumen', icon: 'box', title: 'Stock para volumen', sub: `Más de ${VOLUMEN_MIN.toLocaleString('es-CR')} unidades de cada uno.`, n: volList.length,
-    items: mixedPick(deptsWithProducts().map(d => volList.filter(p => p.dept === d.id && p.img).sort((x, y) => stockNum(y) - stockNum(x)).slice(0, 5)), 14) });
-
+  const cfg = typeof INICIO !== 'undefined' ? INICIO : {};
+  const text = String(cfg.texto || '').replace('{productos}', fmt(VISIBLE_PRODUCTS.length)).replace('{marcas}', BRANDS.length);
+  const popular = (typeof BUSQUEDAS_POPULARES !== 'undefined' ? BUSQUEDAS_POPULARES : []).slice(0, 6);
   el.innerHTML = `
-    <a class="hero-main" href="${escapeHtml(dest)}">
-      <div class="hero-copy">
-        <span class="hero-eyebrow">${useNew ? '<i class="dot-live"></i>' : ''}${escapeHtml(eyebrow)}</span>
-        <h1 class="hero-title">${escapeHtml(title)}</h1>
-        ${text ? `<p class="hero-text">${escapeHtml(text)}</p>` : ''}
-        <span class="btn btn-light btn-lg hero-cta">${escapeHtml(cta)} ${ICONS.arrow}</span>
-      </div>
-      <div class="hero-pics" aria-hidden="true">${pics.slice(0, 4).map((p, i) => `<span class="hero-pic hp-${i}"><img src="${productImgSrc(p)}" alt="" ${i < 2 ? 'fetchpriority="high"' : 'loading="lazy"'}></span>`).join('')}</div>
-    </a>
-    <div class="hero-side">${promos.map(promoCarouselHTML).join('')}</div>`;
+    <div class="wh-head">
+      <span class="wh-eyebrow">${escapeHtml(cfg.etiqueta || 'Catálogo mayorista')}</span>
+      <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué quieres comprar hoy?')}</h1>
+      ${text ? `<p class="wh-text">${escapeHtml(text)}</p>` : ''}
+      ${bigSearchHTML('homeSearch', 'Busca por producto, marca o código de barras')}
+      ${popular.length ? `<div class="wh-pop"><span>Más buscado:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>
+    <div class="dept-access">${deptsWithProducts().map(deptAccessHTML).join('')}</div>`;
 }
 
-// Tarjeta lateral del banner con un carrusel de sus productos (se mueve
-// solo, se detiene al pasar el mouse y se puede deslizar con el dedo).
+function deptAccessHTML(d) {
+  const pics = mixedPick(catsOfDept(d.id).map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 2)), 3);
+  if (pics.length < 3) pics.push(...photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id && !pics.includes(p)), 3 - pics.length));
+  const brands = deptBrands(d.id, 5);
+  const cats = catsOfDept(d.id);
+  const sub = cats.length > 1 ? cats.map(c => c.name).join(' · ') : typesOfCat(cats[0].id).filter(t => t.label !== 'Otros').map(t => t.label).join(' · ');
+  return `
+    <a class="da-card tone-${d.tone}" href="#/d/${d.id}">
+      <span class="da-top">
+        <span class="da-icon">${iconSVG(d.icon)}</span>
+        <span class="da-count">${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
+      </span>
+      <span class="da-name">${escapeHtml(d.name)}</span>
+      <span class="da-sub">${escapeHtml(sub)}</span>
+      <span class="da-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</span>
+      <span class="da-brands">${brands.map(b => `<i>${escapeHtml(b)}</i>`).join('')}</span>
+      <span class="da-go">Entrar a ${escapeHtml(d.name)} ${ICONS.arrow}</span>
+    </a>`;
+}
+
+function bigSearchHTML(id, placeholder) {
+  return `
+    <form class="big-search" role="search" onsubmit="event.preventDefault();submitSearch(searchCtxOf('${id}'))" data-search-wrap="${id}">
+      ${ICONS.search}
+      <input id="${id}" type="search" placeholder="${escapeHtml(placeholder)}" autocomplete="off" enterkeyhint="search" aria-label="${escapeHtml(placeholder)}" aria-controls="${id}Results" aria-expanded="false">
+      <button type="submit" class="btn btn-primary">Buscar</button>
+      <div class="search-results" id="${id}Results" role="listbox"></div>
+    </form>`;
+}
+
+// Tarjeta del inicio con un carrusel de sus productos (se mueve solo,
+// se detiene al pasar el mouse y se puede deslizar con el dedo).
 function promoCarouselHTML(pr) {
   const item = p => {
     const lvl = stockLevel(p);
     return `<a class="pm-item" href="#/p/${p.id}" title="${escapeHtml(prettyName(p))}">
       <span class="pm-pic"><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>
       <span class="pm-name">${escapeHtml(prettyName(p))}</span>
-      <span class="pm-stock is-${lvl.key}">${escapeHtml(lvl.short)}</span>
+      <span class="pm-stock is-${lvl.key}">${escapeHtml(lvl.qty || lvl.label)}</span>
     </a>`;
   };
   const list = pr.items.map(item).join('');
   return `
     <div class="hero-promo ${pr.cls}">
       <a class="pm-head" href="${pr.href}">
-        <span class="hp-k">${iconSVG(pr.icon)}${pr.n.toLocaleString('es-CR')} productos</span>
+        <span class="hp-k">${iconSVG(pr.icon)}${fmt(pr.n)} productos</span>
         <b>${escapeHtml(pr.title)}</b>
         <span class="hp-d">${escapeHtml(pr.sub)}</span>
       </a>
       <div class="pm-viewport">
         <div class="pm-track" style="--pm-dur:${Math.max(24, pr.items.length * 3.2)}s">${list}<span class="pm-dup" aria-hidden="true">${list}</span></div>
       </div>
-      <a class="hp-go" href="${pr.href}">Ver los ${pr.n.toLocaleString('es-CR')} ${ICONS.arrow}</a>
+      <a class="hp-go" href="${pr.href}">Ver los ${fmt(pr.n)} ${ICONS.arrow}</a>
     </div>`;
 }
 
@@ -556,43 +670,33 @@ function renderTrustBar() {
   if (!el) return;
   const conStock = VISIBLE_PRODUCTS.filter(p => stockNum(p) > 0).length;
   const items = [
-    ['box', `${VISIBLE_PRODUCTS.length.toLocaleString('es-CR')} productos`, `${conStock.toLocaleString('es-CR')} con stock hoy`],
-    ['tag', `${BRANDS.length} marcas`, 'Belleza, tecnología y hogar'],
+    ['box', `${fmt(VISIBLE_PRODUCTS.length)} productos`, `${fmt(conStock)} disponibles hoy`],
+    ['tag', `${BRANDS.length} marcas`, 'Cuidado personal, tecnología y hogar'],
     ['file', 'Pedido en Excel', 'Con las fotos de tus productos'],
     ['chat', 'Tu vendedor por WhatsApp', 'Atención directa y personalizada']
   ];
   el.innerHTML = items.map(([i, b, s]) => `<div class="tb-item">${iconSVG(i)}<span><b>${escapeHtml(b)}</b><small>${escapeHtml(s)}</small></span></div>`).join('');
 }
 
-function renderDeptCards() {
-  const el = document.getElementById('deptCards');
-  if (!el) return;
-  el.innerHTML = deptsWithProducts().map(d => {
-    const pics = mixedPick(catsOfDept(d.id).map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 2)), 3);
-    return `
-      <div class="dept-card tone-${d.tone}">
-        <a class="dc-top" href="#/d/${d.id}">
-          <span class="dc-pics" aria-hidden="true">${pics.map(p => `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">`).join('')}</span>
-          <span class="dc-name">${escapeHtml(d.name)}<small>${TAXO_COUNTS.dept[d.id]} productos</small></span>
-        </a>
-        <ul class="dc-cats">${catsOfDept(d.id).map(c => `<li><a href="#/c/${c.id}">${escapeHtml(c.name)}<small>${TAXO_COUNTS.cat[c.id]}</small></a></li>`).join('')}</ul>
-        <a class="dc-all" href="#/d/${d.id}">Ver todo ${escapeHtml(d.name)} ${ICONS.arrow}</a>
-      </div>`;
-  }).join('');
+// "¿Que estas buscando?": accesos por necesidad (config.js NECESIDADES)
+function hashScope(h) {
+  const r = parseHash(h);
+  if (r.view !== 'listing') return [];
+  return scopeOf(r);
 }
-
-function renderCatCircles() {
-  const el = document.getElementById('catCircles');
+function renderNeeds() {
+  const el = document.getElementById('homeNeeds');
   if (!el) return;
-  const cats = deptsWithProducts().flatMap(d => catsOfDept(d.id));
-  el.innerHTML = cats.map(c => {
-    const p = photoPick(VISIBLE_PRODUCTS.filter(x => x.cat === c.id), 1)[0];
-    return `
-      <a class="cc tone-${deptTone(c.dept)}" href="#/c/${c.id}">
-        <span class="cc-pic">${p ? `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">` : iconSVG(c.icon)}</span>
-        <span class="cc-name">${escapeHtml(c.name)}</span>
-      </a>`;
-  }).join('');
+  const list = (typeof NECESIDADES !== 'undefined' ? NECESIDADES : []).map(n => {
+    const scope = hashScope(n.destino);
+    return { ...n, count: scope.length, pic: photoPick(scope, 1)[0] };
+  }).filter(n => n.count);
+  el.innerHTML = list.map(n => `
+    <a class="need" href="${escapeHtml(n.destino)}">
+      <span class="need-pic">${n.pic ? `<img src="${productImgSrc(n.pic)}" alt="" loading="lazy" decoding="async">` : ''}<i>${iconSVG(n.icono)}</i></span>
+      <span class="need-name">${escapeHtml(n.nombre)}</span>
+      <small>${fmt(n.count)} productos</small>
+    </a>`).join('');
 }
 
 function renderDeptBlocks() {
@@ -601,14 +705,18 @@ function renderDeptBlocks() {
   el.innerHTML = deptsWithProducts().map(d => {
     const cats = catsOfDept(d.id);
     const items = mixedPick(cats.map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 8)), 16);
-    const tiles = cats.map(c => {
-      const pic = photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 1)[0];
-      return `<a class="db-tile" href="#/c/${c.id}">
-        <span class="db-tile-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : iconSVG(c.icon)}</span>
-        <span class="db-tile-name">${escapeHtml(c.name)}</span>
-        <span class="db-tile-types">${typesOfCat(c.id).filter(t => t.label !== 'Otros').slice(0, 3).map(t => escapeHtml(t.label)).join(' · ')}</span>
-      </a>`;
-    }).join('');
+    // Departamento de una sola categoria (Baterias): se muestran sus tipos.
+    const tiles = (cats.length > 1 ? cats.map(c => ({ href: '#/c/' + c.id, name: c.name, icon: c.icon, list: VISIBLE_PRODUCTS.filter(p => p.cat === c.id),
+        types: typesOfCat(c.id).filter(t => t.label !== 'Otros').slice(0, 3).map(t => t.label).join(' · ') }))
+      : typesOfCat(cats[0].id).map(t => ({ href: '#/c/' + cats[0].id + '/' + slugify(t.label), name: t.label, icon: cats[0].icon, list: VISIBLE_PRODUCTS.filter(p => p.cat === cats[0].id && p.tipo === t.label), types: `${t.count} productos` })))
+      .map(t => {
+        const pic = photoPick(t.list, 1)[0];
+        return `<a class="db-tile" href="${t.href}">
+          <span class="db-tile-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : iconSVG(t.icon)}</span>
+          <span class="db-tile-name">${escapeHtml(t.name)}</span>
+          <span class="db-tile-types">${escapeHtml(t.types)}</span>
+        </a>`;
+      }).join('');
     return `
       <section class="dept-block tone-${d.tone}" aria-labelledby="db-${d.id}">
         <div class="db-inner">
@@ -618,10 +726,10 @@ function renderDeptBlocks() {
               <h2 class="sec-title" id="db-${d.id}">${escapeHtml(d.name)}</h2>
               <p class="sec-sub">${escapeHtml(d.blurb)}</p>
             </div>
-            <div class="sec-actions"><a class="sec-more" href="#/d/${d.id}">Ver los ${TAXO_COUNTS.dept[d.id]} productos ${ICONS.arrow}</a></div>
+            <div class="sec-actions"><a class="sec-more" href="#/d/${d.id}">Ver los ${fmt(TAXO_COUNTS.dept[d.id])} productos ${ICONS.arrow}</a></div>
           </div>
           <div class="db-tiles">${tiles}</div>
-          ${railHTML(items, { title: `Destacados en ${d.name}`, cls: 'rail-inblock' })}
+          ${railHTML(items, { title: `Productos de ${d.name}`, cls: 'rail-inblock', more: '#/d/' + d.id })}
         </div>
       </section>`;
   }).join('');
@@ -630,8 +738,8 @@ function renderDeptBlocks() {
 function featuredBrands() {
   const stats = {};
   VISIBLE_PRODUCTS.forEach(p => {
-    const b = stats[p.brand] || (stats[p.brand] = { name: p.brand, count: 0, depts: {}, items: [] });
-    b.count++; b.depts[p.dept] = (b.depts[p.dept] || 0) + 1; b.items.push(p);
+    const b = stats[p.brand] || (stats[p.brand] = { name: p.brand, count: 0, depts: {}, cats: {}, items: [] });
+    b.count++; b.depts[p.dept] = (b.depts[p.dept] || 0) + 1; b.cats[p.cat] = (b.cats[p.cat] || 0) + 1; b.items.push(p);
   });
   let list = Object.values(stats).sort((a, b) => b.count - a.count);
   if (typeof MARCAS_DESTACADAS !== 'undefined' && MARCAS_DESTACADAS.length) {
@@ -644,11 +752,13 @@ function featuredBrands() {
 function brandTileHTML(b) {
   const mainDept = Object.keys(b.depts).sort((x, y) => b.depts[y] - b.depts[x])[0];
   const thumbs = photoPick(b.items, 3);
+  const cats = Object.keys(b.cats).sort((x, y) => b.cats[y] - b.cats[x]).map(catName);
   return `
-    <a class="brand-tile tone-${deptTone(mainDept)}" href="${brandHash(b.name)}">
-      <span class="bt-word">${escapeHtml(b.name)}</span>
+    <a class="brand-tile tone-${deptTone(mainDept)}" href="${brandHash(b.name)}" data-brand="${escapeHtml(normText(b.name))}">
+      ${brandMarkHTML(b.name, 'bt-word')}
+      <span class="bt-cats">${escapeHtml(cats.slice(0, 3).join(' · '))}</span>
       <span class="bt-thumbs" aria-hidden="true">${thumbs.map(p => `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">`).join('')}</span>
-      <span class="bt-meta">${b.count} productos · ${Object.keys(b.depts).map(deptName).join(', ')}</span>
+      <span class="bt-foot"><span class="bt-meta">${fmt(b.count)} productos</span><span class="bt-go">Ver productos ${ICONS.arrow}</span></span>
     </a>`;
 }
 
@@ -658,62 +768,105 @@ function renderHomeBrands() {
   el.innerHTML = featuredBrands().slice(0, 12).map(brandTileHTML).join('');
 }
 
+function volLevelChipsHTML(active, onclickFn) {
+  return VOL_LEVELS.map(n => {
+    const c = VISIBLE_PRODUCTS.filter(p => stockNum(p) >= n).length;
+    return onclickFn
+      ? `<button type="button" class="vol-chip${active === n ? ' on' : ''}" onclick="${onclickFn}(${n})"><b>${n}+</b><span>unidades</span><small>${fmt(c)}</small></button>`
+      : `<a class="vol-chip" href="#/col/volumen/${n}"><b>${n}+</b><span>unidades</span><small>${fmt(c)} productos</small></a>`;
+  }).join('');
+}
+
 function renderHomeRails() {
   const top = document.getElementById('homeRailsTop');
-  const mid = document.getElementById('homeRailsMid');
+  const vol = document.getElementById('homeVolume');
   const nuevos = VISIBLE_PRODUCTS.filter(isInNuevosIngresosView).sort((a, b) => rankScore(b) - rankScore(a));
+  const opp = VISIBLE_PRODUCTS.filter(isOpportunity).sort((a, b) => OPORT_RANK[a.id] - OPORT_RANK[b.id]);
   const mas = VISIBLE_PRODUCTS.filter(isBestSeller).sort((a, b) => MAS_VENDIDOS_RANK[a.code] - MAS_VENDIDOS_RANK[b.code]);
-  const ultimas = VISIBLE_PRODUCTS.filter(COLLECTIONS.ultimas.filter);
-  // Ultimas unidades: variado por departamento, primero lo que tiene foto.
-  const ultMix = mixedPick(deptsWithProducts().map(d => topWithPhoto(ultimas.filter(p => p.dept === d.id && p.img), 6)), 18);
-  const vol = mixedPick(deptsWithProducts().map(d => VISIBLE_PRODUCTS.filter(p => p.dept === d.id && p.img && stockNum(p) >= VOLUMEN_MIN).sort((a, b) => stockNum(b) - stockNum(a)).slice(0, 6)), 16);
   if (top) top.innerHTML =
-    railHTML(nuevos.slice(0, 18), { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', icon: 'spark', sub: 'Lo más reciente que entró a bodega.', more: '#/col/nuevos', moreLabel: `Ver los ${nuevos.length}`, cls: 'rail-new' }) +
-    railHTML(mas.slice(0, 18), { title: 'Más vendidos', eyebrow: 'Alta rotación', icon: 'flame', sub: 'Lo que más piden nuestros clientes.', more: '#/col/mas-vendidos', cls: 'rail-best' }) +
-    railHTML(ultMix, { title: 'Últimas unidades', eyebrow: 'Quedan pocas', icon: 'clock', sub: 'Productos con pocas existencias: asegúralos antes de que se agoten.', more: '#/col/ultimas', moreLabel: `Ver los ${ultimas.length}`, cls: 'rail-low' });
-  if (mid) mid.innerHTML = railHTML(vol, { title: 'Stock para volumen', eyebrow: 'Pedidos grandes', icon: 'box', sub: `Más de ${VOLUMEN_MIN.toLocaleString('es-CR')} unidades disponibles de cada uno.`, more: '#/col/volumen', cls: 'rail-vol' });
+    railHTML(nuevos.slice(0, 18), { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', icon: 'spark', sub: 'Productos recién incorporados al catálogo.', more: '#/col/nuevos', moreLabel: `Ver los ${nuevos.length}`, cls: 'rail-new' }) +
+    railHTML(opp.slice(0, 18), { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', icon: 'flame', sub: COLLECTIONS.oportunidades.sub, more: '#/col/oportunidades', moreLabel: `Ver las ${opp.length}`, cls: 'rail-opp' }) +
+    railHTML(mas.slice(0, 18), { title: 'Más vendidos', eyebrow: 'Alta rotación', icon: 'tag', sub: 'Lo que más piden nuestros clientes.', more: '#/col/mas-vendidos', cls: 'rail-best' });
+
+  if (vol) {
+    const ultimasList = VISIBLE_PRODUCTS.filter(isLowStock);
+    const volList = VISIBLE_PRODUCTS.filter(isVolume);
+    const promos = [];
+    if (volList.length) promos.push({ cls: 'promo-alt', href: '#/col/volumen/' + VOL_LEVEL_START, icon: 'box', title: 'Disponibles para volumen', sub: `Más de ${fmt(VOLUMEN_MIN)} unidades de cada uno.`, n: volList.length,
+      items: mixedPick(deptsWithProducts().map(d => volList.filter(p => p.dept === d.id && p.img).sort((x, y) => stockNum(y) - stockNum(x)).slice(0, 5)), 14) });
+    if (ultimasList.length) promos.push({ cls: 'promo-low', href: '#/col/ultimas', icon: 'bolt', title: 'Últimas unidades', sub: 'Quedan pocas: asegúralas hoy.', n: ultimasList.length,
+      items: mixedPick(deptsWithProducts().map(d => topWithPhoto(ultimasList.filter(p => p.dept === d.id && p.img), 5)), 14) });
+    vol.innerHTML = `
+      <div class="sec-head">
+        <div>
+          <span class="sec-eyebrow">${ICONS.box}Pedidos grandes</span>
+          <h2 class="sec-title">Compra por volumen</h2>
+          <p class="sec-sub">Elige cuántas unidades necesitas como mínimo y te mostramos los productos con inventario suficiente.</p>
+        </div>
+        <div class="sec-actions"><a class="sec-more" href="#/col/volumen">Ver compra por volumen ${ICONS.arrow}</a></div>
+      </div>
+      <div class="vol-levels">${volLevelChipsHTML()}</div>
+      <div class="vol-promos">${promos.map(promoCarouselHTML).join('')}</div>`;
+  }
 }
 
 function renderHome() {
   renderHero();
   renderTrustBar();
-  renderDeptCards();
-  renderCatCircles();
+  renderNeeds();
   renderHomeRails();
-  renderDeptBlocks();
   renderHomeBrands();
+  renderDeptBlocks();
+  bindSearchBox('homeSearch');
 }
 // Compatibilidad
 function renderHeroNuevos() {}
 function renderBrandFilter() {}
 function renderCategoriaFilter() { renderNav(); }
+function renderDeptCards() {}
+function renderCatCircles() {}
 
 // ============================================================
 //  DIRECTORIO DE MARCAS
 // ============================================================
 let brandsDeptFilter = '';
+let brandsQuery = '';
 function renderBrandsDirectory() {
   const el = document.getElementById('brandsView');
   if (!el) return;
   const all = featuredBrands();
-  const list = (brandsDeptFilter ? all.filter(b => b.depts[brandsDeptFilter]) : all).slice().sort((a, b) => a.name.localeCompare(b.name, 'es'));
   el.innerHTML = `
     <div class="page-head">
       ${homeBackHTML()}
       <nav class="crumbs" aria-label="Ruta"><a href="#/">Inicio</a>${ICONS.chevR}<span>Marcas</span></nav>
       <h1 class="page-title">Nuestras marcas</h1>
-      <p class="page-sub">${all.length} marcas con todo su surtido disponible. Entra a una marca para ver todos sus productos.</p>
-      <div class="chips-row">
-        <button type="button" class="fchip${!brandsDeptFilter ? ' on' : ''}" onclick="brandsDeptFilter='';renderBrandsDirectory()">Todas</button>
-        ${deptsWithProducts().map(d => `<button type="button" class="fchip${brandsDeptFilter === d.id ? ' on' : ''}" onclick="brandsDeptFilter='${d.id}';renderBrandsDirectory()">${escapeHtml(d.name)}</button>`).join('')}
+      <p class="page-sub">${all.length} marcas con todo su surtido disponible. Entra a una marca para ver sus productos, categorías y filtros.</p>
+      <div class="brand-tools">
+        <label class="brand-search">${ICONS.search}<input type="search" id="brandSearch" placeholder="Buscar marca" autocomplete="off" value="${escapeHtml(brandsQuery)}" oninput="brandsQuery=this.value;filterBrandTiles()" aria-label="Buscar marca"></label>
+        <div class="chips-row">
+          <button type="button" class="fchip${!brandsDeptFilter ? ' on' : ''}" onclick="brandsDeptFilter='';renderBrandsDirectory()">Todas</button>
+          ${deptsWithProducts().map(d => `<button type="button" class="fchip${brandsDeptFilter === d.id ? ' on' : ''}" onclick="brandsDeptFilter='${d.id}';renderBrandsDirectory()">${escapeHtml(d.name)}</button>`).join('')}
+        </div>
       </div>
     </div>
-    <div class="brand-dir">${list.map(brandTileHTML).join('')}</div>
+    <div class="brand-dir" id="brandDir">${(brandsDeptFilter ? all.filter(b => b.depts[brandsDeptFilter]) : all).slice().sort((a, b) => a.name.localeCompare(b.name, 'es')).map(brandTileHTML).join('')}</div>
+    <div class="empty-state" id="brandEmpty" hidden><div class="empty-state-title">Sin marcas con ese nombre</div><div class="empty-state-text">Revisa cómo está escrito o busca el producto en el buscador de arriba.</div></div>
     <div class="home-back-end">${homeBackHTML('is-outline')}</div>`;
+  filterBrandTiles();
+}
+function filterBrandTiles() {
+  const q = normText(brandsQuery).trim();
+  let n = 0;
+  document.querySelectorAll('#brandDir .brand-tile').forEach(t => {
+    const ok = !q || t.dataset.brand.includes(q) || t.dataset.brand.replace(/\s/g, '').includes(q.replace(/\s/g, ''));
+    t.hidden = !ok; if (ok) n++;
+  });
+  const e = document.getElementById('brandEmpty');
+  if (e) e.hidden = n > 0;
 }
 
 // ============================================================
-//  LISTADOS: alcance, filtros contextuales y orden
+//  LISTADOS: alcance, filtros por departamento y orden
 // ============================================================
 function scopeOf(r) {
   switch (r.kind) {
@@ -734,17 +887,6 @@ function defaultSort(r) {
   if (r.kind === 'search') return 'relevance';
   if (r.kind === 'col') return COLLECTIONS[r.col].sort;
   return 'brand';
-}
-
-function availValues(p) {
-  const s = stockNum(p);
-  const out = [];
-  if (s > 0) out.push('Con stock');
-  if (s > 0 && s <= LOW_STOCK) out.push('Últimas unidades');
-  if (s >= VOLUMEN_MIN) out.push('Stock para volumen');
-  if (isProductNew(p)) out.push('Nuevos ingresos');
-  if (p.img) out.push('Con foto');
-  return out;
 }
 
 function toneFamily(p) {
@@ -768,22 +910,53 @@ function connValue(p) {
   return specValue(p, 'Conexión') || 'Con cable';
 }
 
-// Filtros. "tones": en que tipo de seccion aparecen (beauty/care/tech/home;
-// vacio = siempre). Solo se muestran si hay al menos 2 opciones.
+function tipoName(v) {
+  const [c, t] = String(v).split('|');
+  return t === 'Otros' ? `Otros · ${catName(c)}` : t;
+}
+
+const AVAIL_ORDER = ['Disponible', 'Pocas unidades', 'Agotado'];
+const FLAG_ORDER = FLAG_DEFS.map(f => f.facet);
+
+// Filtros. "tones": en que departamentos aparecen (beauty / tech /
+// battery / home; vacio = siempre). Solo se muestran si hay al menos 2
+// opciones. El orden de cada departamento esta en FACET_ORDER.
 const FACETS = [
-  { id: 'dept',   label: 'Departamento', get: p => p.dept, name: deptName, when: r => ['all', 'search', 'col', 'brand'].includes(r.kind) },
-  { id: 'cat',    label: 'Categoría',    get: p => p.cat, name: catName, when: r => r.kind !== 'cat' },
-  { id: 'tipo',   label: 'Tipo de producto', get: p => p.tipo, when: r => r.kind === 'cat' && !r.type || ['dept', 'brand'].includes(r.kind) && false },
-  { id: 'brand',  label: 'Marca',        get: p => p.brand, when: r => r.kind !== 'brand' },
-  { id: 'tone',   label: 'Subtono',      get: toneFamily, tones: ['beauty'] },
-  { id: 'benefit', label: 'Beneficio',   get: productBenefits, tones: ['beauty', 'care'] },
-  { id: 'size',   label: 'Presentación', get: sizeBucket, tones: ['beauty', 'care'], order: SIZE_ORDER },
-  { id: 'conector', label: 'Conector',   get: p => specValue(p, 'Conector'), tones: ['tech'] },
-  { id: 'compat', label: 'Compatibilidad', get: productCompat, tones: ['tech'] },
-  { id: 'conn',   label: 'Conexión',     get: connValue, tones: ['tech'] },
-  { id: 'power',  label: 'Potencia',     get: powerBucket, tones: ['tech'], order: ['Hasta 12 W', '13–25 W', '26–65 W', 'Más de 65 W'] },
-  { id: 'avail',  label: 'Disponibilidad', get: availValues, order: ['Con stock', 'Últimas unidades', 'Stock para volumen', 'Nuevos ingresos', 'Con foto'] }
+  { id: 'dept',    label: 'Departamento',   get: p => p.dept, name: deptName, when: r => ['all', 'search', 'col', 'brand'].includes(r.kind) },
+  { id: 'cat',     label: 'Categoría',      get: p => p.cat, name: catName, when: r => r.kind !== 'cat' },
+  { id: 'tipo',    label: 'Subcategoría',   get: p => p.cat + '|' + p.tipo, name: tipoName, when: r => r.kind !== 'all' && !(r.kind === 'cat' && r.type) },
+  { id: 'brand',   label: 'Marca',          get: p => p.brand, when: r => r.kind !== 'brand' },
+  { id: 'avail',   label: 'Disponibilidad', get: p => stockLevel(p).label, order: AVAIL_ORDER, keep: true },
+  { id: 'flags',   label: 'Tipo de producto', get: p => productFlags(p).map(f => f.facet), order: FLAG_ORDER, keep: true },
+  // Cuidado personal y maquillaje
+  { id: 'size',    label: 'Presentación',   get: sizeBucket, tones: ['beauty'], order: SIZE_ORDER },
+  { id: 'benefit', label: 'Beneficio',      get: productBenefits, tones: ['beauty'] },
+  { id: 'tone',    label: 'Subtono',        get: toneFamily, tones: ['beauty'] },
+  // Tecnologia
+  { id: 'compat',  label: 'Compatibilidad', get: productCompat, tones: ['tech'] },
+  { id: 'conector', label: 'Conector',      get: p => specValue(p, 'Conector'), tones: ['tech'] },
+  { id: 'conn',    label: 'Conectividad',   get: connValue, tones: ['tech'] },
+  { id: 'power',   label: 'Potencia',       get: powerBucket, tones: ['tech', 'home'], order: ['Hasta 12 W', '13–25 W', '26–65 W', 'Más de 65 W'] },
+  // Baterias
+  { id: 'bsize',   label: 'Tamaño',         get: batterySize, tones: ['battery'], order: ['AAA', 'AA', 'C', 'D', '9V'] },
+  { id: 'bchem',   label: 'Tipo de batería', get: batteryChem, tones: ['battery'] },
+  { id: 'bpack',   label: 'Presentación',   get: batteryPack, tones: ['battery'] },
+  { id: 'volt',    label: 'Voltaje',        get: batteryVolt, tones: ['battery'] },
+  // Hogar
+  { id: 'cap',     label: 'Capacidad',      get: p => p.dept === 'hogar' ? specValue(p, 'Capacidad') : '', tones: ['home'] },
+  { id: 'speeds',  label: 'Velocidades',    get: p => p.dept === 'hogar' ? specValue(p, 'Velocidades') : '', tones: ['home'] }
 ];
+const FACET_BY_ID = {};
+FACETS.forEach(f => { FACET_BY_ID[f.id] = f; });
+
+// Orden de los filtros segun el departamento (lo que mas importa primero).
+const FACET_ORDER = {
+  beauty:  ['cat', 'tipo', 'brand', 'size', 'benefit', 'tone', 'flags', 'avail', 'dept'],
+  tech:    ['cat', 'tipo', 'compat', 'conector', 'conn', 'power', 'brand', 'avail', 'flags', 'dept'],
+  battery: ['bsize', 'bchem', 'bpack', 'volt', 'tipo', 'brand', 'avail', 'flags', 'cat', 'dept'],
+  home:    ['cat', 'tipo', 'cap', 'power', 'speeds', 'brand', 'avail', 'flags', 'dept'],
+  mixed:   ['dept', 'cat', 'tipo', 'brand', 'avail', 'flags']
+};
 
 function valuesOf(f, p) {
   const v = f.get(p);
@@ -792,18 +965,18 @@ function valuesOf(f, p) {
 }
 
 function scopeTones(list) {
-  const t = new Set(list.map(p => deptTone(p.dept)));
-  return t;
+  return new Set(list.map(p => deptTone(p.dept)));
 }
 
 function matchesFacets(p, except) {
-  for (const f of FACETS) {
-    if (f.id === except) continue;
-    const sel = listingState.facets[f.id];
-    if (!sel || !sel.size) continue;
+  if (listingState.minStock && stockNum(p) < listingState.minStock) return false;
+  for (const id in listingState.facets) {
+    if (id === except) continue;
+    const sel = listingState.facets[id];
+    const f = FACET_BY_ID[id];
+    if (!f || !sel || !sel.size) continue;
     const vals = valuesOf(f, p);
-    if (f.id === 'avail') { if (![...sel].every(s => vals.includes(s))) return false; }
-    else if (!vals.some(v => sel.has(v))) return false;
+    if (!vals.some(v => sel.has(v))) return false;
   }
   return true;
 }
@@ -812,6 +985,8 @@ function sortList(list, sort) {
   const by = {
     relevance: (a, b) => (b._score || 0) - (a._score || 0) || rankScore(b) - rankScore(a),
     featured: (a, b) => rankScore(b) - rankScore(a),
+    recent: (a, b) => String(b.dateAdded || '').localeCompare(String(a.dateAdded || '')) || b.id - a.id,
+    opp: (a, b) => (OPORT_RANK[a.id] || 1e9) - (OPORT_RANK[b.id] || 1e9),
     bestseller: (a, b) => (MAS_VENDIDOS_RANK[a.code] || 1e9) - (MAS_VENDIDOS_RANK[b.code] || 1e9),
     stock: (a, b) => stockNum(b) - stockNum(a),
     'stock-asc': (a, b) => (stockNum(a) <= 0) - (stockNum(b) <= 0) || stockNum(a) - stockNum(b),
@@ -819,7 +994,7 @@ function sortList(list, sort) {
     brand: (a, b) => a.brand.localeCompare(b.brand, 'es') || catIndex(a) - catIndex(b) ||
       typeIndex(a) - typeIndex(b) || prettyName(a).localeCompare(prettyName(b), 'es', { numeric: true })
   };
-  return list.slice().sort(by[sort] || by.featured);
+  return list.slice().sort(by[sort] || by.brand);
 }
 function catIndex(p) { const i = CATEGORIES.findIndex(c => c.id === p.cat); return i < 0 ? 99 : i; }
 function typeIndex(p) {
@@ -831,52 +1006,54 @@ function typeIndex(p) {
 
 const SORT_OPTIONS = [
   ['relevance', 'Más relevantes', r => r.kind === 'search'],
-  ['brand', 'Por marca', () => true],
-  ['featured', 'Destacados', () => true],
+  ['opp', 'Selección ImpoHogar', r => r.kind === 'col' && r.col === 'oportunidades'],
   ['bestseller', 'Más vendidos', r => r.kind === 'col' && r.col === 'mas-vendidos'],
-  ['stock', 'Más disponibles', () => true],
-  ['stock-asc', 'Menos disponibles', r => r.kind === 'col' && r.col === 'ultimas'],
-  ['az', 'Nombre (A–Z)', () => true]
+  ['recent', 'Más recientes', () => true],
+  ['az', 'A–Z', () => true],
+  ['brand', 'Marca', () => true],
+  ['stock', 'Mayor disponibilidad', () => true],
+  ['stock-asc', 'Menor disponibilidad', () => true]
 ];
 
 function listingMeta(r) {
   const crumbs = [['#/', 'Inicio']];
-  let title = 'Todo el catálogo', sub = 'Explora por departamento, marca o tipo de producto y arma tu pedido.', eyebrow = '', tone = '';
+  let title = 'Catálogo', sub = 'Busca, filtra y ordena entre todos nuestros productos.', eyebrow = '', tone = '';
   if (r.kind === 'dept') {
     const d = DEPARTMENT_BY_ID[r.dept];
-    crumbs.push(['', d.name]); title = d.name; sub = d.blurb; tone = d.tone; eyebrow = 'Departamento';
+    crumbs.push(['#/todo', 'Catálogo']); crumbs.push(['', d.name]); title = d.name; sub = d.blurb; tone = d.tone; eyebrow = 'Departamento';
   } else if (r.kind === 'cat') {
     const c = CATEGORY_BY_ID[r.cat], d = DEPARTMENT_BY_ID[c.dept];
     crumbs.push(['#/d/' + d.id, d.name]);
     if (r.type) { crumbs.push(['#/c/' + c.id, c.name]); crumbs.push(['', r.type]); title = r.type; sub = `${c.name} · ${d.name}`; }
     else { crumbs.push(['', c.name]); title = c.name; sub = `${typesOfCat(c.id).filter(t => t.label !== 'Otros').map(t => t.label).join(', ')}.`; }
-    tone = d.tone;
+    tone = d.tone; eyebrow = d.name;
   } else if (r.kind === 'brand') {
     crumbs.push(['#/marcas', 'Marcas']); crumbs.push(['', r.brand]); title = r.brand; eyebrow = 'Marca';
     const ds = [...new Set(VISIBLE_PRODUCTS.filter(p => p.brand === r.brand).map(p => deptName(p.dept)))];
-    sub = `Todo el surtido de ${r.brand} en ${ds.join(', ').toLowerCase()}.`;
+    sub = brandInfo(r.brand).text || `Todo el surtido de ${r.brand} en ${ds.join(', ').toLowerCase()}.`;
   } else if (r.kind === 'col') {
     const c = COLLECTIONS[r.col];
     crumbs.push(['', c.title]); title = c.title; sub = c.sub; eyebrow = c.eyebrow;
   } else if (r.kind === 'search') {
     crumbs.push(['', 'Búsqueda']); title = `“${r.q}”`; sub = 'Resultados por nombre, marca, código, categoría y palabras relacionadas.'; eyebrow = 'Resultados de búsqueda';
   } else {
-    crumbs.push(['', 'Todo el catálogo']);
+    crumbs.push(['', 'Catálogo']);
   }
   return { crumbs, title, sub, eyebrow, tone };
 }
 
-// Accesos rapidos arriba del listado: categorias del departamento o
-// tipos de la categoria (con foto).
+// Accesos rapidos arriba del listado: categorias del departamento, tipos
+// de la categoria, o tipos de la marca.
 function quickNavHTML(r) {
   let items = [];
   if (r.kind === 'dept') {
-    items = catsOfDept(r.dept).map(c => ({ href: '#/c/' + c.id, label: c.name, count: TAXO_COUNTS.cat[c.id], pic: photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 1)[0], icon: c.icon }));
+    const cats = catsOfDept(r.dept);
+    items = cats.length > 1
+      ? cats.map(c => ({ href: '#/c/' + c.id, label: c.name, count: TAXO_COUNTS.cat[c.id], pic: photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 1)[0], icon: c.icon }))
+      : typesOfCat(cats[0].id).map(t => ({ href: '#/c/' + cats[0].id + '/' + slugify(t.label), label: t.label, count: t.count, pic: photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === cats[0].id && p.tipo === t.label), 1)[0], icon: cats[0].icon }));
   } else if (r.kind === 'cat') {
     items = typesOfCat(r.cat).map(t => ({ href: '#/c/' + r.cat + (r.type === t.label ? '' : '/' + slugify(t.label)), label: t.label, count: t.count, on: r.type === t.label,
       pic: photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === r.cat && p.tipo === t.label), 1)[0], icon: CATEGORY_BY_ID[r.cat].icon }));
-  } else if (r.kind === 'all') {
-    items = deptsWithProducts().map(d => ({ href: '#/d/' + d.id, label: d.name, count: TAXO_COUNTS.dept[d.id], pic: photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id), 1)[0], icon: d.icon }));
   }
   if (items.length < 2) return '';
   return `<div class="quicknav">${items.map(i => `
@@ -884,6 +1061,107 @@ function quickNavHTML(r) {
       <span class="qn-pic">${i.pic ? `<img src="${productImgSrc(i.pic)}" alt="" loading="lazy" decoding="async">` : iconSVG(i.icon)}</span>
       <span class="qn-label">${escapeHtml(i.label)}<small>${i.count}</small></span>
     </a>`).join('')}</div>`;
+}
+
+// Pagina de marca: "Todos | Tratamientos | Crema para peinar | Sets | Nuevos"
+// segun los datos reales de esa marca.
+function brandChipsHTML(r) {
+  const list = VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
+  const counts = {};
+  list.forEach(p => { const k = p.cat + '|' + p.tipo; counts[k] = (counts[k] || 0) + 1; });
+  const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const selT = listingState.facets.tipo || new Set();
+  const selF = listingState.facets.flags || new Set();
+  const flagChips = FLAG_DEFS.filter(f => f.key === 'new' || f.key === 'opp').map(f => ({ f, n: list.filter(f.test).length })).filter(x => x.n);
+  if (keys.length < 2 && !flagChips.length) return '';
+  return `<div class="brand-chips" role="group" aria-label="Filtrar ${escapeHtml(r.brand)}">
+    <button type="button" class="fchip${!selT.size && !selF.size ? ' on' : ''}" onclick="brandChip('', '')">Todos<small>${list.length}</small></button>
+    ${keys.length > 1 ? keys.map(k => `<button type="button" class="fchip${selT.has(k) && selT.size === 1 ? ' on' : ''}" data-v="${escapeHtml(k)}" onclick="brandChip('tipo', this.dataset.v)">${escapeHtml(tipoName(k))}<small>${counts[k]}</small></button>`).join('') : ''}
+    ${flagChips.map(x => `<button type="button" class="fchip fchip-${x.f.key}${selF.has(x.f.facet) ? ' on' : ''}" data-v="${escapeHtml(x.f.facet)}" onclick="brandChip('flags', this.dataset.v)">${ICONS[x.f.icon]}${x.f.key === 'new' ? 'Nuevos' : 'Oportunidades'}<small>${x.n}</small></button>`).join('')}
+  </div>`;
+}
+function brandChip(id, v) {
+  if (!id) { delete listingState.facets.tipo; delete listingState.facets.flags; }
+  else {
+    const cur = listingState.facets[id];
+    if (cur && cur.size === 1 && cur.has(v)) delete listingState.facets[id];
+    else listingState.facets[id] = new Set([v]);
+  }
+  renderListing(false);
+}
+
+function brandHeadHTML(r) {
+  const list = VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
+  const cats = [...new Set(list.map(p => p.cat))].sort((a, b) => catIndex({ cat: a }) - catIndex({ cat: b }));
+  const pics = photoPick(list, 4);
+  const disp = list.filter(p => stockNum(p) > 0).length;
+  return `
+    <div class="brand-hero tone-${deptTone(list[0] ? list[0].dept : '')}">
+      <div class="bh-copy">
+        ${brandMarkHTML(r.brand, 'bh-mark')}
+        <p>${escapeHtml(listingMeta(r).sub)}</p>
+        <div class="bh-stats"><span><b>${fmt(list.length)}</b> productos</span><span><b>${fmt(disp)}</b> disponibles</span><span><b>${cats.length}</b> ${cats.length === 1 ? 'categoría' : 'categorías'}</span></div>
+        <div class="bh-cats">${cats.map(c => `<a href="#/c/${c}">${escapeHtml(catName(c))}</a>`).join('')}</div>
+      </div>
+      <div class="bh-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</div>
+    </div>`;
+}
+
+function deptHeadHTML(r) {
+  const d = DEPARTMENT_BY_ID[r.dept];
+  const brands = deptBrands(d.id, 8);
+  return `
+    <div class="dept-hero tone-${d.tone}">
+      <span class="dh-icon">${iconSVG(d.icon)}</span>
+      <div>
+        <span class="page-eyebrow">Departamento · ${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
+        <h1 class="page-title">${escapeHtml(d.name)}</h1>
+        <p class="page-sub">${escapeHtml(d.blurb)}</p>
+        <div class="dh-brands"><span>Marcas:</span>${brands.map(b => `<a href="${brandHash(b)}">${escapeHtml(b)}</a>`).join('')}</div>
+      </div>
+    </div>`;
+}
+
+// Catalogo general: "¿Que estas buscando?" + comprar por categoria.
+function catalogHeadHTML() {
+  return `
+    <div class="catalog-hero">
+      <h1 class="ch-title">¿Qué estás buscando?</h1>
+      ${bigSearchHTML('catSearch', 'Escribe un producto, una marca o un código')}
+      <div class="ch-label">Comprar por categoría</div>
+      <div class="ch-depts">${deptsWithProducts().map(d => {
+        const pic = photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id), 1)[0];
+        return `<a class="ch-dept tone-${d.tone}" href="#/d/${d.id}">
+          <span class="ch-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : ''}</span>
+          <span class="ch-name">${iconSVG(d.icon)}${escapeHtml(d.name)}<small>${fmt(TAXO_COUNTS.dept[d.id])} productos</small></span>
+        </a>`;
+      }).join('')}</div>
+    </div>`;
+}
+
+function volumeHeadHTML() {
+  return `<div class="vol-levels vol-levels-page" role="group" aria-label="Cantidad mínima disponible">
+    <span class="vl-label">${ICONS.box}Necesito al menos:</span>
+    ${volLevelChipsHTML(listingState.minStock, 'setVolumeLevel')}
+  </div>`;
+}
+function setVolumeLevel(n) {
+  listingState.minStock = n;
+  const h = '#/col/volumen/' + n;
+  try { history.replaceState(null, '', h); } catch (e) {}
+  listingState.key = h; currentRoute.hash = h; lastListingHash = h;
+  const wrap = document.querySelector('.vol-levels-page');
+  if (wrap) wrap.outerHTML = volumeHeadHTML();
+  renderListing(false);
+}
+function setMinStock(v) {
+  listingState.minStock = parseInt(v) || 0;
+  if (currentRoute.kind === 'col' && currentRoute.col === 'volumen') { setVolumeLevel(listingState.minStock || VOL_LEVELS[0]); return; }
+  renderListing(false);
+}
+function minStockOptionsHTML() {
+  return `<option value="0"${!listingState.minStock ? ' selected' : ''}>Cualquier cantidad</option>` +
+    VOL_LEVELS.map(n => `<option value="${n}"${listingState.minStock === n ? ' selected' : ''}>${n}+ unidades</option>`).join('');
 }
 
 let scopeCache = { key: '', list: [] };
@@ -902,29 +1180,31 @@ function facetGroupsHTML() {
   const r = currentRoute;
   const scope = currentScope();
   const tones = scopeTones(scope);
-  return FACETS.map(f => {
+  const order = tones.size === 1 ? FACET_ORDER[[...tones][0]] : FACET_ORDER.mixed.concat(FACETS.map(f => f.id).filter(id => !FACET_ORDER.mixed.includes(id)));
+  return order.map(id => FACET_BY_ID[id]).filter(Boolean).map(f => {
     if (f.when && !f.when(r)) return '';
     if (f.tones && !f.tones.some(t => tones.has(t))) return '';
-    if (f.tones && tones.size > 1 && !['dept', 'brand', 'avail'].includes(f.id) && ![...tones].every(t => f.tones.includes(t)) && r.kind !== 'search') return '';
+    if (f.tones && tones.size > 1 && ![...tones].every(t => f.tones.includes(t)) && r.kind !== 'search') return '';
     const base = scope.filter(p => matchesFacets(p, f.id));
     const counts = {};
     base.forEach(p => valuesOf(f, p).forEach(v => { counts[v] = (counts[v] || 0) + 1; }));
     let vals = Object.keys(counts);
     const sel = listingState.facets[f.id] || new Set();
     sel.forEach(v => { if (!(v in counts)) { counts[v] = 0; vals.push(v); } });
-    if (vals.length < 2 && !sel.size && f.id !== 'avail') return '';
+    if (vals.length < 2 && !sel.size && !f.keep) return '';
     if (!vals.length) return '';
-    if (f.order) vals.sort((a, b) => f.order.indexOf(a) - f.order.indexOf(b));
+    if (f.order) vals.sort((a, b) => (f.order.indexOf(a) + 1 || 99) - (f.order.indexOf(b) + 1 || 99) || String(a).localeCompare(String(b), 'es', { numeric: true }));
     else vals.sort((a, b) => counts[b] - counts[a] || String(a).localeCompare(String(b), 'es'));
     const many = vals.length > 7;
+    const dot = v => f.id === 'avail' ? `<i class="fdot is-${v === 'Disponible' ? 'ok' : v === 'Agotado' ? 'out' : 'low'}"></i>` : '';
     return `
-      <details class="facet" open>
+      <details class="facet facet-${f.id}" open>
         <summary>${escapeHtml(f.label)}${sel.size ? `<b>${sel.size}</b>` : ''}${ICONS.chevD}</summary>
         <div class="facet-opts${many ? ' is-long' : ''}">
           ${vals.map((v, i) => `
             <label class="fopt${i >= 7 ? ' extra' : ''}">
               <input type="checkbox" ${sel.has(v) ? 'checked' : ''} onchange="toggleFacet('${f.id}', this.dataset.v)" data-v="${escapeHtml(v)}">
-              <span class="fbox"></span><span class="ftxt">${escapeHtml(f.name ? f.name(v) : v)}</span><small>${counts[v]}</small>
+              <span class="fbox"></span>${dot(v)}<span class="ftxt">${escapeHtml(f.name ? f.name(v) : v)}</span><small>${fmt(counts[v])}</small>
             </label>`).join('')}
           ${many ? `<button type="button" class="facet-more" onclick="this.closest('.facet-opts').classList.toggle('show-all')"><span class="fm-more">Ver ${vals.length - 7} más</span><span class="fm-less">Ver menos</span></button>` : ''}
         </div>
@@ -939,16 +1219,25 @@ function toggleFacet(id, v) {
   renderListing(false);
 }
 function clearFacet(id, v) {
+  if (id === 'min') { setMinStock(0); return; }
   const s = listingState.facets[id];
   if (s) { s.delete(v); if (!s.size) delete listingState.facets[id]; }
   renderListing(false);
 }
-function clearFacets() { listingState.facets = {}; renderListing(false); }
+function clearFacets() {
+  listingState.facets = {};
+  if (!(currentRoute.kind === 'col' && currentRoute.col === 'volumen')) listingState.minStock = 0;
+  renderListing(false);
+}
 
 function activeChipsHTML() {
   const chips = [];
-  FACETS.forEach(f => (listingState.facets[f.id] || new Set()).forEach(v => chips.push(
-    `<button type="button" class="achip" data-v="${escapeHtml(v)}" onclick="clearFacet('${f.id}', this.dataset.v)">${escapeHtml(f.name ? f.name(v) : v)}${ICONS.close}</button>`)));
+  Object.keys(listingState.facets).forEach(id => {
+    const f = FACET_BY_ID[id];
+    (listingState.facets[id] || new Set()).forEach(v => chips.push(
+      `<button type="button" class="achip" data-v="${escapeHtml(v)}" onclick="clearFacet('${id}', this.dataset.v)">${escapeHtml(f && f.name ? f.name(v) : v)}${ICONS.close}</button>`));
+  });
+  if (listingState.minStock && !(currentRoute.kind === 'col' && currentRoute.col === 'volumen')) chips.push(`<button type="button" class="achip" onclick="clearFacet('min')">${listingState.minStock}+ unidades${ICONS.close}</button>`);
   if (!chips.length) return '';
   return chips.join('') + `<button type="button" class="link-btn" onclick="clearFacets()">Limpiar filtros</button>`;
 }
@@ -960,6 +1249,23 @@ function setViewMode(m) {
   renderListing(false, true);
 }
 
+function listingHeadHTML(r, meta) {
+  const crumbs = `<nav class="crumbs" aria-label="Ruta">${meta.crumbs.map(([h, l]) => h ? `<a href="${h}">${escapeHtml(l)}</a>${ICONS.chevR}` : `<span aria-current="page">${escapeHtml(l)}</span>`).join('')}</nav>`;
+  if (r.kind === 'all') return `${homeBackHTML()}${crumbs}${catalogHeadHTML()}`;
+  if (r.kind === 'dept') return `${homeBackHTML()}${crumbs}${deptHeadHTML(r)}${quickNavHTML(r)}`;
+  if (r.kind === 'brand') return `${homeBackHTML()}${crumbs}${brandHeadHTML(r)}<div id="brandChips"></div>`;
+  const colIcon = r.kind === 'col' ? `<span class="col-icon col-${r.col}">${iconSVG(COLLECTIONS[r.col].icon)}</span>` : '';
+  return `${homeBackHTML()}${crumbs}
+    <div class="page-title-row${colIcon ? ' has-icon' : ''}">${colIcon}<div>
+      ${meta.eyebrow ? `<span class="page-eyebrow">${escapeHtml(meta.eyebrow)}</span>` : ''}
+      <h1 class="page-title">${escapeHtml(meta.title)}</h1>
+      <p class="page-sub">${escapeHtml(meta.sub)}</p>
+    </div></div>
+    ${r.kind === 'col' && r.col === 'volumen' ? volumeHeadHTML() : ''}
+    ${r.kind === 'col' && r.col === 'oportunidades' && OPORT_IS_AUTO ? '<p class="page-note">Productos con la mayor disponibilidad en bodega de cada categoría.</p>' : ''}
+    ${quickNavHTML(r)}`;
+}
+
 function renderListing(full, keepScroll) {
   const r = currentRoute;
   const sec = document.getElementById('catalogo');
@@ -969,24 +1275,18 @@ function renderListing(full, keepScroll) {
   filteredProducts = computeFiltered();
   const total = filteredProducts.length;
   const sorts = SORT_OPTIONS.filter(o => o[2](r));
-  const nFacets = Object.values(listingState.facets).reduce((s, x) => s + x.size, 0);
+  const nFacets = Object.values(listingState.facets).reduce((s, x) => s + x.size, 0) + (listingState.minStock && !(r.kind === 'col' && r.col === 'volumen') ? 1 : 0);
   const scopeN = currentScope().length;
 
   sec.className = 'listing' + (meta.tone ? ' tone-' + meta.tone : '');
   if (full) {
     sec.innerHTML = `
-      <div class="page-head">
-        ${homeBackHTML()}
-        <nav class="crumbs" aria-label="Ruta">${meta.crumbs.map(([h, l], i) => h ? `<a href="${h}">${escapeHtml(l)}</a>${ICONS.chevR}` : `<span aria-current="page">${escapeHtml(l)}</span>`).join('')}</nav>
-        ${meta.eyebrow ? `<span class="page-eyebrow">${escapeHtml(meta.eyebrow)}</span>` : ''}
-        <h1 class="page-title">${escapeHtml(meta.title)}</h1>
-        <p class="page-sub">${escapeHtml(meta.sub)}</p>
-        ${quickNavHTML(r)}
-      </div>
+      <div class="page-head">${listingHeadHTML(r, meta)}</div>
       <div class="plp">
         <aside class="facets" id="facetPanel" aria-label="Filtros">
-          <div class="facets-head"><b>Filtrar</b><button type="button" class="icon-btn" onclick="toggleFilterSheet(false)" aria-label="Cerrar filtros">${ICONS.close}</button></div>
+          <div class="facets-head"><b>Filtrar y ordenar</b><button type="button" class="icon-btn" onclick="toggleFilterSheet(false)" aria-label="Cerrar filtros">${ICONS.close}</button></div>
           <div class="facets-sort"><label for="sortSelM">Ordenar por</label><select id="sortSelM" onchange="setSort(this.value)"></select></div>
+          <div class="facets-sort facets-min"><label for="minSelM">Cantidad disponible</label><select id="minSelM" onchange="setMinStock(this.value)"></select></div>
           <div id="facetGroups"></div>
           <div class="facets-apply"><button type="button" class="btn btn-outline" onclick="clearFacets()">Limpiar</button><button type="button" class="btn btn-primary" id="facetApply" onclick="toggleFilterSheet(false)">Ver resultados</button></div>
         </aside>
@@ -995,6 +1295,7 @@ function renderListing(full, keepScroll) {
           <div class="plp-bar">
             <div class="plp-count" id="count" aria-live="polite"></div>
             <button type="button" class="plp-filter-btn" onclick="toggleFilterSheet(true)">${ICONS.filter}Filtrar y ordenar<b id="filtersCount"></b></button>
+            <label class="plp-sort plp-min"><span>Cantidad</span><select id="minSel" onchange="setMinStock(this.value)"></select></label>
             <label class="plp-sort"><span>Ordenar</span><select id="sortSel" onchange="setSort(this.value)"></select></label>
             <div class="view-toggle" role="group" aria-label="Vista">
               <button type="button" id="vmGrid" onclick="setViewMode('grid')" aria-label="Ver en cuadrícula" title="Cuadrícula">${ICONS.grid}</button>
@@ -1012,17 +1313,21 @@ function renderListing(full, keepScroll) {
         </div>
       </div>`;
     observeSentinel();
+    if (r.kind === 'all') bindSearchBox('catSearch');
   }
   const opts = sorts.map(([v, l]) => `<option value="${v}"${v === listingState.sort ? ' selected' : ''}>${l}</option>`).join('');
   ['sortSel', 'sortSelM'].forEach(id => { const s = document.getElementById(id); if (s) s.innerHTML = opts; });
+  ['minSel', 'minSelM'].forEach(id => { const s = document.getElementById(id); if (s) s.innerHTML = minStockOptionsHTML(); });
+  const bc = document.getElementById('brandChips');
+  if (bc) bc.innerHTML = brandChipsHTML(r);
   document.getElementById('facetGroups').innerHTML = facetGroupsHTML();
   document.getElementById('activeFilters').innerHTML = activeChipsHTML();
   document.getElementById('filtersCount').textContent = nFacets || '';
-  document.getElementById('facetApply').textContent = `Ver ${total.toLocaleString('es-CR')} ${total === 1 ? 'resultado' : 'resultados'}`;
+  document.getElementById('facetApply').textContent = `Ver ${fmt(total)} ${total === 1 ? 'resultado' : 'resultados'}`;
   document.getElementById('vmGrid').classList.toggle('on', viewMode === 'grid');
   document.getElementById('vmList').classList.toggle('on', viewMode === 'list');
   document.getElementById('grid').className = 'grid' + (viewMode === 'list' ? ' is-list' : '');
-  document.getElementById('count').innerHTML = `<b>${total.toLocaleString('es-CR')}</b> ${total === 1 ? 'producto' : 'productos'}${nFacets ? ` <span>de ${scopeN.toLocaleString('es-CR')}</span>` : ''}`;
+  document.getElementById('count').innerHTML = `<b>${fmt(total)}</b> ${total === 1 ? 'producto' : 'productos'}${total !== scopeN ? ` <span>de ${fmt(scopeN)}</span>` : ''}`;
   renderPage(true);
   if (!full && !keepScroll) {
     const bar = document.querySelector('.plp-bar');
@@ -1040,7 +1345,7 @@ function groupHeadersHTML(p) {
     lastBrand = p.brand; lastGroup = '';
     if (currentRoute.kind !== 'brand') {
       const n = filteredProducts.filter(x => x.brand === p.brand).length;
-      html += `<div class="grid-brand"><a href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a><span>${n.toLocaleString('es-CR')} ${n === 1 ? 'producto' : 'productos'}</span></div>`;
+      html += `<div class="grid-brand"><a href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a><span>${fmt(n)} ${n === 1 ? 'producto' : 'productos'}</span></div>`;
     }
   }
   const k = p.cat + '|' + p.tipo;
@@ -1053,6 +1358,27 @@ function groupHeadersHTML(p) {
   return html;
 }
 
+function emptyListingHTML() {
+  const r = currentRoute;
+  const col = r.kind === 'col' ? COLLECTIONS[r.col] : null;
+  const filtered = Object.keys(listingState.facets).length || (listingState.minStock && !(col && r.col === 'volumen'));
+  let text = 'Ningún producto cumple todos los filtros elegidos.';
+  if (r.kind === 'search') text = 'No encontramos productos con esa búsqueda. Prueba con otra palabra, la marca o el código de barras.';
+  else if (col && col.empty && !currentScope().length) text = col.empty;
+  else if (col && r.col === 'volumen') text = 'Ningún producto tiene esa cantidad disponible con los filtros elegidos. Prueba con un nivel menor.';
+  return `
+    <div class="empty-state">
+      <div class="empty-icon">${col ? iconSVG(col.icon) : ICONS.search}</div>
+      <div class="empty-state-title">${col && !currentScope().length ? 'Muy pronto' : 'Sin resultados'}</div>
+      <div class="empty-state-text">${escapeHtml(text)}</div>
+      <div class="empty-actions">
+        ${filtered ? `<button type="button" class="btn btn-outline" onclick="clearFacets()">Quitar filtros</button>` : ''}
+        ${col && r.col !== 'oportunidades' ? `<a class="btn btn-outline" href="#/col/oportunidades">Ver oportunidades</a>` : ''}
+        <a class="btn btn-primary" href="#/todo">Ver todo el catálogo</a>
+      </div>
+    </div>`;
+}
+
 function renderPage(reset) {
   const grid = document.getElementById('grid');
   if (!grid) return;
@@ -1060,15 +1386,7 @@ function renderPage(reset) {
     grid.innerHTML = '';
     renderedCount = 0;
     lastBrand = ''; lastGroup = '';
-    if (!filteredProducts.length) {
-      grid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">${ICONS.search}</div>
-          <div class="empty-state-title">Sin resultados</div>
-          <div class="empty-state-text">${currentRoute.kind === 'search' ? 'No encontramos productos con esa búsqueda. Prueba con otra palabra, la marca o el código de barras.' : 'Ningún producto cumple todos los filtros elegidos.'}</div>
-          ${Object.keys(listingState.facets).length ? `<button type="button" class="btn btn-outline" onclick="clearFacets()">Quitar filtros</button>` : `<a class="btn btn-outline" href="#/todo">Ver todo el catálogo</a>`}
-        </div>`;
-    }
+    if (!filteredProducts.length) grid.innerHTML = emptyListingHTML();
   }
   const next = filteredProducts.slice(renderedCount, renderedCount + PAGE_SIZE);
   const fn = viewMode === 'list' ? rowHTML : cardHTML;
@@ -1078,10 +1396,10 @@ function renderPage(reset) {
   const btn = document.getElementById('loadMoreBtn');
   if (btn) {
     btn.style.display = renderedCount < total ? '' : 'none';
-    btn.textContent = `Cargar más (${(total - renderedCount).toLocaleString('es-CR')} restantes)`;
+    btn.textContent = `Cargar más (${fmt(total - renderedCount)} restantes)`;
   }
   const meta = document.getElementById('loadMoreMeta');
-  if (meta) meta.innerHTML = total > PAGE_SIZE ? `Mostrando ${renderedCount.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')}<span class="lm-bar"><i style="width:${Math.round(renderedCount / total * 100)}%"></i></span>` : '';
+  if (meta) meta.innerHTML = total > PAGE_SIZE ? `Mostrando ${fmt(renderedCount)} de ${fmt(total)}<span class="lm-bar"><i style="width:${Math.round(renderedCount / total * 100)}%"></i></span>` : '';
 }
 
 // Carga automatica al llegar al final del listado
@@ -1103,11 +1421,27 @@ function applyFilters() { if (currentRoute.view === 'listing') renderListing(fal
 function renderActiveFilters() {}
 
 // ============================================================
-//  BUSCADOR
+//  BUSCADOR (encabezado, inicio y catalogo)
 // ============================================================
+//  Resultados mientras se escribe: categorias y tipos que coinciden,
+//  marcas y productos (con boton para agregar al pedido). Un codigo de
+//  barras exacto lleva directo al producto.
 let searchTimer = null;
 let searchActiveIndex = -1;
 const RECENT_KEY = 'impohogar_tec_recent';
+const SEARCH_CTXS = {};
+
+function searchCtxOf(inputId) {
+  if (SEARCH_CTXS[inputId]) {
+    const c = SEARCH_CTXS[inputId];
+    c.input = document.getElementById(inputId) || c.input;
+    c.box = document.getElementById(c.boxId) || c.box;
+    return c;
+  }
+  const boxId = inputId === 'search' ? 'searchResults' : inputId + 'Results';
+  return (SEARCH_CTXS[inputId] = { id: inputId, boxId, input: document.getElementById(inputId), box: document.getElementById(boxId) });
+}
+function headerCtx() { return searchCtxOf('search'); }
 
 function recentSearches() { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; } }
 function saveRecent(q) {
@@ -1115,7 +1449,10 @@ function saveRecent(q) {
   const list = [q].concat(recentSearches().filter(x => normText(x) !== normText(q))).slice(0, 6);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (e) {}
 }
-function clearRecent() { try { localStorage.removeItem(RECENT_KEY); } catch (e) {} renderSearchResults(); }
+function clearRecent() {
+  try { localStorage.removeItem(RECENT_KEY); } catch (e) {}
+  renderSearchResults(Object.values(SEARCH_CTXS).find(c => c.box && c.box.classList.contains('open')));
+}
 
 function highlight(text, tokens) {
   let out = escapeHtml(text);
@@ -1145,24 +1482,25 @@ function taxoSuggestions(tokens) {
   return out.sort((a, b) => b.count - a.count).slice(0, 4);
 }
 
-function renderSearchResults() {
-  const box = document.getElementById('searchResults');
-  const input = document.getElementById('search');
+function renderSearchResults(ctx) {
+  ctx = ctx || headerCtx();
+  const box = ctx.box, input = ctx.input;
   if (!box || !input) return;
   const q = input.value.trim();
   const tokens = queryTokensOf(q);
   searchActiveIndex = -1;
+  const run = `runSearch(this.dataset.q, '${ctx.id}')`;
   if (!q) {
     const rec = recentSearches();
     box.innerHTML = `
       ${rec.length ? `<div class="sr-label">Búsquedas recientes <button type="button" class="sr-clear" onclick="clearRecent()">Borrar</button></div>
-        <div class="sr-chips">${rec.map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${ICONS.clock}${escapeHtml(t)}</button>`).join('')}</div>` : ''}
+        <div class="sr-chips">${rec.map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="${run}">${ICONS.clock}${escapeHtml(t)}</button>`).join('')}</div>` : ''}
       <div class="sr-label">Búsquedas populares</div>
-      <div class="sr-chips">${(typeof BUSQUEDAS_POPULARES !== 'undefined' ? BUSQUEDAS_POPULARES : []).map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${ICONS.search}${escapeHtml(t)}</button>`).join('')}</div>
+      <div class="sr-chips">${(typeof BUSQUEDAS_POPULARES !== 'undefined' ? BUSQUEDAS_POPULARES : []).map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="${run}">${ICONS.search}${escapeHtml(t)}</button>`).join('')}</div>
       <div class="sr-label">Departamentos</div>
       <div class="sr-depts">${deptsWithProducts().map(d => `<a href="#/d/${d.id}" class="sr-dept tone-${d.tone}">${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span></a>`).join('')}</div>
       <p class="sr-tip">Tip: puedes buscar por <b>código de barras</b>, marca o tipo de producto (ej. “cargador tipo C”).</p>`;
-    openSearchResults();
+    openSearchResults(ctx);
     return;
   }
   const matches = VISIBLE_PRODUCTS.map(p => [searchScore(p, tokens), p]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0] || rankScore(b[1]) - rankScore(a[1])).map(x => x[1]);
@@ -1170,44 +1508,53 @@ function renderSearchResults() {
   const taxo = taxoSuggestions(tokens);
   const sugg = taxo.map(s => `<a class="sr-sugg" role="option" href="${s.href}">${ICONS.search}<span><b>${escapeHtml(s.label)}</b> <em>en ${escapeHtml(s.where)}</em></span><small>${s.count}</small></a>`)
     .concat(brandHits.map(b => `<a class="sr-sugg" role="option" href="${brandHash(b)}">${ICONS.tag}<span>Marca <b>${escapeHtml(b)}</b></span><small>${VISIBLE_PRODUCTS.filter(p => p.brand === b).length}</small></a>`));
-  const rows = matches.slice(0, 6).map(p => {
+  const rows = matches.slice(0, 7).map(p => {
     const lvl = stockLevel(p);
-    return `<a class="sr-item" role="option" href="#/p/${p.id}">
-      <img src="${productImgSrc(p)}" alt="" loading="lazy">
-      <span class="sr-text"><span class="sr-brand">${escapeHtml(p.brand)} · ${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span><span class="sr-name">${highlight(prettyName(p), tokens)}</span><span class="sr-code">${highlight(p.code, tokens)}</span></span>
-      <span class="sr-stock is-${lvl.key}">${escapeHtml(lvl.short)}</span>
-    </a>`;
+    const qty = qtyMap[p.id] || 0;
+    return `<div class="sr-item${qty ? ' has-qty' : ''}" data-card="${p.id}">
+      <a class="sr-link" role="option" href="#/p/${p.id}">
+        <img src="${productImgSrc(p)}" alt="" loading="lazy">
+        <span class="sr-text"><span class="sr-brand">${escapeHtml(p.brand)} · ${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span><span class="sr-name">${highlight(prettyName(p), tokens)}</span><span class="sr-code">Código ${highlight(p.code, tokens)}</span></span>
+        <span class="sr-stock is-${lvl.key}"><i></i>${escapeHtml(lvl.label)}</span>
+      </a>
+      ${lvl.key === 'out' ? '' : `<button type="button" class="sr-add" onclick="event.stopPropagation();changeQty(${p.id},1)" aria-label="Agregar ${escapeHtml(prettyName(p))} al pedido">${ICONS.plus}<b data-qty-badge="${p.id}">${qty || ''}</b></button>`}
+    </div>`;
   });
   box.innerHTML = (sugg.length ? `<div class="sr-label">Sugerencias</div><div class="sr-group">${sugg.join('')}</div>` : '') +
     (rows.length ? `<div class="sr-label">Productos</div>${rows.join('')}` : `<div class="sr-empty">Sin coincidencias para “${escapeHtml(q)}”. Prueba con otra palabra, la marca o el código.</div>`) +
-    (matches.length ? `<button type="button" class="sr-all" onclick="submitSearch()">Ver los ${matches.length.toLocaleString('es-CR')} resultados para “${escapeHtml(q)}” ${ICONS.arrow}</button>` : '');
-  openSearchResults();
+    (matches.length ? `<button type="button" class="sr-all" onclick="submitSearch(searchCtxOf('${ctx.id}'))">Ver los ${fmt(matches.length)} resultados para “${escapeHtml(q)}” ${ICONS.arrow}</button>` : '');
+  openSearchResults(ctx);
 }
 
-function openSearchResults() {
-  const box = document.getElementById('searchResults');
-  box.classList.add('open');
-  document.getElementById('search').setAttribute('aria-expanded', 'true');
-  closeMegaMenu();
+function openSearchResults(ctx) {
+  ctx = ctx || headerCtx();
+  Object.values(SEARCH_CTXS).forEach(c => { if (c !== ctx) closeSearchResults(c); });
+  ctx.box.classList.add('open');
+  ctx.input.setAttribute('aria-expanded', 'true');
+  closeMegaMenu(); closeMoreMenu();
 }
-function closeSearchResults() {
-  const box = document.getElementById('searchResults');
-  if (box) box.classList.remove('open');
-  const input = document.getElementById('search');
-  if (input) input.setAttribute('aria-expanded', 'false');
+function closeSearchResults(ctx) {
+  ctx = ctx || headerCtx();
+  if (ctx.box) ctx.box.classList.remove('open');
+  if (ctx.input) ctx.input.setAttribute('aria-expanded', 'false');
+}
+function closeAllSearchResults() {
+  closeSearchResults(headerCtx());
+  Object.values(SEARCH_CTXS).forEach(c => closeSearchResults(c));
 }
 
-function runSearch(q) {
-  const input = document.getElementById('search');
-  input.value = q;
+function runSearch(q, ctxId) {
+  const ctx = searchCtxOf(ctxId || 'search');
+  ctx.input.value = q;
   syncSearchBox();
-  submitSearch();
+  submitSearch(ctx);
 }
 
-function submitSearch() {
-  const input = document.getElementById('search');
+function submitSearch(ctx) {
+  ctx = ctx && ctx.input ? ctx : headerCtx();
+  const input = ctx.input;
   const q = input.value.trim();
-  closeSearchResults();
+  closeAllSearchResults();
   document.body.classList.remove('search-open');
   input.blur();
   if (!q) return;
@@ -1218,8 +1565,8 @@ function submitSearch() {
   navigate('#/buscar/' + encodeURIComponent(q));
 }
 
-function moveSearchSelection(delta) {
-  const items = Array.from(document.querySelectorAll('#searchResults .sr-sugg, #searchResults .sr-item, #searchResults .sr-all'));
+function moveSearchSelection(ctx, delta) {
+  const items = Array.from(ctx.box.querySelectorAll('.sr-sugg, .sr-link, .sr-all'));
   if (!items.length) return;
   searchActiveIndex = (searchActiveIndex + delta + items.length) % items.length;
   items.forEach((el, i) => el.classList.toggle('is-active', i === searchActiveIndex));
@@ -1232,54 +1579,80 @@ function syncSearchBox() {
   if (box && input) box.classList.toggle('has-value', !!input.value);
 }
 
-function openSearchOverlay() {
+function openSearchOverlay(prefill) {
   document.body.classList.add('search-open');
   const input = document.getElementById('search');
+  if (typeof prefill === 'string' && prefill) { input.value = prefill; syncSearchBox(); }
   input.focus();
-  renderSearchResults();
+  renderSearchResults(headerCtx());
 }
 function closeSearchOverlay() {
   document.body.classList.remove('search-open');
-  closeSearchResults();
+  closeSearchResults(headerCtx());
   document.getElementById('search').blur();
 }
 
+const isTouchLayout = () => window.matchMedia('(max-width: 1023px)').matches;
+
+// Conecta un buscador grande (inicio / catalogo). En celular abre el
+// buscador de pantalla completa del encabezado.
+function bindSearchBox(inputId) {
+  const ctx = searchCtxOf(inputId);
+  const input = ctx.input;
+  if (!input || input.dataset.bound) return;
+  input.dataset.bound = '1';
+  input.addEventListener('focus', () => {
+    if (isTouchLayout()) { const v = input.value; input.blur(); openSearchOverlay(v); return; }
+    renderSearchResults(ctx);
+  });
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => renderSearchResults(ctx), 90);
+  });
+  input.addEventListener('keydown', e => searchKeydown(e, ctx));
+  ctx.box.addEventListener('click', e => { if (e.target.closest('a')) closeSearchResults(ctx); });
+}
+
+function searchKeydown(e, ctx) {
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveSearchSelection(ctx, 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); moveSearchSelection(ctx, -1); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const active = ctx.box.querySelector('.is-active');
+    if (active) active.click(); else submitSearch(ctx);
+  } else if (e.key === 'Escape') { if (ctx.id === 'search') closeSearchOverlay(); else { closeSearchResults(ctx); ctx.input.blur(); } }
+}
+
 function initSearch() {
-  const input = document.getElementById('search');
-  const box = document.getElementById('searchBox');
+  const ctx = headerCtx();
+  const input = ctx.input;
   const clear = document.getElementById('searchClear');
   input.addEventListener('input', () => {
     syncSearchBox();
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(renderSearchResults, 90);
+    searchTimer = setTimeout(() => renderSearchResults(ctx), 90);
   });
   input.addEventListener('focus', () => {
-    if (window.matchMedia('(max-width: 1023px)').matches) document.body.classList.add('search-open');
-    renderSearchResults();
+    if (isTouchLayout()) document.body.classList.add('search-open');
+    renderSearchResults(ctx);
   });
-  input.addEventListener('keydown', e => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); moveSearchSelection(1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); moveSearchSelection(-1); }
-    else if (e.key === 'Enter') {
-      e.preventDefault();
-      const active = document.querySelector('#searchResults .is-active');
-      if (active) active.click(); else submitSearch();
-    } else if (e.key === 'Escape') { closeSearchOverlay(); }
-  });
+  input.addEventListener('keydown', e => searchKeydown(e, ctx));
   clear.addEventListener('click', () => {
     input.value = '';
     syncSearchBox();
     input.focus();
-    renderSearchResults();
+    renderSearchResults(ctx);
   });
-  document.getElementById('searchResults').addEventListener('click', e => {
-    if (e.target.closest('a')) { closeSearchResults(); document.body.classList.remove('search-open'); }
+  ctx.box.addEventListener('click', e => {
+    if (e.target.closest('a')) { closeSearchResults(ctx); document.body.classList.remove('search-open'); }
   });
   document.addEventListener('click', e => {
-    if (!box.contains(e.target) && !e.target.closest('#tabSearch') && !e.target.closest('.search-back')) {
-      closeSearchResults();
-    }
+    Object.values(SEARCH_CTXS).forEach(c => {
+      const wrap = c.id === 'search' ? document.getElementById('searchBox') : (c.input && c.input.closest('.big-search'));
+      if (wrap && !wrap.contains(e.target) && !e.target.closest('#tabSearch') && !e.target.closest('.search-back')) closeSearchResults(c);
+    });
     if (!e.target.closest('#megaMenu') && !e.target.closest('#megaBtn') && !e.target.closest('.dn-link')) closeMegaMenu();
+    if (!e.target.closest('.dn-more')) closeMoreMenu();
   });
   // Atajo "/" para ir al buscador
   document.addEventListener('keydown', e => {

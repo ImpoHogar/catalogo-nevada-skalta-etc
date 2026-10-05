@@ -73,26 +73,43 @@ const VITRINA_MAX_POR_FILA = 40;
 //  BARRAS exactos, como en el resto del catalogo.
 // ============================================================
 
-// Banner principal del inicio.
-//   modo 'auto': si hay nuevos ingresos muestra "Descubre lo nuevo" con
-//                esos productos; si no, muestra este texto.
-//   modo 'fijo': siempre muestra este texto.
-//   destino: a donde lleva el boton ('#/todo', '#/col/nuevos',
-//            '#/col/ultimas', '#/c/audio', '#/marca/tirtir', '#/d/belleza'...)
-//   productos: codigos para las fotos del banner (vacio = automatico).
-const CAMPANA_INICIO = {
-  modo: 'auto',
-  etiqueta: 'Catálogo mayorista',
-  titulo: 'Surtido completo para tu negocio, en un solo pedido.',
-  texto: 'Belleza, cuidado personal, tecnología y hogar de las marcas que más se venden. Busca por nombre, marca o código y arma tu pedido en minutos.',
-  boton: 'Explorar el catálogo',
-  destino: '#/todo',
-  productos: []
+// Textos del encabezado del inicio ("¿Que quieres comprar hoy?").
+// En "texto" se puede usar {productos} y {marcas}: se reemplazan solos
+// por las cantidades reales del catalogo.
+const INICIO = {
+  etiqueta: 'Catálogo mayorista · Grupo ImpoHogar',
+  titulo: '¿Qué quieres comprar hoy?',
+  texto: '{productos} productos de {marcas} marcas con disponibilidad real de bodega. Busca por nombre, marca o código, o entra por departamento.'
 };
 
-// Nuevos ingresos marcados a mano (ademas de los que tienen dateAdded en
-// products.js, que pone solo el script de carga). Ej: ["886540006029"]
+// ------------------------------------------------------------
+//  NUEVOS INGRESOS
+// ------------------------------------------------------------
+//  Un producto es "Nuevo ingreso" si cumple CUALQUIERA de estas:
+//   1. Tiene "dateAdded" en products.js dentro de los ultimos
+//      NEW_PRODUCT_DAYS dias. El script herramientas/actualizar_catalogo.py
+//      lo pone solo cuando aparece un codigo nuevo en la plantilla.
+//   2. Tiene "nuevo":true en su linea de products.js.
+//   3. Su codigo esta en esta lista. Ej: ["886540006029", "7897042018512"]
+//  Si no hay ninguno, la seccion no aparece en el inicio (no se inventa).
 const NUEVOS_INGRESOS = [];
+
+// ------------------------------------------------------------
+//  OPORTUNIDADES
+// ------------------------------------------------------------
+//  Productos que ImpoHogar quiere poner frente al cliente: impulsar,
+//  mover inventario, dar a conocer, productos estrategicos...
+//  Se marcan con su CODIGO DE BARRAS en esta lista (en el orden en que
+//  quieres que salgan) o con "oportunidad":true en products.js.
+//    Ej: const OPORTUNIDADES = ["7897042018512", "025215723476"];
+//
+//  OPORTUNIDADES_AUTO: mientras la lista este vacia, el catalogo elige
+//  solo los productos con MAS UNIDADES en bodega de cada categoria
+//  (stock real, con foto). Pon false para que la seccion solo muestre
+//  lo que escribas en la lista.
+const OPORTUNIDADES = [];
+const OPORTUNIDADES_AUTO = true;
+const OPORTUNIDADES_AUTO_CANTIDAD = 24;
 
 // Mas vendidos / alta rotacion, en orden. Mientras este vacio, la
 // seccion "Mas vendidos" no aparece (no se inventa).
@@ -102,8 +119,49 @@ const MAS_VENDIDOS = [];
 // catalogo). Vacio = las marcas con mas productos.
 const MARCAS_DESTACADAS = [];
 
-// "Stock para volumen": productos con al menos esta cantidad disponible.
-const STOCK_VOLUMEN = 1000;
+// Informacion visual de cada marca (opcional). El logo se guarda en
+// img/marcas/<archivo>. Si una marca no tiene logo, se muestra su
+// nombre escrito (nunca se inventa un logo).
+//   "SKALA": { logo: "skala.png", descripcion: "Cuidado capilar brasileño." },
+const MARCAS_INFO = {
+};
+
+// ------------------------------------------------------------
+//  DISPONIBILIDAD Y COMPRA POR VOLUMEN
+// ------------------------------------------------------------
+// Etiqueta "VOLUMEN" y badge "Disponible para volumen": productos con
+// al menos esta cantidad en bodega.
+const STOCK_VOLUMEN = 500;
+
+// Botones de "Compra por volumen" (cantidad minima disponible).
+const VOLUMEN_NIVELES = [5, 10, 25, 50, 100];
+// Nivel que se muestra al entrar a "Compra por volumen".
+const VOLUMEN_NIVEL_INICIAL = 50;
+
+// Por encima de esta cantidad la tarjeta dice "+100 disponibles" en
+// vez del numero exacto. (Pocas unidades = LOW_STOCK, en js/ui.js.)
+const STOCK_TOPE_VISIBLE = 100;
+
+// ------------------------------------------------------------
+//  "¿QUE ESTAS BUSCANDO?" (comprar por necesidad)
+// ------------------------------------------------------------
+//  Accesos pensados para el cliente que no conoce las marcas.
+//  destino: '#/c/<categoria>', '#/c/<categoria>/<tipo>', '#/d/<departamento>',
+//           '#/buscar/<palabras>' o '#/marca/<marca>'.
+//  icono: makeup, face, hair, body, tech, cable, bolt, battery, mouse,
+//         watch, stand, home, iron, box, tag.
+const NECESIDADES = [
+  { nombre: 'Maquillaje',              icono: 'makeup',  destino: '#/c/maquillaje' },
+  { nombre: 'Cuidado de la piel',      icono: 'face',    destino: '#/c/skincare' },
+  { nombre: 'Cuidado del cabello',     icono: 'hair',    destino: '#/c/cabello' },
+  { nombre: 'Cuidado corporal',        icono: 'body',    destino: '#/c/cuidado-corporal' },
+  { nombre: 'Barbería',                icono: 'hair',    destino: '#/c/barberia' },
+  { nombre: 'Accesorios tecnológicos', icono: 'cable',   destino: '#/d/tecnologia' },
+  { nombre: 'Audio',                   icono: 'tech',    destino: '#/c/audio' },
+  { nombre: 'Cargadores y energía',    icono: 'bolt',    destino: '#/c/carga-energia' },
+  { nombre: 'Baterías',                icono: 'battery', destino: '#/d/baterias' },
+  { nombre: 'Hogar y cocina',          icono: 'home',    destino: '#/d/hogar' }
+];
 
 // Sugerencias del buscador cuando todavia no se escribio nada.
 const BUSQUEDAS_POPULARES = ['Cushion', 'Audífonos', 'Cargador tipo C', 'Exfoliante', 'Licuadora', 'Baterías AA', 'Sérum', 'Shampoo', 'Smartwatch', 'Labial'];

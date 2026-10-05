@@ -54,3 +54,15 @@ function placeholderImg(brand, categoria) {
 function sanitizeFilename(str) {
   return String(str).replace(/[^a-zA-Z0-9_\-]+/g, '_').substring(0, 60);
 }
+
+// Aviso breve en pantalla (usa la misma cajita del "agregado al pedido").
+let _noticeTimer = null;
+function notify(msg, isError) {
+  const t = document.getElementById('addToast');
+  if (!t) { setStatus(msg, isError); return; }
+  t.innerHTML = `<span class="at-text at-only${isError ? ' is-error' : ''}"><b>${escapeHtml(msg)}</b></span>`;
+  t.classList.add('show');
+  clearTimeout(_noticeTimer);
+  if (typeof toastTimer !== 'undefined') clearTimeout(toastTimer);
+  _noticeTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}

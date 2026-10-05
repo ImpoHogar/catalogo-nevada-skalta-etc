@@ -11,6 +11,30 @@ let lastOrderSummary = { name: '', phone: '', totalProducts: 0, totalUnits: 0 };
 
 let pendingPhotosZip = null;
 
+// Ultimo Excel generado: se puede volver a descargar desde "Pedido generado".
+let lastExcel = null;
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function downloadLastExcel() {
+  if (lastExcel) downloadBlob(lastExcel.blob, lastExcel.filename);
+}
+
+// ------------------------------------------------------------
+//  ¿TODO LISTO? (confirmacion antes de generar)
+// ------------------------------------------------------------
+//  Muestra el resumen del pedido, avisa si algo tiene disponibilidad
+//  limitada y pide nombre y telefono (se recuerdan en este navegador).
+//  Se mantiene el nombre openCustomerModal: el boton "Generar pedido"
+//  de la barra lo usa.
 function openCustomerModal() {
   const ids = Object.keys(qtyMap);
   if (ids.length === 0) {
@@ -22,12 +46,26 @@ function openCustomerModal() {
     document.getElementById('custName').value = saved.name || '';
     document.getElementById('custPhone').value = saved.phone || '';
   } catch (err) {}
+  const { products, units } = cartTotals();
+  const shortages = cartShortages();
+  document.getElementById('confirmProducts').textContent = products.toLocaleString('es-CR');
+  document.getElementById('confirmUnits').textContent = units.toLocaleString('es-CR');
+  document.getElementById('confirmBrands').textContent = new Set(ids.map(id => PRODUCTS_BY_ID[id].brand)).size;
+  document.getElementById('confirmWarn').innerHTML = shortages.length ? `
+    <div class="order-alert">${ICONS.warn}<span><b>${plural(shortages.length, 'producto tiene', 'productos tienen')} disponibilidad limitada:</b>
+      ${shortages.slice(0, 4).map(p => escapeHtml(prettyName(p))).join(', ')}${shortages.length > 4 ? '…' : ''}. Tu vendedor te confirma las cantidades.</span></div>` : '';
   document.getElementById('custError').textContent = '';
+  closeOrderReview();
   document.getElementById('customerModal').classList.add('open');
 }
 
 function closeCustomerModal() {
   document.getElementById('customerModal').classList.remove('open');
+}
+
+function backToOrder() {
+  closeCustomerModal();
+  openOrderReview();
 }
 
 function confirmCustomerInfo() {
@@ -85,16 +123,10 @@ async function generateExcel() {
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
     const today = new Date().toISOString().slice(0, 10);
     const fileTag = customerName ? `_${sanitizeFilename(customerName)}` : '';
-    a.href = url;
-    a.download = `Pedido${fileTag}_${today}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    lastExcel = { blob, filename: `Pedido${fileTag}_${today}.xlsx` };
+    downloadBlob(lastExcel.blob, lastExcel.filename);
 
     setStatus('✓ Excel descargado.', false);
     saveOrderToHistory(customerName, customerPhone, historyItems);
@@ -116,13 +148,14 @@ async function generateExcel() {
 
     clearCart();
 
+    // "Pedido generado" se abre enseguida; el ZIP de fotos se arma
+    // mientras tanto y su boton se activa cuando esta listo.
+    pendingPhotosZip = null;
+    showOrderDone(photoItems.length);
     if (photoItems.length > 0) {
       await prepareOrderPhotosZip(photoItems, customerName, today, fileTag);
-    } else {
-      pendingPhotosZip = null;
+      refreshDonePhotos();
     }
-
-    showThankYouModal();
   } catch (err) {
     console.error(err);
     setStatus('Error al generar: ' + err.message, true);
@@ -169,38 +202,87 @@ async function prepareOrderPhotosZip(photoItems, customerName, today, fileTag) {
 
 function downloadPendingPhotosZip() {
   if (!pendingPhotosZip) return;
-  const zipUrl = URL.createObjectURL(pendingPhotosZip.blob);
-  const zipLink = document.createElement('a');
-  zipLink.href = zipUrl;
-  zipLink.download = pendingPhotosZip.filename;
-  document.body.appendChild(zipLink);
-  zipLink.click();
-  document.body.removeChild(zipLink);
-  URL.revokeObjectURL(zipUrl);
+  downloadBlob(pendingPhotosZip.blob, pendingPhotosZip.filename);
 }
 
-function showPhotosNoticeModal() {
-  document.getElementById('photosNoticeModal').classList.add('open');
-}
-
-function hidePhotosNoticeModal() {
-  document.getElementById('photosNoticeModal').classList.remove('open');
-  openSellerModal();
-}
-
-function showThankYouModal() {
+// ------------------------------------------------------------
+//  PEDIDO GENERADO
+// ------------------------------------------------------------
+let donePhotosExpected = 0;
+function showOrderDone(nPhotos) {
+  donePhotosExpected = nPhotos;
+  const s = lastOrderSummary;
+  document.getElementById('doneSummary').innerHTML =
+    `<span><b>${s.totalProducts.toLocaleString('es-CR')}</b> ${s.totalProducts === 1 ? 'producto' : 'productos'}</span><span><b>${s.totalUnits.toLocaleString('es-CR')}</b> ${s.totalUnits === 1 ? 'unidad' : 'unidades'}</span>`;
+  refreshDonePhotos();
   closeOrderReview();
-  document.getElementById('thanksModal').classList.add('open');
+  document.getElementById('doneModal').classList.add('open');
+}
+function refreshDonePhotos() {
+  const btn = document.getElementById('donePhotosBtn');
+  if (!btn) return;
+  btn.hidden = !donePhotosExpected;
+  btn.disabled = !pendingPhotosZip;
+  btn.querySelector('span').textContent = pendingPhotosZip ? `Descargar fotos (${donePhotosExpected})` : 'Preparando fotos…';
+}
+function closeOrderDone() {
+  document.getElementById('doneModal').classList.remove('open');
+}
+function doneSendWhatsApp() {
+  closeOrderDone();
+  openSellerModal('pedido');
+}
+function doneKeepShopping() {
+  closeOrderDone();
+  if (currentRoute.view === 'product') return;
+  navigate(lastListingHash && currentRoute.view !== 'home' ? lastListingHash : '#/');
 }
 
-function hideThankYouModal() {
-  document.getElementById('thanksModal').classList.remove('open');
-  if (pendingPhotosZip) {
-    showPhotosNoticeModal();
-  } else {
-    openSellerModal();
+// Compatibilidad con el flujo anterior (avisos "gracias" / fotos).
+function showPhotosNoticeModal() { showOrderDone(donePhotosExpected); }
+function hidePhotosNoticeModal() { openSellerModal('pedido'); }
+function showThankYouModal() { showOrderDone(donePhotosExpected); }
+function hideThankYouModal() { closeOrderDone(); openSellerModal('pedido'); }
+
+// ------------------------------------------------------------
+//  DESCARGA DE IMAGENES
+// ------------------------------------------------------------
+// Foto de un producto en JPG (ficha del producto).
+async function downloadProductPhoto(pid, btn) {
+  const p = PRODUCTS_BY_ID[pid];
+  if (!p || !p.img) return;
+  if (btn) btn.classList.add('is-busy');
+  try {
+    const jpeg = await imageToJpegBlob(productImgSrc(p));
+    downloadBlob(jpeg, `${sanitizeFilename(`${p.brand}_${p.name}`)}_${p.code}.jpg`);
+  } catch (e) {
+    console.error(e);
+    notify('No se pudo descargar la foto.', true);
   }
+  if (btn) btn.classList.remove('is-busy');
 }
+
+// ZIP con las fotos de los productos que estan en el pedido actual.
+async function downloadCartPhotos() {
+  const items = Object.keys(qtyMap).map(id => PRODUCTS_BY_ID[id]).filter(p => p && p.img);
+  if (!items.length) {
+    notify(Object.keys(qtyMap).length ? 'Los productos de tu pedido todavía no tienen foto.' : 'Agrega productos a tu pedido para descargar sus fotos.', true);
+    return;
+  }
+  notify(`Preparando ${items.length} ${items.length === 1 ? 'foto' : 'fotos'}…`);
+  const today = new Date().toISOString().slice(0, 10);
+  await prepareOrderPhotosZip(items, '', today, '');
+  if (pendingPhotosZip) {
+    downloadPendingPhotosZip();
+    notify('✓ Fotos de tu pedido descargadas.');
+  } else notify('No se pudieron preparar las fotos.', true);
+}
+
+// ------------------------------------------------------------
+//  AYUDA
+// ------------------------------------------------------------
+function openHelp() { document.getElementById('helpModal').classList.add('open'); }
+function closeHelp() { document.getElementById('helpModal').classList.remove('open'); }
 
 // Tarjetas de vendedores: en la ventana de envio del pedido y en el pie.
 function sellerPhoneLabel(phone) {
@@ -217,19 +299,41 @@ const SELLER_KEY = 'impohogar_tec_seller';
 function savedSellerKey() {
   try { const k = localStorage.getItem(SELLER_KEY); return SELLERS[k] ? k : ''; } catch (e) { return ''; }
 }
+// Modo de la ventana de vendedores:
+//   'pedido'   -> enviar el pedido recien generado
+//   'consulta' -> preguntar por un producto (desde su ficha)
+//   'contacto' -> escribir sin pedido
+let sellerMode = 'pedido';
+let sellerProduct = null;
+
 function renderSellers() {
   const list = document.getElementById('sellerList');
   const mine = savedSellerKey();
   const entries = Object.entries(SELLERS).sort((a, b) => (b[0] === mine) - (a[0] === mine));
+  const verb = sellerMode === 'pedido' ? 'Enviar pedido a' : 'Escribir a';
   if (list) list.innerHTML = entries.map(([key, s]) =>
-    `<button type="button" class="seller-option${key === mine ? ' is-mine' : ''}" onclick="sendToSeller('${key}')" aria-label="Enviar pedido a ${escapeHtml(s.name)} por WhatsApp">${key === mine ? '<span class="seller-mine">Tu vendedor</span>' : ''}${sellerCardInner(s)}</button>`).join('');
+    `<button type="button" class="seller-option${key === mine ? ' is-mine' : ''}" onclick="sendToSeller('${key}')" aria-label="${verb} ${escapeHtml(s.name)} por WhatsApp">${key === mine ? '<span class="seller-mine">Tu vendedor</span>' : ''}${sellerCardInner(s)}</button>`).join('');
   const foot = document.getElementById('footerSellers');
   if (foot) foot.innerHTML = Object.values(SELLERS).map(s =>
     `<a class="seller-option" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</a>`).join('');
 }
 document.addEventListener('DOMContentLoaded', renderSellers);
 
-function openSellerModal() {
+function openSellerModal(mode, pid) {
+  sellerMode = mode || 'pedido';
+  sellerProduct = pid ? PRODUCTS_BY_ID[pid] : null;
+  const t = document.getElementById('sellerTitle');
+  const n = document.getElementById('sellerNote');
+  if (sellerMode === 'consulta' && sellerProduct) {
+    t.textContent = '¿Tienes dudas sobre este producto?';
+    n.textContent = `Elige tu vendedor: se abrirá WhatsApp con el producto y su código (${sellerProduct.code}) listos.`;
+  } else if (sellerMode === 'contacto') {
+    t.textContent = 'Contacta a tu vendedor';
+    n.textContent = 'Toca a tu vendedor para escribirle por WhatsApp.';
+  } else {
+    t.textContent = 'Elige tu vendedor para enviarle tu pedido por WhatsApp';
+    n.textContent = 'Se abrirá un chat de WhatsApp con el mensaje listo: solo adjunta ahí el Excel que se acaba de descargar.';
+  }
   renderSellers();
   document.getElementById('sellerModal').classList.add('open');
 }
@@ -241,10 +345,18 @@ function closeSellerModal() {
 function sendToSeller(key) {
   const seller = SELLERS[key];
   if (!seller) return;
-  const s = lastOrderSummary;
-  const intro = s.name ? `Buenas, mi nombre es ${s.name}, este es mi pedido` : 'Buenas, este es mi pedido';
-  const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
-  const message = intro + detalle;
+  let message;
+  if (sellerMode === 'consulta' && sellerProduct) {
+    const p = sellerProduct;
+    message = `Buenas, tengo una consulta sobre este producto: ${prettyName(p)} (${p.brand}) · Código ${p.code}.`;
+  } else if (sellerMode === 'contacto') {
+    message = 'Buenas, quisiera hacer una consulta sobre el catálogo.';
+  } else {
+    const s = lastOrderSummary;
+    const intro = s.name ? `Buenas, mi nombre es ${s.name}, este es mi pedido` : 'Buenas, este es mi pedido';
+    const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
+    message = intro + detalle;
+  }
   const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
   try { localStorage.setItem(SELLER_KEY, key); } catch (e) {}
   window.open(url, '_blank');

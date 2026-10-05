@@ -17,25 +17,32 @@
 //  Cargar DESPUES de ui.js y ANTES de catalog.js.
 // ============================================================
 
+// Los cuatro grandes accesos del catalogo. "tone" define la experiencia
+// visual y los filtros de cada uno (beauty / tech / battery / home).
+// "aliases": direcciones viejas que siguen funcionando (#/d/belleza).
 const DEPARTMENTS = [
-  { id: 'belleza',          name: 'Belleza',          tone: 'beauty', icon: 'makeup', blurb: 'Maquillaje y skincare: K-beauty, bases, labios y rutinas completas.' },
-  { id: 'cuidado-personal', name: 'Cuidado personal', tone: 'care',   icon: 'body',   blurb: 'Cuidado corporal, cabello y barbería para el día a día.' },
-  { id: 'tecnologia',       name: 'Tecnología',       tone: 'tech',   icon: 'tech',   blurb: 'Audio, carga, cables, baterías, computación y smart.' },
-  { id: 'hogar',            name: 'Hogar',            tone: 'home',   icon: 'home',   blurb: 'Pequeños electrodomésticos para cocina y el hogar.' }
+  { id: 'cuidado-personal', name: 'Cuidado personal', tone: 'beauty',  icon: 'makeup',  aliases: ['belleza'],
+    blurb: 'Maquillaje, skincare, cabello, cuidado corporal y barbería.' },
+  { id: 'tecnologia',       name: 'Tecnología',       tone: 'tech',    icon: 'tech',
+    blurb: 'Audio, cables, cargadores, computación, smart y soportes.' },
+  { id: 'baterias',         name: 'Baterías',         tone: 'battery', icon: 'battery',
+    blurb: 'Pilas alcalinas AA, AAA, C, D, 9V y baterías de botón.' },
+  { id: 'hogar',            name: 'Hogar',            tone: 'home',    icon: 'home',
+    blurb: 'Pequeños electrodomésticos para cocina y el hogar.' }
 ];
 
 // Categorias (orden = orden en menus). "types": [tipo, palabras del nombre].
 // Gana el primer tipo que encuentra alguna de sus palabras.
 const CATEGORIES = [
-  // ---------- BELLEZA ----------
-  { id: 'maquillaje', name: 'Maquillaje', dept: 'belleza', icon: 'makeup', types: [
+  // ---------- CUIDADO PERSONAL: maquillaje y skincare ----------
+  { id: 'maquillaje', name: 'Maquillaje', dept: 'cuidado-personal', icon: 'makeup', types: [
     ['Mejillas',      ['ILLUMIN', 'ILUMUN', 'SPARKLE PARTY', 'BLUSH', 'RUBOR', 'HIGHLIGHT', 'ILUMIN', 'CONTOUR', 'BRONZ', 'SHIMMER', 'GLOW TIME', 'HALO', 'SUNLIT', 'SCULPT', 'SHOW YOUR', 'STARCROSSED', 'FUCHSIA']],
     ['Ojos y cejas',  ['LASTING STROKES', 'LONG LASTING AND', 'BROW', 'LINER', 'MASCARA', 'EYESHAD', 'SOMBRA', 'PALET', 'LASH', 'FLICK', 'EYE']],
     ['Labios',        ['GLASSY', 'LIP', 'LABIAL', 'LABIOS', 'GLOSS', 'TINT', 'BALM', 'POUT', 'KISS', 'ROUGE', 'MARKER', 'GLOW POP', 'ENCHANTED ROSE', 'JELLY MUCH']],
     ['Bases y cushions', ['CUSHION', 'FOUNDATION', 'FUNDATION', 'BASE', 'BB CREAM', 'MASK FIT', 'FIT RED', 'PERFECT COVER']],
     ['Correctores y polvos', ['CORRECTOR', 'POLVO', 'PRIMER', 'SELLADOR', 'SETTING', 'LOOSE', 'BLUR', 'BAKED', 'FLORA MIST']]
   ]},
-  { id: 'skincare', name: 'Skincare', dept: 'belleza', icon: 'face', types: [
+  { id: 'skincare', name: 'Skincare', dept: 'cuidado-personal', icon: 'face', types: [
     ['Sets y kits',       [' SET ', 'KIT', 'SET DE']],
     ['Protección solar',  ['SPF', 'SUN ', 'SOLAR', 'BLOQUE', 'SUNSCREEN']],
     ['Mascarillas',       ['MASK', 'MASCARILLA']],
@@ -44,7 +51,7 @@ const CATEGORIES = [
     ['Sérums y ampollas', ['SERUM', 'AMPOLLA', 'AMPOULE']],
     ['Cremas e hidratación', ['CREMA', 'CREAM', 'HIDRATANTE', 'GEL', 'CAPSULA', 'PORE']]
   ]},
-  // ---------- CUIDADO PERSONAL ----------
+  // ---------- CUIDADO PERSONAL: cuerpo, cabello y barberia ----------
   { id: 'cuidado-corporal', name: 'Cuidado corporal', dept: 'cuidado-personal', icon: 'body', types: [
     ['Cuidado de labios',  ['LIP SCRUB', 'LIP MASK', 'SUGAR LIPS', 'SUGARLIPS', 'LIP BUTTER']],
     ['Afeitado',           ['AFEITAR', 'SHAVE']],
@@ -89,13 +96,6 @@ const CATEGORIES = [
     ['Cargadores de vehículo', ['VEHICULO', 'CAR CHARGER', 'AUTO']],
     ['Cargadores de pared', ['CARGADOR', 'CHARGER', 'CUBO', 'CARGA', 'POWER']]
   ]},
-  { id: 'baterias', name: 'Baterías y pilas', dept: 'tecnologia', icon: 'battery', types: [
-    ['Alcalinas AA',       [' AA ', 'LR06', 'LR6']],
-    ['Alcalinas AAA',      [' AAA ', 'LR03']],
-    ['Alcalinas C, D y 9V', ['TIPO D', 'TIPO C', '9 V', ' 9V', 'LR20', 'LR14']],
-    ['Botón y litio',      ['CR20', 'CR16', 'CR24', 'LITHIUM', 'LITIO', 'BOTON', 'MICRO BATERIA']],
-    ['Recargables',        ['RECARGABLE', 'RECHARG']]
-  ]},
   { id: 'computacion', name: 'Computación y gaming', dept: 'tecnologia', icon: 'mouse', types: [
     ['Mochilas y fundas',  ['BACKPACK', 'MOCHILA', 'BOLSO', 'FUNDA', 'SLEEVE', 'MALETIN', 'NOTEBOOK BAG']],
     ['Mouse pads',         ['PAD', 'ALMOHADILLA', 'AMOHADILLA']],
@@ -113,6 +113,16 @@ const CATEGORIES = [
     ['Soportes de TV y monitor', ['TV', 'MONITOR', 'DESK MOUNT', 'WALL MOUNT']],
     ['Iluminación y selfie', ['RING LIGHT', 'LIGHT', 'SELFIE', 'TRIPOD', 'TRIPODE', 'LED']],
     ['Soportes para celular', ['SOPORTE', 'SPORTE', 'SORPORTE', 'HOLDER', 'MOUN', 'STAND', 'POUCH', 'CELL PHONE', 'CELULAR']]
+  ]},
+  // ---------- BATERIAS ----------
+  { id: 'baterias', name: 'Baterías y pilas', dept: 'baterias', icon: 'battery', types: [
+    ['Pilas AAA',          [' AAA ', 'LR03']],
+    ['Pilas AA',           [' AA ', 'LR06', 'LR6']],
+    ['Pilas C',            ['TIPO C', 'LR14']],
+    ['Pilas D',            ['TIPO D', 'LR20']],
+    ['Batería 9V',         ['9 V', ' 9V']],
+    ['Botón de litio',     ['CR20', 'CR16', 'CR 16', 'CR24', 'LITHIUM', 'LITIO', 'BOTON', 'MICRO BATERIA']],
+    ['Recargables',        ['RECARGABLE', 'RECHARG']]
   ]},
   // ---------- HOGAR ----------
   { id: 'cocina', name: 'Cocina', dept: 'hogar', icon: 'home', types: [
@@ -186,7 +196,10 @@ PRODUCTS.forEach(p => {
 
 function catName(id) { return CATEGORY_BY_ID[id] ? CATEGORY_BY_ID[id].name : 'Otros'; }
 function deptName(id) { return DEPARTMENT_BY_ID[id] ? DEPARTMENT_BY_ID[id].name : 'Otros'; }
-function deptTone(id) { return DEPARTMENT_BY_ID[id] ? DEPARTMENT_BY_ID[id].tone : 'care'; }
+function deptTone(id) { return DEPARTMENT_BY_ID[id] ? DEPARTMENT_BY_ID[id].tone : 'beauty'; }
+// Direcciones viejas (#/d/belleza) -> departamento actual.
+const DEPT_ALIAS = {};
+DEPARTMENTS.forEach(d => (d.aliases || []).forEach(a => { DEPT_ALIAS[a] = d.id; }));
 
 // Conteos (solo productos visibles) para menus y filtros.
 const TAXO_COUNTS = { dept: {}, cat: {}, tipo: {} };
@@ -267,6 +280,43 @@ function productCompat(p) {
   if (/GAMING|GAMER|PS4|PS5|XBOX|NINTENDO/.test(n)) out.push('Gaming');
   if (/VEHICULO|VEHÍCULO|CARRO|AUTO\b|CAR /.test(n)) out.push('Vehículo');
   return out;
+}
+
+// Baterias: tamano, quimica, presentacion y voltaje. Solo lo que dice
+// el nombre del producto (si no lo dice, queda vacio: no se inventa).
+function batterySize(p) {
+  if (p.dept !== 'baterias') return '';
+  const n = upperName(p);
+  const cr = n.match(/CR\s?(\d{4})/); if (cr) return 'CR' + cr[1];
+  if (/ AAA |LR03/.test(n)) return 'AAA';
+  if (/ AA |LR06|LR6\b/.test(n)) return 'AA';
+  if (/TIPO C|LR14/.test(n)) return 'C';
+  if (/TIPO D|LR20/.test(n)) return 'D';
+  if (/9 ?V\b/.test(n)) return '9V';
+  return '';
+}
+function batteryChem(p) {
+  if (p.dept !== 'baterias') return '';
+  const n = upperName(p);
+  if (/RECARG|RECHARG/.test(n)) return 'Recargable';
+  if (/LITHIUM|LITIO|CR\s?\d{4}/.test(n)) return 'Litio';
+  if (/ALCALIN|ALC\b/.test(n)) return 'Alcalina';
+  return '';
+}
+function batteryPack(p) {
+  if (p.dept !== 'baterias') return '';
+  const n = upperName(p);
+  const caja = /^ CAJA /.test(n) ? 'Caja de ' : '';
+  const m = n.match(/(\d+)\+(\d+)\s?PK/);
+  if (m) return `${caja}${m[1]}+${m[2]} unidades`;
+  const k = n.match(/(\d+)\s?PK\b/);
+  if (k) return caja ? `Caja de blísteres de ${k[1]}` : `${k[1]} ${k[1] === '1' ? 'unidad' : 'unidades'}`;
+  return caja ? 'Caja' : '';
+}
+function batteryVolt(p) {
+  if (p.dept !== 'baterias') return '';
+  const m = upperName(p).match(/(\d+(?:[.,]\d+)?)\s?V\b/);
+  return m ? m[1].replace(',', '.') + ' V' : '';
 }
 
 // Ficha "Conector" / "Conexion" ya las calcula productSpecs(); se reusan.
@@ -368,7 +418,8 @@ function productHaystack(p) {
   const specs = (p._specs || (p._specs = productSpecs(p))).map(s => s.value).join(' ');
   p._hayName = searchNorm(prettyName(p) + ' ' + p.name);
   p._hay2 = searchNorm([p.name, prettyName(p), p.brand, p.code, catName(p.cat), deptName(p.dept), p.tipo, specs,
-    productCompat(p).join(' '), productBenefits(p).join(' ')].join(' '));
+    productCompat(p).join(' '), productBenefits(p).join(' '), batterySize(p), batteryChem(p),
+    Array.isArray(p.tags) ? p.tags.join(' ') : (p.tags || '')].join(' '));
   return p._hay2;
 }
 

@@ -25,6 +25,8 @@
 #     carrito y el historial de los clientes dependen de el).
 #   * Los productos nuevos (codigo que no estaba antes) reciben la fecha
 #     de hoy en "dateAdded" y aparecen solos en "Nuevos ingresos".
+#   * Se conservan los campos que se agregan a mano en products.js:
+#     notes, imgs, tags, nuevo, oportunidad y hidden.
 #   * Las fotos se buscan en img/productos/<codigo>.jpg|.jpeg|.png|.webp
 #   * Las categorias internas (gastos, material POP, exhibidores,
 #     regalias...) no se publican.
@@ -244,7 +246,9 @@ CABECERA_PRODUCTS = """// ======================================================
 //  ceros), name, categoria (una de CATEGORIAS en config.js),
 //  img (nombre del archivo en img/productos/ o false),
 //  dateAdded (opcional: lo pone "Nuevos ingresos"),
-//  notes (opcional: detalles que se muestran en la ficha).
+//  notes (opcional: detalles que se muestran en la ficha),
+//  imgs (opcional: fotos extra), tags (opcional: palabras extra
+//  para el buscador), nuevo / oportunidad (opcional: true).
 // ============================================================
 const PRODUCTS = [
 """
@@ -339,8 +343,10 @@ def main():
                 p["dateAdded"] = hoy
         elif prev.get("dateAdded"):
             p["dateAdded"] = prev["dateAdded"]
-        if prev.get("notes"):
-            p["notes"] = prev["notes"]
+        # Campos que se agregan a mano en products.js: se conservan.
+        for extra in ("notes", "imgs", "tags", "nuevo", "oportunidad", "hidden"):
+            if prev.get(extra):
+                p[extra] = prev[extra]
         if p["categoria"] == OTROS:
             otros.append(p)
         productos.append(p)
