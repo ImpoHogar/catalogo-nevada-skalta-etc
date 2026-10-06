@@ -197,4 +197,6 @@ function renderOrderReview() {
   if (gen) gen.disabled = !products;
   const clr = document.getElementById('orderClearBtn');
   if (clr) clr.hidden = !products;
+  const pics = document.getElementById('orderPhotosBtn');
+  if (pics) pics.hidden = !items.some(p => p.img);
 }

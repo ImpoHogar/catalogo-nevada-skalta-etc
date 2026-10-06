@@ -29,11 +29,6 @@ const listingState = { key: '', facets: {}, sort: '', q: '', minStock: 0 };
 let viewMode = 'grid';
 try { viewMode = localStorage.getItem('impohogar_tec_view') === 'list' ? 'list' : 'grid'; } catch (e) {}
 
-// Compatibilidad con codigo anterior (vitrina, main.js)
-let diaNinoMode = false;
-let nuevosIngresosMode = false;
-let selectedCategoria = new Set();
-
 const NUEVOS_SET = new Set(typeof NUEVOS_INGRESOS !== 'undefined' ? NUEVOS_INGRESOS : []);
 const MAS_VENDIDOS_LIST = (typeof MAS_VENDIDOS !== 'undefined' ? MAS_VENDIDOS : []);
 const MAS_VENDIDOS_RANK = {};
@@ -111,7 +106,6 @@ function productImgSrc(p) {
 // Usadas por la vitrina de entrada (showcase.js), que sigue con las
 // categorias de origen.
 function getCategoria(p) { return p.categoria || null; }
-function normalizeText(s) { return normText(s); }
 function categoriesWithCounts() {
   const counts = {};
   VISIBLE_PRODUCTS.forEach(p => { counts[p.categoria] = (counts[p.categoria] || 0) + 1; });
@@ -155,6 +149,16 @@ const COLLECTIONS = {
   'mas-vendidos':  { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Los productos que más piden nuestros clientes.', icon: 'tag', filter: isBestSeller, sort: 'bestseller' },
   'dia-nino':      { title: 'Día del Niño', eyebrow: 'Temporada', sub: 'Productos seleccionados para la temporada.', icon: 'spark', filter: p => DIA_DEL_NINO_CATEGORIES.includes(p.brand), sort: 'brand' }
 };
+// Oportunidades: un solo centro con tres motivos comerciales reales
+// (seleccion, pocas unidades en bodega, mucho inventario). Cada motivo
+// conserva su direccion propia (#/col/oportunidades, /ultimas, /volumen).
+const OPP_TABS = [
+  { col: 'oportunidades', href: '#/col/oportunidades', label: 'Selección ImpoHogar', icon: 'flame' },
+  { col: 'ultimas',       href: '#/col/ultimas',       label: 'Últimas unidades',    icon: 'bolt' },
+  { col: 'volumen',       href: '#/col/volumen',       label: 'Stock para volumen',  icon: 'box' }
+];
+const OPP_COLS = OPP_TABS.map(t => t.col);
+
 function collectionActive(id) {
   if (id === 'dia-nino') {
     const lim = new Date(DIA_DEL_NINO_FECHA_LIMITE + 'T23:59:59');
@@ -254,22 +258,10 @@ function router() {
   updateMobileTabs();
 }
 
-function goHome() { navigate('#/'); }
 
 // Boton grande para volver al inicio (arriba y al final de cada seccion).
 function homeBackHTML(extra) {
   return `<a class="home-back${extra ? ' ' + extra : ''}" href="#/">${ICONS.home2}<span>Volver a la página principal</span></a>`;
-}
-
-// Compatibilidad con llamadas anteriores
-function selectBrand(b) { navigate(brandHash(b)); }
-function selectCategoria(cat) { navigate('#/todo'); }
-function showNuevosIngresos() { navigate('#/col/nuevos'); }
-function showDiaDelNino() { navigate('#/col/dia-nino'); }
-function clearAllFilters() {
-  listingState.facets = {};
-  if (currentRoute.view === 'listing' && currentRoute.kind === 'search') { navigate('#/todo'); return; }
-  renderListing(true);
 }
 
 // ============================================================
@@ -285,12 +277,9 @@ function renderNav() {
       <a class="dn-link" href="#/todo" data-route="all">Catálogo</a>
       <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
       <a class="dn-link dn-nuevos" href="#/col/nuevos" data-route="col-nuevos">${ICONS.spark}Nuevos ingresos</a>
-      <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="col-oportunidades">${ICONS.flame}Oportunidades</a>
-      <a class="dn-link dn-low" href="#/col/ultimas" data-route="col-ultimas">${ICONS.bolt}<span class="dn-long">Últimas unidades</span><span class="dn-short">Últimas</span></a>
-      <a class="dn-link dn-vol" href="#/col/volumen" data-route="col-volumen">${ICONS.box}<span class="dn-long">Stock para volumen</span><span class="dn-short">Volumen</span></a>
+      <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="opp">${ICONS.flame}Oportunidades</a>
       ${nino}
       <span class="dn-spacer"></span>
-      <button type="button" class="dn-tool dn-calc" onclick="openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
       <div class="dn-more">
         <button type="button" class="dn-tool" id="moreBtn" onclick="toggleMoreMenu(event)" aria-expanded="false" aria-controls="moreMenu">${ICONS.dots}<span>Más</span>${ICONS.chevD}</button>
         <div class="more-menu" id="moreMenu" role="menu">${toolsMenuHTML()}</div>
@@ -300,15 +289,16 @@ function renderNav() {
   renderMobileMenu();
 }
 
-// Herramientas secundarias (menu "Mas" y menu movil). La calculadora
-// tiene su propio boton visible y no se esconde aqui.
+// Herramientas secundarias (menu "Mas" en escritorio y en la barra
+// inferior del celular). No compiten con la navegacion principal.
 function toolsMenuHTML() {
   return `
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openCalculator()">${ICONS.calc}<span>Calculadora<small>Para calcular cantidades y totales</small></span></button>
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openOrderHistory()">${ICONS.clock}<span>Historial de pedidos<small>Ver y repetir pedidos anteriores</small></span></button>
-    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();downloadCartPhotos()">${ICONS.download}<span>Descargar fotos<small>Las fotos de los productos de tu pedido</small></span></button>
+    <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();downloadCartPhotos()">${ICONS.download}<span>Descargar imágenes<small>Las fotos de los productos de tu pedido</small></span></button>
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openHelp()">${ICONS.help}<span>Ayuda<small>Cómo armar y enviar tu pedido</small></span></button>
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openSellerModal('contacto')">${ICONS.chat}<span>Contactar vendedor<small>Escríbenos por WhatsApp</small></span></button>
-    <button type="button" role="menuitem" onclick="toggleTheme()">${ICONS.spark}<span>Modo claro / oscuro</span></button>`;
+    <button type="button" role="menuitem" onclick="toggleTheme()">${typeof THEME_ICON_MOON !== 'undefined' ? THEME_ICON_MOON : ''}<span>Modo claro / oscuro</span></button>`;
 }
 function toggleMoreMenu(e) {
   if (e) e.stopPropagation();
@@ -378,20 +368,24 @@ function toggleMegaMenu() {
   if (document.body.classList.contains('mega-open')) closeMegaMenu(); else openMegaMenu('', false);
 }
 
+// Pestana "Mas" del celular: descubrir (nuevos y oportunidades), explorar
+// (catalogo, marcas, departamentos) y herramientas.
 function renderMobileMenu() {
   const el = document.getElementById('mobileMenuBody');
   if (!el) return;
-  const cols = ['nuevos', 'oportunidades', 'volumen', 'ultimas', 'mas-vendidos', 'dia-nino'].filter(id => (COLLECTIONS[id].always && id !== 'dia-nino') || collectionActive(id)).map(id =>
-    `<a class="mmb-col mmb-${id}" href="#/col/${id}">${iconSVG(COLLECTIONS[id].icon)}<span>${escapeHtml(COLLECTIONS[id].title)}</span><small>${collectionCount(id)} productos</small></a>`).join('');
+  const opp = OPP_TABS.map(t => `<a class="mmb-sub" href="${t.href}">${iconSVG(t.icon)}<span>${escapeHtml(t.label)}</span><small>${fmt(collectionCount(t.col))}</small></a>`).join('');
+  const nino = collectionActive('dia-nino') ? `<a class="mmb-row" href="#/col/dia-nino">${ICONS.spark}<span>Día del Niño</span><small>${collectionCount('dia-nino')}</small></a>` : '';
   el.innerHTML = `
-    <div class="mmb-main">
-      <a class="mmb-row" href="#/">${ICONS.home2}<span>Inicio</span></a>
-      <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Catálogo completo</span><small>${fmt(VISIBLE_PRODUCTS.length)}</small></a>
-      <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Marcas</span><small>${BRANDS.length}</small></a>
-      <button type="button" class="mmb-row" onclick="closeMobileMenu();openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
+    <div class="mmb-label">Descubrir</div>
+    <div class="mmb-cols">
+      <a class="mmb-col mmb-nuevos" href="#/col/nuevos">${ICONS.spark}<span>Nuevos ingresos</span><small>${fmt(collectionCount('nuevos'))} productos</small></a>
+      <a class="mmb-col mmb-oportunidades" href="#/col/oportunidades">${ICONS.flame}<span>Oportunidades</span><small>Selección, últimas unidades y volumen</small></a>
     </div>
-    <div class="mmb-cols">${cols}</div>
-    <div class="mmb-label">Departamentos</div>
+    <div class="mmb-subs">${opp}</div>
+    ${nino}
+    <div class="mmb-label">Explorar</div>
+    <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Catálogo completo</span><small>${fmt(VISIBLE_PRODUCTS.length)}</small></a>
+    <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Marcas</span><small>${BRANDS.length}</small></a>
     ${deptsWithProducts().map(d => `
       <details class="mmb-dept tone-${d.tone}">
         <summary>${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span><small>${TAXO_COUNTS.dept[d.id]}</small>${ICONS.chevD}</summary>
@@ -406,14 +400,23 @@ function renderMobileMenu() {
     <div class="mmb-label">Herramientas</div>
     <div class="mmb-tools">${toolsMenuHTML()}</div>`;
 }
-function openMobileMenu() { closeMoreMenu(); document.body.classList.add('menu-open'); }
-function closeMobileMenu() { document.body.classList.remove('menu-open'); }
+function openMobileMenu() {
+  closeMoreMenu();
+  document.body.classList.add('menu-open');
+  const t = document.getElementById('tabMore');
+  if (t) t.setAttribute('aria-expanded', 'true');
+}
+function closeMobileMenu() {
+  document.body.classList.remove('menu-open');
+  const t = document.getElementById('tabMore');
+  if (t) t.setAttribute('aria-expanded', 'false');
+}
 
 function routeKey(r) {
   if (r.view === 'home') return 'home';
   if (r.view === 'brands' || r.kind === 'brand') return 'brands';
   if (r.kind === 'all') return 'all';
-  if (r.kind === 'col') return 'col-' + r.col;
+  if (r.kind === 'col') return OPP_COLS.includes(r.col) ? 'opp' : 'col-' + r.col;
   return '';
 }
 function updateNavActive() {
@@ -672,29 +675,6 @@ function bigSearchHTML(id, placeholder) {
 
 // Tarjeta del inicio con un carrusel de sus productos (se mueve solo,
 // se detiene al pasar el mouse y se puede deslizar con el dedo).
-function promoCarouselHTML(pr) {
-  const item = p => {
-    const lvl = stockLevel(p);
-    return `<a class="pm-item" href="#/p/${p.id}" title="${escapeHtml(prettyName(p))}">
-      <span class="pm-pic"><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>
-      <span class="pm-name">${escapeHtml(prettyName(p))}</span>
-      <span class="pm-stock is-${lvl.key}">${escapeHtml(lvl.qty || lvl.label)}</span>
-    </a>`;
-  };
-  const list = pr.items.map(item).join('');
-  return `
-    <div class="hero-promo ${pr.cls}">
-      <a class="pm-head" href="${pr.href}">
-        <span class="hp-k">${iconSVG(pr.icon)}${fmt(pr.n)} productos</span>
-        <b>${escapeHtml(pr.title)}</b>
-        <span class="hp-d">${escapeHtml(pr.sub)}</span>
-      </a>
-      <div class="pm-viewport">
-        <div class="pm-track" style="--pm-dur:${Math.max(24, pr.items.length * 3.2)}s">${list}<span class="pm-dup" aria-hidden="true">${list}</span></div>
-      </div>
-      <a class="hp-go" href="${pr.href}">Ver los ${fmt(pr.n)} ${ICONS.arrow}</a>
-    </div>`;
-}
 
 function renderTrustBar() {
   const el = document.getElementById('trustBar');
@@ -730,41 +710,6 @@ function renderNeeds() {
     </a>`).join('');
 }
 
-function renderDeptBlocks() {
-  const el = document.getElementById('deptBlocks');
-  if (!el) return;
-  el.innerHTML = deptsWithProducts().map(d => {
-    const cats = catsOfDept(d.id);
-    const items = mixedPick(cats.map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 8)), 16);
-    // Departamento de una sola categoria (Baterias): se muestran sus tipos.
-    const tiles = (cats.length > 1 ? cats.map(c => ({ href: '#/c/' + c.id, name: c.name, icon: c.icon, list: VISIBLE_PRODUCTS.filter(p => p.cat === c.id),
-        types: typesOfCat(c.id).filter(t => t.label !== 'Otros').slice(0, 3).map(t => t.label).join(' · ') }))
-      : typesOfCat(cats[0].id).map(t => ({ href: '#/c/' + cats[0].id + '/' + slugify(t.label), name: t.label, icon: cats[0].icon, list: VISIBLE_PRODUCTS.filter(p => p.cat === cats[0].id && p.tipo === t.label), types: `${t.count} productos` })))
-      .map(t => {
-        const pic = photoPick(t.list, 1)[0];
-        return `<a class="db-tile" href="${t.href}">
-          <span class="db-tile-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : iconSVG(t.icon)}</span>
-          <span class="db-tile-name">${escapeHtml(t.name)}</span>
-          <span class="db-tile-types">${escapeHtml(t.types)}</span>
-        </a>`;
-      }).join('');
-    return `
-      <section class="dept-block tone-${d.tone}" aria-labelledby="db-${d.id}">
-        <div class="db-inner">
-          <div class="sec-head">
-            <div>
-              <span class="sec-eyebrow">${iconSVG(d.icon)}Departamento</span>
-              <h2 class="sec-title" id="db-${d.id}">${escapeHtml(d.name)}</h2>
-              <p class="sec-sub">${escapeHtml(d.blurb)}</p>
-            </div>
-            <div class="sec-actions"><a class="sec-more" href="#/d/${d.id}">Ver los ${fmt(TAXO_COUNTS.dept[d.id])} productos ${ICONS.arrow}</a></div>
-          </div>
-          <div class="db-tiles">${tiles}</div>
-          ${railHTML(items, { title: `Productos de ${d.name}`, cls: 'rail-inblock', more: '#/d/' + d.id })}
-        </div>
-      </section>`;
-  }).join('');
-}
 
 function featuredBrands() {
   const stats = {};
@@ -792,15 +737,21 @@ function brandTileHTML(b) {
       <span class="bt-mark${brandInfo(b.name).logo ? ' has-logo' : ''}">${brandMarkHTML(b.name, 'bt-word')}</span>
       <span class="bt-cats">${escapeHtml(cats.slice(0, 3).join(' · '))}</span>
       <span class="bt-thumbs" aria-hidden="true">${thumbs.map(p => `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">`).join('')}</span>
-      <span class="bt-stats"><span><b>${fmt(b.count)}</b> productos</span><span><b>${fmt(disp)}</b> con stock</span>${nuevos ? `<span class="bt-new"><b>${nuevos}</b> nuevos</span>` : ''}${vol ? `<span class="bt-vol"><b>${vol}</b> para volumen</span>` : ''}</span>
+      <span class="bt-stats"><span><b>${fmt(b.count)}</b> ${b.count === 1 ? 'producto' : 'productos'}</span><span><b>${fmt(disp)}</b> con stock</span>${nuevos ? `<span class="bt-new"><b>${nuevos}</b> nuevos</span>` : ''}${vol ? `<span class="bt-vol"><b>${vol}</b> para volumen</span>` : ''}</span>
       <span class="bt-go">Ver productos ${ICONS.arrow}</span>
     </a>`;
 }
 
+// Inicio: muro de logos (todas las marcas, de la que tiene mas surtido a
+// la que tiene menos). Sin logo se escribe el nombre.
 function renderHomeBrands() {
   const el = document.getElementById('homeBrands');
   if (!el) return;
-  el.innerHTML = featuredBrands().slice(0, 12).map(brandTileHTML).join('');
+  el.innerHTML = featuredBrands().map(b => `
+    <a class="bw-item" href="${brandHash(b.name)}" aria-label="${escapeHtml(b.name)}: ${fmt(b.count)} productos">
+      <span class="bw-logo">${brandMarkHTML(b.name, 'bw-mark')}</span>
+      <span class="bw-count">${fmt(b.count)} ${b.count === 1 ? 'producto' : 'productos'}</span>
+    </a>`).join('');
 }
 
 function volLevelChipsHTML(active, onclickFn) {
@@ -815,67 +766,68 @@ function volLevelChipsHTML(active, onclickFn) {
 // ------------------------------------------------------------
 //  ESCAPARATES COMERCIALES DEL INICIO
 // ------------------------------------------------------------
-//  Nuevos ingresos, Oportunidades, Ultimas unidades y Stock para
-//  volumen. Cada uno con su mensaje, sus pestanas (por departamento o
-//  por cantidad minima) y tarjetas completas con "Agregar". Todo sale
-//  de los datos; un escaparate sin productos no se muestra.
+//  Nuevos ingresos (por departamento) y Oportunidades (por motivo:
+//  seleccion, ultimas unidades, stock para volumen). Tarjetas completas
+//  con "Agregar". Todo sale de los datos; un escaparate vacio no se
+//  muestra.
 const SHOWCASE_MAX = 16;
 const SHOWCASES = [
-  { id: 'nuevos', col: 'nuevos', icon: 'spark', claim: 'Esto acaba de llegar', title: 'Nuevos ingresos',
-    sub: 'Lo más reciente que entró a bodega, por departamento.', tabs: 'dept',
-    list: () => VISIBLE_PRODUCTS.filter(isInNuevosIngresosView), sort: 'recent' },
-  { id: 'oportunidades', col: 'oportunidades', icon: 'flame', claim: 'Selección ImpoHogar', title: 'Oportunidades',
-    sub: 'Productos que te recomendamos tener: buena disponibilidad y listos para mover.', tabs: 'dept',
-    list: () => VISIBLE_PRODUCTS.filter(isOpportunity), sort: 'opp' },
-  { id: 'ultimas', col: 'ultimas', icon: 'bolt', claim: 'Quedan pocas unidades', title: 'Últimas unidades',
-    sub: `Productos con ${LOW_STOCK} unidades o menos. Asegúralos antes de que se agoten.`, tabs: 'dept',
-    list: () => VISIBLE_PRODUCTS.filter(isLowStock), sort: 'stock-asc' },
-  { id: 'volumen', col: 'volumen', icon: 'box', claim: 'Mucho inventario', title: 'Stock para volumen',
-    sub: 'Elige la cantidad mínima que necesitas y te mostramos lo que tiene inventario suficiente.', tabs: 'level',
-    list: () => VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVELS[0]), sort: 'stock' },
-  { id: 'mas-vendidos', col: 'mas-vendidos', icon: 'tag', claim: 'Alta rotación', title: 'Más vendidos',
-    sub: 'Lo que más piden nuestros clientes.', tabs: 'dept',
-    list: () => VISIBLE_PRODUCTS.filter(isBestSeller), sort: 'bestseller' }
+  { id: 'nuevos', icon: 'spark', claim: 'Esto acaba de llegar', title: 'Nuevos ingresos',
+    sub: 'Lo más reciente que entró a bodega.', tabs: 'dept', col: 'nuevos' },
+  { id: 'oportunidades', icon: 'flame', claim: 'Para pedir hoy', title: 'Oportunidades',
+    sub: 'Productos con un motivo real para pedirlos ahora, según la disponibilidad en bodega.', tabs: 'motive' },
+  { id: 'mas-vendidos', icon: 'tag', claim: 'Alta rotación', title: 'Más vendidos',
+    sub: 'Lo que más piden nuestros clientes.', tabs: 'dept', col: 'mas-vendidos' }
 ];
 const SC_STATE = {};
 
+// Coleccion que muestra el escaparate ahora (el motivo elegido o la suya).
+function showcaseCol(sc) { return sc.tabs === 'motive' ? SC_STATE[sc.id] : sc.col; }
+function showcaseBase(sc) {
+  const col = showcaseCol(sc);
+  if (col === 'volumen') return VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVEL_START);
+  return VISIBLE_PRODUCTS.filter(COLLECTIONS[col].filter);
+}
+
 function showcaseItems(sc) {
   const st = SC_STATE[sc.id];
-  let list = sc.list();
-  if (sc.tabs === 'level') list = list.filter(p => stockNum(p) >= st);
-  else if (st) list = list.filter(p => p.dept === st);
-  list = sortList(list, sc.sort);
-  // Con fotos primero; en "Todos" se alternan departamentos para variar.
+  const col = showcaseCol(sc);
+  let list = showcaseBase(sc);
+  if (sc.tabs === 'dept' && st) list = list.filter(p => p.dept === st);
+  list = sortList(list, COLLECTIONS[col].sort);
+  // Con fotos primero; se alternan departamentos para variar (salvo la
+  // seleccion, que respeta su orden).
   const withImg = list.filter(p => p.img).concat(list.filter(p => !p.img));
-  if (sc.tabs === 'dept' && !st && sc.sort !== 'opp') return mixedPick(deptsWithProducts().map(d => withImg.filter(p => p.dept === d.id)), SHOWCASE_MAX);
-  if (sc.tabs === 'level') return mixedPick(deptsWithProducts().map(d => withImg.filter(p => p.dept === d.id)), SHOWCASE_MAX);
-  return withImg.slice(0, SHOWCASE_MAX);
+  if (col === 'oportunidades' || (sc.tabs === 'dept' && st)) return withImg.slice(0, SHOWCASE_MAX);
+  return mixedPick(deptsWithProducts().map(d => withImg.filter(p => p.dept === d.id)), SHOWCASE_MAX);
 }
 
 function showcaseTabsHTML(sc) {
   const st = SC_STATE[sc.id];
-  if (sc.tabs === 'level') {
-    return VOL_LEVELS.map(n => {
-      const c = VISIBLE_PRODUCTS.filter(p => stockNum(p) >= n).length;
-      return `<button type="button" class="sc-tab${st === n ? ' on' : ''}" onclick="showcaseTab('${sc.id}', ${n})"><b>${n}+</b> unidades<small>${fmt(c)}</small></button>`;
-    }).join('');
+  const tab = (on, arg, label, n, icon) => `<button type="button" class="sc-tab${on ? ' on' : ''}" aria-pressed="${on}" onclick="showcaseTab('${sc.id}', '${arg}')">${icon ? iconSVG(icon) : ''}${escapeHtml(label)}<small>${fmt(n)}</small></button>`;
+  if (sc.tabs === 'motive') {
+    return OPP_TABS.map(t => tab(st === t.col, t.col, t.col === 'volumen' ? `Stock para volumen (${VOL_LEVEL_START}+)` : t.label,
+      t.col === 'volumen' ? VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVEL_START).length : collectionCount(t.col), t.icon)).join('');
   }
-  const all = sc.list();
+  const all = showcaseBase(sc);
   const depts = deptsWithProducts().map(d => ({ d, n: all.filter(p => p.dept === d.id).length })).filter(x => x.n);
   if (depts.length < 2) return '';
-  return `<button type="button" class="sc-tab${!st ? ' on' : ''}" onclick="showcaseTab('${sc.id}', '')">Todos<small>${fmt(all.length)}</small></button>` +
-    depts.map(x => `<button type="button" class="sc-tab${st === x.d.id ? ' on' : ''}" onclick="showcaseTab('${sc.id}', '${x.d.id}')">${escapeHtml(x.d.name)}<small>${fmt(x.n)}</small></button>`).join('');
+  return tab(!st, '', 'Todos', all.length) + depts.map(x => tab(st === x.d.id, x.d.id, x.d.name, x.n)).join('');
 }
 
-function showcaseMoreHref(sc) {
+function showcaseMore(sc) {
   const st = SC_STATE[sc.id];
-  if (sc.tabs === 'level') return '#/col/volumen/' + st;
-  return '#/col/' + sc.col;
+  const col = showcaseCol(sc);
+  if (col === 'volumen') {
+    const n = VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVEL_START).length;
+    return { href: '#/col/volumen/' + VOL_LEVEL_START, label: `Ver los ${fmt(n)}` };
+  }
+  const n = sc.tabs === 'dept' && st ? showcaseBase(sc).filter(p => p.dept === st).length : collectionCount(col);
+  return { href: '#/col/' + col, label: `Ver ${col === 'oportunidades' || col === 'ultimas' ? 'las' : 'los'} ${fmt(n)}` };
 }
 
 function showcaseHTML(sc) {
-  const total = sc.list().length;
-  const n = sc.tabs === 'level' ? VISIBLE_PRODUCTS.filter(p => stockNum(p) >= SC_STATE[sc.id]).length : total;
+  const more = showcaseMore(sc);
   return `
     <section class="showcase sc-${sc.id}" id="sc-${sc.id}" aria-labelledby="sct-${sc.id}">
       <div class="sc-head">
@@ -885,7 +837,7 @@ function showcaseHTML(sc) {
           <h2 class="sc-title" id="sct-${sc.id}">${escapeHtml(sc.title)}</h2>
           <p class="sc-sub">${escapeHtml(sc.sub)}</p>
         </div>
-        <a class="sc-more" href="${showcaseMoreHref(sc)}" data-sc-more>Ver ${sc.id === 'oportunidades' || sc.id === 'ultimas' ? 'las' : 'los'} ${fmt(n)} ${ICONS.arrow}</a>
+        <a class="sc-more" href="${more.href}" data-sc-more>${more.label} ${ICONS.arrow}</a>
       </div>
       <div class="sc-bar">
         <div class="sc-tabs" role="group" aria-label="Filtrar ${escapeHtml(sc.title)}">${showcaseTabsHTML(sc)}</div>
@@ -900,18 +852,17 @@ function showcaseHTML(sc) {
 
 function showcaseTab(id, v) {
   const sc = SHOWCASES.find(x => x.id === id);
-  if (!sc) return;
-  SC_STATE[id] = v;
   const el = document.getElementById('sc-' + id);
-  if (!el) return;
+  if (!sc || !el) return;
+  SC_STATE[id] = v;
   el.querySelector('.sc-tabs').innerHTML = showcaseTabsHTML(sc);
   const track = el.querySelector('.sc-track');
   track.innerHTML = showcaseItems(sc).map(cardHTML).join('');
   track.scrollLeft = 0;
-  const more = el.querySelector('[data-sc-more]');
-  const n = sc.tabs === 'level' ? VISIBLE_PRODUCTS.filter(p => stockNum(p) >= v).length : sc.list().filter(p => !v || p.dept === v).length;
-  more.href = showcaseMoreHref(sc);
-  more.innerHTML = `Ver ${sc.id === 'oportunidades' || sc.id === 'ultimas' ? 'las' : 'los'} ${fmt(n)} ${ICONS.arrow}`;
+  const more = showcaseMore(sc);
+  const a = el.querySelector('[data-sc-more]');
+  a.href = more.href;
+  a.innerHTML = `${more.label} ${ICONS.arrow}`;
 }
 
 function scrollShowcase(id, dir) {
@@ -922,11 +873,12 @@ function scrollShowcase(id, dir) {
 function renderShowcases() {
   const el = document.getElementById('homeShowcases');
   if (!el) return;
-  SHOWCASES.forEach(sc => { if (!(sc.id in SC_STATE)) SC_STATE[sc.id] = sc.tabs === 'level' ? VOL_LEVEL_START : ''; });
-  el.innerHTML = SHOWCASES.filter(sc => sc.list().length).map(showcaseHTML).join('');
+  SHOWCASES.forEach(sc => { if (!(sc.id in SC_STATE)) SC_STATE[sc.id] = sc.tabs === 'motive' ? 'oportunidades' : ''; });
+  // Si la seleccion esta vacia, el escaparate abre en el primer motivo con productos.
+  const opp = SHOWCASES.find(sc => sc.tabs === 'motive');
+  if (!showcaseBase(opp).length) { const t = OPP_TABS.find(t => (SC_STATE[opp.id] = t.col) && showcaseBase(opp).length); if (!t) SC_STATE[opp.id] = 'oportunidades'; }
+  el.innerHTML = SHOWCASES.filter(sc => showcaseBase(sc).length).map(showcaseHTML).join('');
 }
-// Compatibilidad: el inicio anterior llamaba a esta funcion.
-function renderHomeRails() { renderShowcases(); }
 
 function renderHome() {
   renderHero();
@@ -935,16 +887,8 @@ function renderHome() {
   renderNeeds();
   renderHomeBrands();
   renderTrustBar();
-  renderDeptBlocks();
   bindSearchBox('homeSearch');
 }
-// Compatibilidad
-function renderHeroNuevos() {}
-function renderBrandFilter() {}
-function renderCategoriaFilter() { renderNav(); }
-function renderDeptCards() {}
-function renderCatCircles() {}
-
 // ============================================================
 //  DIRECTORIO DE MARCAS
 // ============================================================
@@ -1052,7 +996,9 @@ const FACETS = [
   { id: 'tipo',    label: 'Subcategoría',   get: p => p.cat + '|' + p.tipo, name: tipoName, when: r => r.kind !== 'all' && !(r.kind === 'cat' && r.type) },
   { id: 'brand',   label: 'Marca',          get: p => p.brand, when: r => r.kind !== 'brand' },
   { id: 'avail',   label: 'Disponibilidad', get: p => stockLevel(p).label, order: AVAIL_ORDER, keep: true },
-  { id: 'flags',   label: 'Tipo de producto', get: p => productFlags(p).map(f => f.facet), order: FLAG_ORDER, keep: true },
+  // Nuevo / Oportunidad / Ultimas / Volumen: se eligen con los filtros
+  // rapidos de arriba del listado (no se repiten en el panel).
+  { id: 'flags',   label: 'Selección comercial', get: p => productFlags(p).map(f => f.facet), order: FLAG_ORDER, panel: false },
   // Cuidado personal y maquillaje
   { id: 'size',    label: 'Presentación',   get: sizeBucket, tones: ['beauty', 'care'], order: SIZE_ORDER },
   { id: 'benefit', label: 'Beneficio',      get: productBenefits, tones: ['beauty', 'care'] },
@@ -1107,6 +1053,13 @@ function matchesFacets(p, except) {
   return true;
 }
 
+// Orden de los listados. Las comparaciones de texto usan un Collator
+// (mucho mas rapido que localeCompare) y los indices de categoria/tipo se
+// calculan una vez por producto.
+const TEXT_ORDER = new Intl.Collator('es', { numeric: true });
+function sortKeys(p) {
+  return p._sk || (p._sk = { name: prettyName(p), cat: catIndex(p), type: typeIndex(p) });
+}
 function sortList(list, sort) {
   const by = {
     relevance: (a, b) => (b._score || 0) - (a._score || 0) || rankScore(b) - rankScore(a),
@@ -1116,9 +1069,12 @@ function sortList(list, sort) {
     bestseller: (a, b) => (MAS_VENDIDOS_RANK[a.code] || 1e9) - (MAS_VENDIDOS_RANK[b.code] || 1e9),
     stock: (a, b) => stockNum(b) - stockNum(a),
     'stock-asc': (a, b) => (stockNum(a) <= 0) - (stockNum(b) <= 0) || stockNum(a) - stockNum(b),
-    az: (a, b) => prettyName(a).localeCompare(prettyName(b), 'es', { numeric: true }),
-    brand: (a, b) => a.brand.localeCompare(b.brand, 'es') || catIndex(a) - catIndex(b) ||
-      typeIndex(a) - typeIndex(b) || prettyName(a).localeCompare(prettyName(b), 'es', { numeric: true })
+    az: (a, b) => TEXT_ORDER.compare(sortKeys(a).name, sortKeys(b).name),
+    brand: (a, b) => {
+      if (a.brand !== b.brand) return TEXT_ORDER.compare(a.brand, b.brand);
+      const ka = sortKeys(a), kb = sortKeys(b);
+      return ka.cat - kb.cat || ka.type - kb.type || TEXT_ORDER.compare(ka.name, kb.name);
+    }
   };
   return list.slice().sort(by[sort] || by.brand);
 }
@@ -1131,11 +1087,11 @@ function typeIndex(p) {
 }
 
 const SORT_OPTIONS = [
-  ['relevance', 'Más relevantes', r => r.kind === 'search'],
+  ['relevance', 'Relevancia', r => r.kind === 'search'],
   ['opp', 'Selección ImpoHogar', r => r.kind === 'col' && r.col === 'oportunidades'],
   ['bestseller', 'Más vendidos', r => r.kind === 'col' && r.col === 'mas-vendidos'],
-  ['recent', 'Más recientes', () => true],
-  ['az', 'A–Z', () => true],
+  ['recent', 'Novedades', () => true],
+  ['az', 'Nombre (A–Z)', () => true],
   ['brand', 'Marca', () => true],
   ['stock', 'Mayor disponibilidad', () => true],
   ['stock-asc', 'Menor disponibilidad', () => true]
@@ -1159,6 +1115,7 @@ function listingMeta(r) {
     sub = brandInfo(r.brand).text || `Todo el surtido de ${r.brand} en ${ds.join(', ').toLowerCase()}.`;
   } else if (r.kind === 'col') {
     const c = COLLECTIONS[r.col];
+    if (OPP_COLS.includes(r.col) && r.col !== 'oportunidades') crumbs.push(['#/col/oportunidades', 'Oportunidades']);
     crumbs.push(['', c.title]); title = c.title; sub = c.sub; eyebrow = c.eyebrow;
   } else if (r.kind === 'search') {
     crumbs.push(['', 'Búsqueda']); title = `“${r.q}”`; sub = 'Resultados por nombre, marca, código, categoría y palabras relacionadas.'; eyebrow = 'Resultados de búsqueda';
@@ -1225,7 +1182,7 @@ function brandHeadHTML(r) {
   return `
     <div class="brand-hero tone-${deptTone(list[0] ? list[0].dept : '')}">
       <div class="bh-copy">
-        <span class="page-eyebrow">Marca · ${fmt(list.length)} productos</span>
+        <span class="page-eyebrow">Marca · ${fmt(list.length)} ${list.length === 1 ? 'producto' : 'productos'}</span>
         ${brandMarkHTML(r.brand, 'bh-mark')}
         <p>${escapeHtml(listingMeta(r).sub)}</p>
         <div class="bh-cats">${cats.map(c => `<a href="#/c/${c}">${escapeHtml(catName(c))}<small>${list.filter(p => p.cat === c).length}</small></a>`).join('')}</div>
@@ -1241,7 +1198,7 @@ const BRAND_STATS = [
   { key: 'avail:Disponible', label: 'Disponibles', test: p => stockLevel(p).key === 'ok', cls: 'is-ok' },
   { key: 'flags:Nuevo ingreso', label: 'Nuevos ingresos', test: isProductNew, cls: 'is-new' },
   { key: 'flags:Oportunidad', label: 'Oportunidades', test: isOpportunity, cls: 'is-opp' },
-  { key: 'flags:Compra por volumen', label: 'Para volumen', test: isVolume, cls: 'is-vol' },
+  { key: 'flags:Compra por volumen', label: 'Alta disponibilidad', test: isVolume, cls: 'is-vol' },
   { key: 'flags:Últimas unidades', label: 'Últimas unidades', test: isLowStock, cls: 'is-low' }
 ];
 function brandStatsHTML(r) {
@@ -1277,21 +1234,45 @@ function deptHeadHTML(r) {
     </div>`;
 }
 
-// Catalogo general: "¿Que estas buscando?" + comprar por categoria.
+// Catalogo general: titulo compacto y accesos a los departamentos. El
+// buscador es el del encabezado (siempre visible): no se repite aqui.
 function catalogHeadHTML() {
   return `
-    <div class="catalog-hero">
-      <h1 class="ch-title">¿Qué estás buscando?</h1>
-      ${bigSearchHTML('catSearch', 'Escribe un producto, una marca o un código')}
-      <div class="ch-label">Comprar por categoría</div>
-      <div class="ch-depts">${deptsWithProducts().map(d => {
+    <div class="catalog-head">
+      <div>
+        <span class="page-eyebrow">Encontrar</span>
+        <h1 class="page-title">Catálogo</h1>
+        <p class="page-sub">${fmt(VISIBLE_PRODUCTS.length)} productos de ${BRANDS.length} marcas. Busca arriba por nombre, marca o código, o filtra por departamento.</p>
+      </div>
+      <nav class="ch-depts" aria-label="Departamentos">${deptsWithProducts().map(d => {
         const pic = photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id), 1)[0];
         return `<a class="ch-dept tone-${d.tone}" href="#/d/${d.id}">
           <span class="ch-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : ''}</span>
-          <span class="ch-name">${iconSVG(d.icon)}${escapeHtml(d.name)}<small>${fmt(TAXO_COUNTS.dept[d.id])} productos</small></span>
+          <span class="ch-name">${escapeHtml(d.name)}<small>${fmt(TAXO_COUNTS.dept[d.id])} productos</small></span>
         </a>`;
-      }).join('')}</div>
+      }).join('')}</nav>
     </div>`;
+}
+
+// Encabezado comun de Oportunidades con sus tres motivos como pestanas.
+function oppHeadHTML(r) {
+  const tabs = OPP_TABS.map(t => `<a class="opp-tab${t.col === r.col ? ' on' : ''}" href="${t.href}"${t.col === r.col ? ' aria-current="page"' : ''}>${iconSVG(t.icon)}<span>${escapeHtml(t.label)}</span><small>${fmt(collectionCount(t.col))}</small></a>`).join('');
+  let detail = '';
+  if (r.col === 'oportunidades' && OPORT_IS_AUTO) detail = '<p class="opp-note">Hoy: los productos con la mayor disponibilidad en bodega de cada categoría.</p>';
+  if (r.col === 'ultimas') {
+    const low = VISIBLE_PRODUCTS.filter(isLowStock);
+    const one = low.filter(p => stockNum(p) === 1).length, five = low.filter(p => stockNum(p) <= 5).length;
+    detail = `<p class="opp-note opp-urgent">${ICONS.bolt}<span><b>${fmt(one)}</b> ${one === 1 ? 'producto tiene' : 'productos tienen'} una sola unidad y <b>${fmt(five)}</b> ${five === 1 ? 'tiene' : 'tienen'} 5 o menos.</span></p>`;
+  }
+  if (r.col === 'volumen') detail = volumeHeadHTML();
+  return `
+    <div class="page-title-row has-icon"><span class="col-icon col-oportunidades">${ICONS.flame}</span><div>
+      <span class="page-eyebrow">Descubrir</span>
+      <h1 class="page-title">Oportunidades</h1>
+      <p class="page-sub">Productos con un motivo real para pedirlos hoy, según la disponibilidad en bodega.</p>
+    </div></div>
+    <nav class="opp-tabs" aria-label="Tipos de oportunidad">${tabs}</nav>
+    <div class="opp-detail"><p class="opp-desc">${escapeHtml(COLLECTIONS[r.col].sub)}</p>${detail}</div>`;
 }
 
 function volumeHeadHTML() {
@@ -1337,7 +1318,7 @@ function facetGroupsHTML() {
   const tones = scopeTones(scope);
   const order = tones.size === 1 ? FACET_ORDER[[...tones][0]] : FACET_ORDER.mixed.concat(FACETS.map(f => f.id).filter(id => !FACET_ORDER.mixed.includes(id)));
   return order.map(id => FACET_BY_ID[id]).filter(Boolean).map(f => {
-    if (f.when && !f.when(r)) return '';
+    if (f.panel === false || (f.when && !f.when(r))) return '';
     if (f.tones && !f.tones.some(t => tones.has(t))) return '';
     if (f.tones && tones.size > 1 && ![...tones].every(t => f.tones.includes(t)) && r.kind !== 'search') return '';
     const base = scope.filter(p => matchesFacets(p, f.id));
@@ -1431,6 +1412,7 @@ function listingHeadHTML(r, meta) {
   if (r.kind === 'all') return `${homeBackHTML()}${crumbs}${catalogHeadHTML()}`;
   if (r.kind === 'dept') return `${homeBackHTML()}${crumbs}${deptHeadHTML(r)}${quickNavHTML(r)}`;
   if (r.kind === 'brand') return `${homeBackHTML()}${crumbs}${brandHeadHTML(r)}<h2 class="plp-title">Todos los productos de ${escapeHtml(r.brand)}</h2><div id="brandChips"></div>`;
+  if (r.kind === 'col' && OPP_COLS.includes(r.col)) return `${homeBackHTML()}${crumbs}${oppHeadHTML(r)}`;
   const colIcon = r.kind === 'col' ? `<span class="col-icon col-${r.col}">${iconSVG(COLLECTIONS[r.col].icon)}</span>` : '';
   return `${homeBackHTML()}${crumbs}
     <div class="page-title-row${colIcon ? ' has-icon' : ''}">${colIcon}<div>
@@ -1438,8 +1420,6 @@ function listingHeadHTML(r, meta) {
       <h1 class="page-title">${escapeHtml(meta.title)}</h1>
       <p class="page-sub${r.kind === 'search' && listingState.corrected ? ' is-fix' : ''}">${escapeHtml(meta.sub)}</p>
     </div></div>
-    ${r.kind === 'col' && r.col === 'volumen' ? volumeHeadHTML() : ''}
-    ${r.kind === 'col' && r.col === 'oportunidades' && OPORT_IS_AUTO ? '<p class="page-note">Productos con la mayor disponibilidad en bodega de cada categoría.</p>' : ''}
     ${quickNavHTML(r)}`;
 }
 
@@ -1492,7 +1472,6 @@ function renderListing(full, keepScroll) {
         </div>
       </div>`;
     observeSentinel();
-    if (r.kind === 'all') bindSearchBox('catSearch');
   }
   const opts = sorts.map(([v, l]) => `<option value="${v}"${v === listingState.sort ? ' selected' : ''}>${l}</option>`).join('');
   ['sortSel', 'sortSelM'].forEach(id => { const s = document.getElementById(id); if (s) s.innerHTML = opts; });
@@ -1620,10 +1599,6 @@ function observeSentinel() {
 }
 
 function toggleFilterSheet(open) { document.body.classList.toggle('sheet-open', !!open); }
-
-// Compatibilidad: algunas funciones antiguas llaman a esto.
-function applyFilters() { if (currentRoute.view === 'listing') renderListing(false); }
-function renderActiveFilters() {}
 
 // ============================================================
 //  BUSCADOR (encabezado, inicio y catalogo)
@@ -1881,6 +1856,3 @@ function initFilters() {
   if (mm) mm.addEventListener('mouseleave', e => { if (!e.relatedTarget || !e.relatedTarget.closest('#navBar')) closeMegaMenu(); });
   window.addEventListener('hashchange', router);
 }
-
-// Compatibilidad: algunas partes llaman a esto para resaltar un producto.
-function renderBarcodes() {}

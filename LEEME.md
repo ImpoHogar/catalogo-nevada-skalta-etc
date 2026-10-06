@@ -149,18 +149,30 @@ en `SELLERS` y se reemplaza su imagen.
 
 ## Diseño y arquitectura (ImpoHogar Market)
 
-El catálogo funciona como una herramienta mayorista con secciones, cada una con
-su dirección (se puede usar el botón "atrás" del navegador y compartir el enlace):
+El catálogo está organizado alrededor de tres cosas: **ENCONTRAR** (buscador,
+catálogo, departamentos, marcas), **DESCUBRIR** (nuevos ingresos y
+oportunidades) y **COMPRAR** (Mi pedido, siempre a un toque).
+
+**Navegación principal:** Inicio · Catálogo · Marcas · Nuevos ingresos ·
+Oportunidades, más el botón **Mi pedido**. Las herramientas secundarias
+(Calculadora, Historial de pedidos, Descargar imágenes, Ayuda, Contactar
+vendedor y modo claro/oscuro) viven en **Más**. En celular, la barra inferior es
+Inicio · Catálogo · Marcas · Mi pedido · Más (Más abre un panel con Nuevos
+ingresos, Oportunidades, departamentos y herramientas).
+
+Cada sección tiene su dirección (se puede usar el botón "atrás" del navegador y
+compartir el enlace):
 
 | Dirección | Qué muestra |
 |---|---|
-| `#/` | Inicio: "¿Qué estás buscando?" (buscador) > Compra por departamento (5) > escaparates Nuevos ingresos, Oportunidades, Últimas unidades y Stock para volumen > compra por necesidad > marcas |
-| `#/todo` | Catálogo: buscador grande, comprar por categoría, filtros y orden |
+| `#/` | Inicio: buscador > Compra por departamento (5) > Nuevos ingresos > Oportunidades (por motivo) > compra por necesidad > muro de marcas |
+| `#/todo` | Catálogo: departamentos, filtros, filtros rápidos y orden (el buscador es el del encabezado) |
 | `#/d/cuidado-personal` · `#/d/maquillaje` · `#/d/tecnologia` · `#/d/baterias` · `#/d/hogar` | Departamento (`#/d/belleza` sigue funcionando) |
 | `#/c/audio` · `#/c/audio/parlantes` | Categoría y subcategoría |
 | `#/marca/skala` · `#/marcas` | Página de una marca (con chips por tipo) / directorio con buscador |
 | `#/buscar/cargador tipo c` | Resultados de búsqueda |
-| `#/col/nuevos` · `#/col/oportunidades` · `#/col/volumen` · `#/col/volumen/25` · `#/col/ultimas` | Colecciones comerciales |
+| `#/col/nuevos` | Nuevos ingresos |
+| `#/col/oportunidades` · `#/col/ultimas` · `#/col/volumen` · `#/col/volumen/25` | Oportunidades: un solo centro con tres pestañas (Selección ImpoHogar, Últimas unidades, Stock para volumen) |
 | `#/p/123` | Ficha del producto |
 
 **Departamentos > categorías > subcategorías** (`js/taxonomy.js`):
@@ -178,14 +190,17 @@ subtono; tecnología: compatibilidad, conector, conectividad, potencia;
 baterías: tamaño, tipo, presentación, voltaje; hogar: capacidad, velocidades).
 Todo sale del nombre del producto: si un dato no está, no se muestra.
 
-**Escaparates del inicio:** Nuevos ingresos, Oportunidades, Últimas unidades
-y Stock para volumen, con pestañas por departamento (o por cantidad mínima en
-volumen) y tarjetas con "Agregar". Un escaparate sin productos no aparece.
+**Escaparates del inicio:** Nuevos ingresos (pestañas por departamento) y
+Oportunidades (pestañas por motivo: Selección ImpoHogar, Últimas unidades y
+Stock para volumen 50+), con tarjetas con "Agregar". Un escaparate sin productos
+no aparece.
 Las tarjetas llevan una línea de color según su estado principal (nuevo,
 oportunidad, pocas unidades, volumen).
 
 **Filtros rápidos:** Disponible, Nuevo, Oportunidad, Volumen y Últimas unidades,
-arriba de los productos. En celular el panel de filtros ocupa toda la pantalla.
+arriba de los productos (no se repiten en el panel lateral). Orden: Relevancia
+(búsquedas), Novedades, Nombre (A–Z), Marca, Mayor y Menor disponibilidad. En
+celular el panel de filtros ocupa toda la pantalla.
 
 **Disponibilidad:** 🟢 Disponible · 🟡 Pocas unidades (12 o menos) · 🔴 Agotado,
 con la cantidad real de `stock.js` ("8 disponibles"; por encima de
@@ -208,9 +223,13 @@ Descripción, Cantidad).
 **Historial:** ver pedido y "Repetir pedido" (pregunta antes, suma las
 cantidades e informa los productos que ya no están o están agotados).
 
-**Herramientas:** la Calculadora está siempre visible (menú principal y barra
-inferior del celular). En "Más": historial, descargar fotos del pedido, ayuda y
-contactar vendedor. La ficha tiene "Descargar foto" y "Consultar con vendedor".
+**Herramientas:** en "Más" (escritorio y celular): Calculadora, Historial de
+pedidos, Descargar imágenes del pedido, Ayuda, Contactar vendedor y modo
+claro/oscuro. "Descargar imágenes" también está dentro de Mi pedido. La ficha
+tiene "Descargar foto" y "Consultar con vendedor".
+
+**Marcas:** cada marca usa su logo de `img/marcas/` (se configura en
+`MARCAS_INFO` de `js/config.js`); sin logo se muestra su nombre.
 
 ### Datos comerciales (en `js/config.js`)
 
