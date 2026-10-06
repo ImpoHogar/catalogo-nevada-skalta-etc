@@ -40,7 +40,7 @@ const CATEGORIES = [
   { id: 'maquillaje', name: 'Maquillaje', dept: 'maquillaje', icon: 'makeup', types: [
     ['Mejillas',      ['ILLUMIN', 'ILUMUN', 'SPARKLE PARTY', 'BLUSH', 'RUBOR', 'HIGHLIGHT', 'ILUMIN', 'CONTOUR', 'BRONZ', 'SHIMMER', 'GLOW TIME', 'HALO', 'SUNLIT', 'SCULPT', 'SHOW YOUR', 'STARCROSSED', 'FUCHSIA']],
     ['Ojos y cejas',  ['LASTING STROKES', 'LONG LASTING AND', 'BROW', 'LINER', 'MASCARA', 'EYESHAD', 'SOMBRA', 'PALET', 'LASH', 'FLICK', 'EYE']],
-    ['Labios',        ['GLASSY', 'LIP', 'LABIAL', 'LABIOS', 'GLOSS', 'TINT', 'BALM', 'POUT', 'KISS', 'ROUGE', 'MARKER', 'GLOW POP', 'ENCHANTED ROSE', 'JELLY MUCH']],
+    ['Labios',        ['GLASSY', 'LIP', 'LABIAL', 'LABIOS', 'GLOSS', 'TINT', 'BALM', 'POUT', 'KISS', 'ROUGE', 'MARKER', 'GLOW POP', 'ENCHANTED ROSE', 'JELLY MUCH', 'PH GLOW']],
     ['Bases y cushions', ['CUSHION', 'FOUNDATION', 'FUNDATION', 'BASE', 'BB CREAM', 'MASK FIT', 'FIT RED', 'PERFECT COVER']],
     ['Correctores y polvos', ['CORRECTOR', 'POLVO', 'PRIMER', 'SELLADOR', 'SETTING', 'LOOSE', 'BLUR', 'BAKED', 'FLORA MIST']]
   ]},
@@ -48,11 +48,11 @@ const CATEGORIES = [
   { id: 'skincare', name: 'Skincare', dept: 'cuidado-personal', icon: 'face', types: [
     ['Sets y kits',       [' SET ', 'KIT', 'SET DE']],
     ['Protección solar',  ['SPF', 'SUN ', 'SOLAR', 'BLOQUE', 'SUNSCREEN']],
-    ['Mascarillas',       ['MASK', 'MASCARILLA']],
-    ['Limpieza',          ['EXFOLIANTE', 'LIMPIADOR', 'LIMPIADORA', 'CLEANS', 'MICELAR', 'DESMAQUILL', 'REMOVEDOR', 'JABON', 'WIPES', 'FOAM']],
+    ['Mascarillas',       ['MASK', 'MASCARILLA', 'MASCARILLL']],
+    ['Limpieza',          ['EXFOLIANTE', 'LIMPIADOR', 'LIMPIADORA', 'CLEANS', 'MICELAR', 'DESMAQUILL', 'REMOVEDOR', 'JABON', 'WIPES', 'FOAM', 'CLEANER', 'TOALLAS', 'TOLLAS']],
     ['Tónicos y pads',    ['TONER', 'TONICO', 'PADS']],
-    ['Sérums y ampollas', ['SERUM', 'AMPOLLA', 'AMPOULE']],
-    ['Cremas e hidratación', ['CREMA', 'CREAM', 'HIDRATANTE', 'GEL', 'CAPSULA', 'PORE']]
+    ['Sérums y ampollas', ['SERUM', 'AMPOLLA', 'AMPOULE', 'PEPTIDES', 'HYALURONIC ACID+']],
+    ['Cremas e hidratación', ['CREMA', 'CREAM', 'HIDRATANTE', 'GEL', 'CAPSULA', 'PORE', 'FACE LOTION']]
   ]},
   { id: 'cuidado-corporal', name: 'Cuidado corporal', dept: 'cuidado-personal', icon: 'body', types: [
     ['Cuidado de labios',  ['LIP SCRUB', 'LIP MASK', 'SUGAR LIPS', 'SUGARLIPS', 'LIP BUTTER']],
@@ -68,7 +68,8 @@ const CATEGORIES = [
     ['Sets capilares',     ['SET ', 'KIT', 'PACK']],
     ['Shampoo y acondicionador', ['SHAMPO', 'SHP', 'ACONDICIONADOR', 'ACD ']],
     ['Peinado y definición', ['PEINAR', 'GEL', 'CERA', 'SPRAY', 'DEFINIC', 'ACTIVADORA', 'MODELADORA', 'VOLUMEN', 'ALISET']],
-    ['Tratamientos',       ['TRAT', 'MASCARILLA', 'CREMA', 'CAPSULA', 'KERATINA', 'SELAGEM', 'ACEITE']]
+    ['Tratamientos',       ['TRAT', 'MASCARILLA', 'CREMA', 'CAPSULA', 'KERATINA', 'SELAGEM', 'ACEITE']],
+    ['Coloración',         ['TINTE']]
   ]},
   { id: 'barberia', name: 'Barbería', dept: 'cuidado-personal', icon: 'hair', types: [
     ['Máquinas y recortadoras', ['RECORTADORA', 'CORTAR CABELLO', 'MAQUINA']],
@@ -130,8 +131,8 @@ const CATEGORIES = [
   { id: 'cocina', name: 'Cocina', dept: 'hogar', icon: 'home', types: [
     ['Café y bebidas',     ['COFFEE', 'CAFÉ', 'CAFE', 'TETERA', 'HERVIDOR', 'GRANIZ', 'KETTLE']],
     ['Licuadoras y batidoras', ['LICUADORA', 'BATIDORA', 'MEZCLADOR', 'PROCESADOR', 'EXPRIMIDOR', 'MOLIN', 'MILINO', 'ABRIDOR', 'BLENDER']],
-    ['Ollas y sartenes eléctricos', ['OLLA', 'SARTEN', 'SARTÉN', 'PARRILLA', 'VAPORERA', 'ARROCERA', 'FREIDORA', 'PRESION', 'PRESIÓN']],
-    ['Snacks y repostería', ['HUEVOS', 'WAFFL', 'GOFRE', 'DONA', 'CUPCAKE', 'PALOMITA', 'ALGODÓN', 'ALGODON', 'HELADO', 'CAKE', 'QUESADILLA', 'OMELET', 'TOSTADORA', 'DESAYUNO', 'BUNDT', 'SANDWICH', 'PIZZA']]
+    ['Ollas y sartenes eléctricos', ['OLLA', 'SARTEN', 'SARTÉN', 'PARRILLA', 'VAPORERA', 'ARROCERA', 'FREIDORA', 'PRESION', 'PRESIÓN', 'PLANTILLA']],
+    ['Snacks y repostería', ['HUEVOS', 'WAFFL', 'GOFRE', 'DONA', 'CUPCAKE', 'PALOMITA', 'ALGODÓN', 'ALGODON', 'HELADO', 'CAKE', 'QUESADILLA', 'OMELET', 'TOSTADORA', 'DESAYUNO', 'BUNDT', 'SANDWICH', 'PIZZA', 'CREPA']]
   ]},
   { id: 'cuidado-ropa', name: 'Cuidado de la ropa', dept: 'hogar', icon: 'iron', types: [
     ['Planchas',           ['PLANCHA']]
