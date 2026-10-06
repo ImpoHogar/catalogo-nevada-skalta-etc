@@ -203,8 +203,10 @@ arriba de los productos (no se repiten en el panel lateral). Orden: Relevancia
 celular el panel de filtros ocupa toda la pantalla.
 
 **Disponibilidad:** 🟢 Disponible · 🟡 Pocas unidades (12 o menos) · 🔴 Agotado,
-con la cantidad real de `stock.js` ("8 disponibles"; por encima de
-`STOCK_TOPE_VISIBLE` dice "+100 disponibles").
+con la cantidad de `stock.js`: exacta hasta 100 ("8 disponibles") y, por
+encima, redondeada hacia abajo a dos cifras ("+5 300 disponibles" para 5.312;
+"+140 000" para 143.420), así nunca promete de más. Para mostrar siempre el
+número exacto, cambiar `STOCK_MODO` a `'exacto'` en `js/config.js`.
 
 **Etiquetas automáticas:** NUEVO (nuevo ingreso), OPORTUNIDAD, VOLUMEN (al menos
 `STOCK_VOLUMEN` unidades) y ÚLTIMAS UNIDADES.

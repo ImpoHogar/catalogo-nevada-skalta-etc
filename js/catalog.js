@@ -468,7 +468,7 @@ function sizeOf(p) {
   return m ? m[1].replace(',', '.') + ' ' + m[2].toLowerCase().replace('gr', 'g') : '';
 }
 
-// Disponibilidad corta: "+100 disponibles", "Quedan 8" o "Agotado"
+// Disponibilidad corta: "+5.300 disponibles", "Quedan 8" o "Agotado"
 // (la palabra "Disponible" ya la dice la cantidad).
 function availHTML(p, cls) {
   const lvl = stockLevel(p);

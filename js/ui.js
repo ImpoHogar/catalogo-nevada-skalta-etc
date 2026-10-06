@@ -299,14 +299,23 @@ function productSpecs(p) {
 //  Disponibilidad
 // ------------------------------------------------------------
 // Estados: Disponible (verde), Pocas unidades (amarillo, LOW_STOCK o
-// menos) y Agotado (rojo). La cantidad sale tal cual de stock.js; por
-// encima de STOCK_TOPE_VISIBLE (config.js) se muestra "+100 disponibles".
+// menos) y Agotado (rojo). La cantidad sale de stock.js: exacta, o
+// aproximada hacia abajo por encima de STOCK_TOPE_VISIBLE (STOCK_MODO en
+// config.js): 5.312 -> "+5.300 disponibles".
 const LOW_STOCK = 12;
-function stockQtyText(s) {
+function stockApprox(s) {
   const tope = typeof STOCK_TOPE_VISIBLE !== 'undefined' ? STOCK_TOPE_VISIBLE : 100;
+  const modo = typeof STOCK_MODO !== 'undefined' ? STOCK_MODO : 'aproximado';
+  if (modo === 'exacto' || s <= tope) return s;
+  const paso = Math.pow(10, Math.max(0, String(Math.floor(s)).length - 2));
+  return Math.floor(s / paso) * paso;
+}
+function stockQtyText(s) {
   if (s <= 0) return '';
-  if (s > tope) return `+${tope.toLocaleString('es-CR')} disponibles`;
-  return `${s.toLocaleString('es-CR')} ${s === 1 ? 'disponible' : 'disponibles'}`;
+  const n = stockApprox(s);
+  const txt = n.toLocaleString('es-CR');
+  if (n < s) return `+${txt} disponibles`;
+  return `${txt} ${s === 1 ? 'disponible' : 'disponibles'}`;
 }
 function stockLevel(p) {
   const s = parseInt(p.stock) || 0;
