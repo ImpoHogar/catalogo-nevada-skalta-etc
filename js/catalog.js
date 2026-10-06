@@ -789,7 +789,7 @@ function brandTileHTML(b) {
   const vol = b.items.filter(isVolume).length;
   return `
     <a class="brand-tile tone-${deptTone(mainDept)}" href="${brandHash(b.name)}" data-brand="${escapeHtml(normText(b.name))}">
-      <span class="bt-mark">${brandMarkHTML(b.name, 'bt-word')}</span>
+      <span class="bt-mark${brandInfo(b.name).logo ? ' has-logo' : ''}">${brandMarkHTML(b.name, 'bt-word')}</span>
       <span class="bt-cats">${escapeHtml(cats.slice(0, 3).join(' · '))}</span>
       <span class="bt-thumbs" aria-hidden="true">${thumbs.map(p => `<img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">`).join('')}</span>
       <span class="bt-stats"><span><b>${fmt(b.count)}</b> productos</span><span><b>${fmt(disp)}</b> con stock</span>${nuevos ? `<span class="bt-new"><b>${nuevos}</b> nuevos</span>` : ''}${vol ? `<span class="bt-vol"><b>${vol}</b> para volumen</span>` : ''}</span>

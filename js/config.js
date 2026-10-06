@@ -129,6 +129,25 @@ const MARCAS_DESTACADAS = [];
 // nombre escrito (nunca se inventa un logo).
 //   "SKALA": { logo: "skala.png", descripcion: "Cuidado capilar brasileño." },
 const MARCAS_INFO = {
+  "ARGOM": { logo: "argom.png" },
+  "TIRTIR": { logo: "tirtir.png" },
+  "KARA BEAUTY": { logo: "kara-beauty.png" },
+  "NEVADA": { logo: "nevada.png" },
+  "UNNO TEKNO": { logo: "unno-tekno.png" },
+  "TREE HUT": { logo: "tree-hut.png" },
+  "SKALA": { logo: "skala.png" },
+  "BRENTWOOD": { logo: "brentwood.png" },
+  "ORIGEM": { logo: "origem.png" },
+  "MAXELL": { logo: "maxell.png" },
+  "IMMORTAL": { logo: "immortal.png" },
+  "EQQUALBERRY": { logo: "eqqualberry.png" },
+  "PATRICIA DE LEÓN": { logo: "patricia-de-leon.png" },
+  "NOSTALGIA": { logo: "nostalgia.png" },
+  "INOAR": { logo: "inoar.png" },
+  "NIVEA": { logo: "nivea.svg" },
+  "WAHL": { logo: "wahl.png" },
+  "SALON LINE": { logo: "salon-line.png" },
+  "XTRACARE": { logo: "xtracare.png" },
 };
 
 // ------------------------------------------------------------
