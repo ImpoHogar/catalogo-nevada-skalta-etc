@@ -449,15 +449,28 @@ function cardBadges(p) {
 
 // Datos clave de la tarjeta segun el departamento: cada uno muestra lo
 // que importa para decidir (nunca datos inventados).
+// Variantes que se verian con el mismo nombre (el mismo parlante en negro,
+// azul y rosado): se les muestra el modelo, que es lo que las distingue.
+let _nameCount = null;
+function variantModel(p) {
+  if (!_nameCount) {
+    _nameCount = {};
+    VISIBLE_PRODUCTS.forEach(q => { const k = prettyName(q).toUpperCase(); _nameCount[k] = (_nameCount[k] || 0) + 1; });
+  }
+  return _nameCount[prettyName(p).toUpperCase()] > 1 ? modelCode(p) : '';
+}
+
 function keySpec(p) {
   const specs = p._specs || (p._specs = productSpecs(p));
   const tone = deptTone(p.dept);
   const get = l => (specs.find(s => s.label === l) || {}).value;
-  if (tone === 'battery') return [batterySize(p) && 'Tamaño ' + batterySize(p), batteryPack(p), batteryVolt(p)].filter(Boolean).slice(0, 2);
-  if (tone === 'tech') return [get('Conector'), get('Conexión'), get('Potencia'), get('Batería'), get('Video'), get('Largo')].filter(Boolean).slice(0, 2);
-  if (tone === 'home') return [get('Capacidad'), get('Potencia'), get('Velocidades'), get('Conexión')].filter(Boolean).slice(0, 2);
-  const size = sizeOf(p);
-  return [get('Tono') && 'Tono ' + get('Tono'), size, get('Protección'), get('Contenido')].filter(Boolean).slice(0, 2);
+  const model = variantModel(p);
+  let list;
+  if (tone === 'battery') list = [batterySize(p) && 'Tamaño ' + batterySize(p), batteryPack(p), batteryVolt(p)];
+  else if (tone === 'tech') list = [get('Conector'), get('Conexión'), get('Potencia'), get('Batería'), get('Video'), get('Largo')];
+  else if (tone === 'home') list = [get('Capacidad'), get('Potencia'), get('Velocidades'), get('Conexión')];
+  else list = [get('Tono') && 'Tono ' + get('Tono'), sizeOf(p), get('Protección'), get('Contenido')];
+  return [model && 'Modelo ' + model].concat(list).filter(Boolean).slice(0, 2);
 }
 // Presentacion / tamano tal como viene en el nombre (ej. "250 ml").
 function sizeOf(p) {

@@ -39,7 +39,7 @@ const CATEGORIES = [
   // ---------- MAQUILLAJE ----------
   { id: 'maquillaje', name: 'Maquillaje', dept: 'maquillaje', icon: 'makeup', types: [
     ['Mejillas',      ['ILLUMIN', 'ILUMUN', 'SPARKLE PARTY', 'BLUSH', 'RUBOR', 'HIGHLIGHT', 'ILUMIN', 'CONTOUR', 'BRONZ', 'SHIMMER', 'GLOW TIME', 'HALO', 'SUNLIT', 'SCULPT', 'SHOW YOUR', 'STARCROSSED', 'FUCHSIA']],
-    ['Ojos y cejas',  ['LASTING STROKES', 'LONG LASTING AND', 'BROW', 'LINER', 'MASCARA', 'EYESHAD', 'SOMBRA', 'PALET', 'LASH', 'FLICK', 'EYE']],
+    ['Ojos y cejas',  ['ROYAL DANSK', 'LASTING STROKES', 'LONG LASTING AND', 'BROW', 'LINER', 'MASCARA', 'EYESHAD', 'SOMBRA', 'PALET', 'LASH', 'FLICK', 'EYE']],
     ['Labios',        ['GLASSY', 'LIP', 'LABIAL', 'LABIOS', 'GLOSS', 'TINT', 'BALM', 'POUT', 'KISS', 'ROUGE', 'MARKER', 'GLOW POP', 'ENCHANTED ROSE', 'JELLY MUCH', 'PH GLOW']],
     ['Bases y cushions', ['CUSHION', 'FOUNDATION', 'FUNDATION', 'BASE', 'BB CREAM', 'MASK FIT', 'FIT RED', 'PERFECT COVER']],
     ['Correctores y polvos', ['CORRECTOR', 'POLVO', 'PRIMER', 'SELLADOR', 'SETTING', 'LOOSE', 'BLUR', 'BAKED', 'FLORA MIST']]
@@ -62,7 +62,7 @@ const CATEGORIES = [
     ['Exfoliantes',        ['EXFOLIANTE', 'SCRUB', 'SUNLIT GLOW MARACUJA']],
     ['Baño y ducha',       ['GEL', 'JABON', 'SHOWER', 'ESPUMOSO', 'MANOS']],
     ['Aceites corporales', ['ACEITE', 'OIL']],
-    ['Cremas y mantequillas', ['CREMA', 'CREAM', 'BUTTER', 'BODY B', 'LOCION', 'LOTION', 'MTQ', 'SERUM', 'SERYM', 'BRIGHTEN', 'BALSAMO', 'BÁLSAMO', 'CRE,A', 'FIRMING', 'SMOOTH']]
+    ['Cremas y mantequillas', ['CREMA', 'CREAM', 'BUTTER', 'BODY B', 'LOCION', 'LOTION', 'MTQ', 'SERUM', 'SERYM', 'BRIGHTEN', 'BALSAMO', 'BÁLSAMO', 'CRE,A', 'FIRMING', 'SMOOTH', 'HYDRAGLOW']]
   ]},
   { id: 'cabello', name: 'Cabello', dept: 'cuidado-personal', icon: 'hair', types: [
     ['Sets capilares',     ['SET ', 'KIT', 'PACK']],
@@ -182,10 +182,17 @@ function placeCategory(p) {
   }
 }
 
+// Palabras que mandan sobre el orden normal de los tipos: "LIP LINER"
+// lleva LINER (ojos) y "SOFT BROWN - LIP SYRUP" lleva BROW, pero son labios.
+const TYPE_FIRST = {
+  maquillaje: [['Labios', ['LIP LINER', 'LIP SYRUP']]]
+};
+
 function placeType(p, catId) {
   const cat = CATEGORY_BY_ID[catId];
   if (!cat) return 'Otros';
   const n = upperName(p);
+  for (const [label, words] of (TYPE_FIRST[catId] || [])) if (hasAny(n, words)) return label;
   for (const [label, words] of cat.types) if (hasAny(n, words)) return label;
   return 'Otros';
 }
@@ -341,7 +348,9 @@ function normText(s) {
 const SEARCH_PHRASES = [
   [/\b(tipo|type|usb)[\s-]?c\b/g, ' usbc '],
   [/\bmicro[\s-]?usb\b/g, ' microusb '],
-  [/\bpower[\s-]?bank\b|\bbanco de poder\b/g, ' powerbank '],
+  [/\bpower[\s-]?bank\b|\bbanco de poder\b|\b(bateria|cargador) portatil\b/g, ' powerbank '],
+  [/\breloj inteligente\b/g, ' smartwatch '],
+  [/\bbrillo labial\b|\bbrillo de labios\b/g, ' gloss '],
   [/\bprotector solar\b|\bbloqueador solar\b/g, ' bloqueador '],
   [/\bsmart[\s-]?watch\b/g, ' smartwatch '],
   [/\bmanos libres\b/g, ' manoslibres ']
@@ -376,7 +385,11 @@ const SYNONYMS = [
   ['iluminador', 'highlight', 'highlighter', 'illuminator'],
   ['cejas', 'ceja', 'brow', 'brows'],
   ['delineador', 'liner', 'eyeliner'],
-  ['rimel', 'mascara', 'pestanas', 'lash'],
+  ['rimel', 'rimmel', 'mascara', 'pestanas', 'pestanina', 'lash'],
+  ['bronceador', 'bronzer', 'bronze'],
+  ['bluetooth', 'bt', 'inalambrico', 'inalambricos', 'inalambrica', 'inalambricas', 'wireless'],
+  ['toallitas', 'toallas', 'wipes', 'panitos'],
+  ['cortadora', 'recortadora', 'trimmer', 'clipper', 'rasuradora', 'afeitadora'],
   ['sombra', 'sombras', 'eyeshadow', 'paleta', 'palette'],
   ['polvo', 'polvos', 'powder', 'setting'],
   ['bloqueador', 'spf', 'sunscreen'],
@@ -428,8 +441,13 @@ function productHaystack(p) {
 
 // Las letras sueltas ("vitamina c", "tipo d") no filtran: casi todo las
 // contiene y dejarian la busqueda vacia o rara. Los numeros si cuentan.
+// Las palabras de union ("crema PARA peinar", "delineador DE labios") no
+// describen el producto: si se exigieran, la busqueda quedaria vacia.
+const SEARCH_STOPWORDS = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'para', 'con', 'y', 'en', 'un', 'una', 'por', 'al', 'the', 'and', 'for', 'of', 'with']);
 function queryTokensOf(q) {
-  return searchNorm(q).trim().split(' ').filter(t => t && t !== '-' && (t.length > 1 || /\d/.test(t)));
+  const all = searchNorm(q).trim().split(' ').filter(t => t && t !== '-' && (t.length > 1 || /\d/.test(t)));
+  const words = all.filter(t => !SEARCH_STOPWORDS.has(t));
+  return words.length ? words : all;
 }
 
 // Puntaje de relevancia (0 = no coincide).

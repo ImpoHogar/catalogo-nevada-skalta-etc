@@ -214,7 +214,17 @@ número exacto, cambiar `STOCK_MODO` a `'exacto'` en `js/config.js`.
 **Buscador:** resultados mientras se escribe (con botón para agregar al pedido),
 por nombre, marca, código de barras (exacto o parcial), categoría, tipo,
 sinónimos (`SYNONYMS` en taxonomy.js) y el campo opcional `"tags"` de cada
-producto. Un código completo abre la ficha directo.
+producto. Un código completo abre la ficha directo. Las palabras de unión
+("crema **para** peinar", "delineador **de** labios") no se exigen
+(`SEARCH_STOPWORDS`).
+
+**Variantes con el mismo nombre:** si dos productos se verían con el mismo
+nombre (ej. el mismo parlante en varios colores), la tarjeta y el pedido
+muestran su modelo ("Modelo SP-2801BK") para distinguirlos. Para tonos de
+maquillaje sin modelo, el tono debe venir en el nombre del producto.
+
+**Tipos que mandan:** `TYPE_FIRST` en taxonomy.js resuelve choques de palabras
+(un "LIP LINER" lleva LINER pero es de labios).
 
 **Mi pedido:** líneas agrupadas por marca con disponibilidad, aviso de
 "Disponibilidad limitada" si se pide más de lo que hay, totales de productos y
