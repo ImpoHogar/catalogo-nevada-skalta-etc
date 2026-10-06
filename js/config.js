@@ -162,8 +162,13 @@ const VOLUMEN_NIVELES = [5, 10, 25, 50];
 // Nivel que se muestra al entrar a "Compra por volumen".
 const VOLUMEN_NIVEL_INICIAL = 50;
 
-// Por encima de esta cantidad la tarjeta dice "+100 disponibles" en
-// vez del numero exacto. (Pocas unidades = LOW_STOCK, en js/ui.js.)
+// Como se muestra la cantidad disponible:
+//   'aproximado' -> exacta hasta STOCK_TOPE_VISIBLE; por encima se redondea
+//                   HACIA ABAJO a dos cifras (nunca promete de mas):
+//                   437 -> "+430", 5.312 -> "+5.300", 143.420 -> "+140.000".
+//   'exacto'     -> siempre el numero exacto de stock.js.
+// (Pocas unidades = LOW_STOCK, en js/ui.js.)
+const STOCK_MODO = 'aproximado';
 const STOCK_TOPE_VISIBLE = 100;
 
 // ------------------------------------------------------------
