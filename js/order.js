@@ -242,12 +242,6 @@ function doneKeepShopping() {
   navigate(lastListingHash && currentRoute.view !== 'home' ? lastListingHash : '#/');
 }
 
-// Compatibilidad con el flujo anterior (avisos "gracias" / fotos).
-function showPhotosNoticeModal() { showOrderDone(donePhotosExpected); }
-function hidePhotosNoticeModal() { openSellerModal('pedido'); }
-function showThankYouModal() { showOrderDone(donePhotosExpected); }
-function hideThankYouModal() { closeOrderDone(); openSellerModal('pedido'); }
-
 // ------------------------------------------------------------
 //  DESCARGA DE IMAGENES
 // ------------------------------------------------------------

@@ -1425,9 +1425,6 @@ body.dark .need-pic { background: #EEF0F3; }
 .promo-low .hp-k, .promo-low .hp-go { color: var(--avail-low); }
 .pm-stock.is-low { color: var(--avail-low); }
 
-.home-cta { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-top: 56px; padding: 28px 32px; border-radius: 22px; background: var(--brand-deep); color: #fff; }
-.home-cta h2 { font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
-.home-cta p { margin: 4px 0 0; color: #C9D5EE; font-size: 14.5px; }
 
 /* ---------- Disponibilidad y etiquetas ---------- */
 .pc-stock, .rc-stock { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 6px; font-size: 12.5px; color: var(--ink-2); white-space: normal; }
@@ -1492,9 +1489,6 @@ body.dark .pc-add { color: #0D0F14; }
 .sr-add:hover, .sr-item.has-qty .sr-add { background: var(--brand); color: #fff; }
 
 /* ---------- Catalogo general ---------- */
-.catalog-hero { margin-top: 14px; padding: 26px 28px 24px; border-radius: 22px; background: var(--brand-deep); color: #fff; }
-.ch-title { font-family: var(--font-display); font-size: clamp(26px, 2.8vw, 36px); font-weight: 800; letter-spacing: -.03em; margin-bottom: 16px; }
-.ch-label { margin: 22px 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9FB5E3; }
 .ch-depts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .ch-dept { display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border-radius: 14px; background: var(--surface); color: var(--ink); text-decoration: none; box-shadow: inset 4px 0 0 var(--tone); transition: transform var(--t-fast); }
 .ch-dept:hover { transform: translateY(-2px); }
@@ -1739,9 +1733,6 @@ body.dark .pdp-mini-stepper { color: #0D0F14; }
   .vol-chip { flex: none; height: 42px; line-height: 42px; padding: 0 12px; }
   .vol-chip b { font-size: 16px; }
   .vl-label { flex: none; }
-  .home-cta { padding: 22px; margin-top: 40px; }
-  .home-cta .btn { width: 100%; }
-  .catalog-hero { margin: 12px calc(-1 * var(--gutter)) 0; border-radius: 0; padding: 22px var(--gutter); }
   .ch-depts { gap: 8px; }
   .ch-dept { padding: 6px 10px 6px 6px; gap: 8px; }
   .ch-pic { width: 42px; height: 42px; }
@@ -2105,8 +2096,6 @@ body.dark :focus-visible { outline-color: #9DB8FF; }
 
 @media (max-width: 1023px) {
   /* El buscador del encabezado ya esta arriba: el catalogo no repite otro */
-  .catalog-hero .ch-title, .catalog-hero .big-search { display: none; }
-  .catalog-hero .ch-label { margin-top: 0; }
   .ch-depts { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: minmax(168px, 1fr); overflow-x: auto; scrollbar-width: none; margin-right: calc(-1 * var(--gutter)); padding-right: var(--gutter); scroll-snap-type: x mandatory; }
   .ch-depts::-webkit-scrollbar { display: none; }
   .ch-dept { scroll-snap-align: start; min-height: 58px; }
@@ -2114,7 +2103,6 @@ body.dark :focus-visible { outline-color: #9DB8FF; }
   .home-back { height: 46px; }
 }
 @media (max-width: 640px) {
-  .catalog-hero { padding: 16px var(--gutter) 18px; }
   .empty-search .empty-state-title { font-size: 19px; }
   .done-steps li { padding: 9px 10px; }
   .ds-link { display: none; }
@@ -2143,4 +2131,112 @@ body.dark .pc-badges .badge-out { background: #FDECEA; color: #C0362C; }
   .bt-word.has-logo img { max-height: 36px; }
   .bh-mark.has-logo { padding: 10px 16px; }
   .bh-mark.has-logo img { max-height: 52px; }
+}
+
+/* ---------- Redes sociales: logos oficiales a color ---------- */
+.fl-fb .fl-ic, .fl-ig .fl-ic, .fl-tt .fl-ic, .fl-yt .fl-ic { background: none; box-shadow: none; border-radius: 0; }
+.fl-ic svg.sl { width: 38px; height: 38px; fill: initial; filter: none; transform: none; }
+
+/* ==========================================================================
+   24 Reestructuracion: ENCONTRAR · DESCUBRIR · COMPRAR
+   Navegacion corta (Inicio, Catalogo, Marcas, Nuevos, Oportunidades, Mas
+   y Mi pedido), Oportunidades como un solo centro con tres motivos,
+   catalogo sin buscador repetido y muro de marcas.
+   ========================================================================== */
+
+/* Barra superior: datos de la empresa + contacto directo */
+.hu-links .hu-link { color: #FFFFFF; font-weight: 600; }
+.hu-links .hu-link:hover { background: rgba(255,255,255,.1); }
+
+/* Navegacion principal */
+.dept-nav .dn-link { padding: 0 14px; }
+.dn-more .dn-tool { height: 38px; }
+
+/* Pie: herramientas como botones */
+.footer-nav button { padding: 0; border: none; background: none; text-align: left; font-size: 13.5px; color: #9EA2AE; cursor: pointer; }
+.footer-nav button:hover { color: #FFFFFF; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Catalogo: encabezado compacto ---------- */
+.catalog-head { display: flex; flex-direction: column; gap: 16px; margin-top: 6px; }
+.catalog-head .page-sub { max-width: 640px; }
+.catalog-head .ch-depts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.catalog-head .ch-dept { min-height: 64px; padding: 8px 12px 8px 8px; background: var(--surface); box-shadow: inset 4px 0 0 var(--tone), 0 0 0 1px var(--line); }
+.catalog-head .ch-dept:hover { box-shadow: inset 4px 0 0 var(--tone), 0 0 0 1px var(--line-strong), var(--sh-1); }
+.catalog-head .ch-pic { width: 46px; height: 46px; background: var(--stage, var(--surface-2)); }
+.catalog-head .ch-name { font-size: 14.5px; }
+
+/* ---------- Oportunidades: un centro, tres motivos ---------- */
+.opp-tabs { display: flex; gap: 8px; margin-top: 18px; overflow-x: auto; scrollbar-width: none; }
+.opp-tabs::-webkit-scrollbar { display: none; }
+.opp-tab { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--ink); font-size: 14.5px; font-weight: 700; text-decoration: none; transition: box-shadow var(--t-fast), background-color var(--t-fast), color var(--t-fast); }
+.opp-tab svg { width: 18px; height: 18px; color: var(--opp); }
+.opp-tab small { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.opp-tab:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.opp-tab.on { background: var(--ink); color: var(--surface); box-shadow: none; }
+.opp-tab.on svg, .opp-tab.on small { color: inherit; opacity: .85; }
+.opp-detail { margin-top: 12px; }
+.opp-desc { margin: 0; font-size: 14px; color: var(--ink-2); }
+.opp-note { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.opp-urgent { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: var(--avail-low-soft); color: var(--ink-2); }
+.opp-urgent svg { width: 16px; height: 16px; color: var(--avail-low); flex: none; }
+.opp-urgent b { color: var(--avail-low); }
+.opp-detail .vol-levels-page { margin-top: 12px; }
+.sc-tab svg { width: 15px; height: 15px; color: var(--opp); }
+.sc-tab.on svg { color: inherit; }
+
+/* ---------- Inicio: muro de marcas ---------- */
+.brand-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.bw-item { display: flex; flex-direction: column; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); overflow: hidden; text-decoration: none; color: var(--ink); transition: box-shadow var(--t-fast), transform var(--t-fast); }
+.bw-item:hover { box-shadow: 0 0 0 1px var(--line-strong), var(--sh-2); transform: translateY(-2px); }
+.bw-logo { display: flex; align-items: center; justify-content: center; height: 76px; padding: 10px 14px; background: #FFFFFF; }
+.bw-mark { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: var(--font-display); font-size: 15px; font-weight: 800; text-transform: uppercase; color: #14161B; text-align: center; }
+.bw-mark.has-logo img { display: block; max-width: 100%; max-height: 50px; width: auto; height: auto; object-fit: contain; }
+.bw-count { padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; }
+
+/* ---------- Mi pedido: acciones secundarias ---------- */
+.of-totals .of-links { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.of-links .link-btn { font-size: 12.5px; color: var(--muted); }
+.of-totals .of-clear { margin-left: 0; }
+
+/* ---------- Celular: barra inferior con "Mas" ---------- */
+@media (max-width: 1023px) {
+  .hdr-main { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "logo . actions" "search search search"; }
+  .tabbar a, .tabbar button { min-height: 48px; }
+  #tabMore[aria-expanded="true"] { color: var(--brand); }
+  .mm-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  .mm-sheet { left: auto; right: 0; transform: translateX(102%); }
+  .mmb-label:first-child { margin-top: 4px; }
+  .mmb-cols .mmb-col { min-height: 92px; }
+  .mmb-oportunidades svg { color: var(--opp); }
+  .mmb-nuevos svg { color: var(--new); }
+  .mmb-subs { display: flex; flex-direction: column; margin: -2px 0 6px; }
+  .mmb-sub { display: flex; align-items: center; gap: 10px; padding: 11px 8px; border-radius: 10px; color: var(--ink); text-decoration: none; font-size: 14.5px; font-weight: 600; }
+  .mmb-sub svg { width: 18px; height: 18px; color: var(--opp); }
+  .mmb-sub small { margin-left: auto; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .mmb-sub:active { background: var(--surface-2); }
+  .mmb-tools button { min-height: 48px; }
+  .mmb-tools small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .catalog-head { margin-top: 4px; gap: 12px; }
+  .catalog-head .page-sub { font-size: 13.5px; }
+  .catalog-head .ch-depts { display: grid; grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: minmax(170px, 1fr); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 2px var(--gutter); scroll-snap-type: x mandatory; }
+  .catalog-head .ch-depts::-webkit-scrollbar { display: none; }
+  .catalog-head .ch-dept { scroll-snap-align: start; min-height: 58px; }
+}
+@media (max-width: 640px) {
+  .opp-tabs { margin: 14px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); }
+  .opp-tab { height: 42px; padding: 0 13px; font-size: 13.5px; }
+  .brand-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .bw-logo { height: 54px; padding: 6px 8px; }
+  .bw-mark.has-logo img { max-height: 32px; }
+  .bw-count { padding: 5px 4px; font-size: 11px; }
+}
+/* La pestana "Inicio" de la barra inferior siempre esta a mano: arriba no
+   se repite el boton (sigue al final de cada pagina). */
+@media (max-width: 1023px) {
+  .page-head > .home-back, .pdp-top > .home-back { display: none; }
+}
+@media (min-width: 1024px) {
+  .brand-wall { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+  .bw-logo { height: 68px; padding: 8px 10px; }
+  .bw-mark.has-logo img { max-height: 44px; }
 }

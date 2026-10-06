@@ -252,12 +252,6 @@ function computeSubtipo(p) {
 
 PRODUCTS.forEach(p => { p.subtipo = computeSubtipo(p); });
 
-function subtypesOf(cat) {
-  const counts = {};
-  VISIBLE_PRODUCTS.forEach(p => { if (p.categoria === cat) counts[p.subtipo] = (counts[p.subtipo] || 0) + 1; });
-  const order = (SUBTYPE_RULES[cat] || []).map(r => r[0]).concat(['Otros']);
-  return order.filter(s => counts[s]).map(s => ({ label: s, count: counts[s] }));
-}
 
 // ------------------------------------------------------------
 //  Especificaciones / tono / tamano (salen del nombre)
