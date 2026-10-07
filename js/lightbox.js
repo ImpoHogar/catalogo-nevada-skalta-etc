@@ -52,7 +52,7 @@ function onProductViewLeave() { lightboxState.pid = null; }
 // Caracteristicas de la ficha segun el departamento. Solo datos que
 // salen del nombre / la estructura del catalogo (nada inventado).
 function productFacts(p) {
-  const tone = deptTone(p.dept);
+  const tone = productTone(p);
   const specs = p._specs || (p._specs = productSpecs(p));
   const model = modelCode(p);
   const rows = [['Marca', p.brand], ['Categoría', catName(p.cat)], ['Tipo de producto', p.tipo !== 'Otros' ? p.tipo : catName(p.cat)]];
@@ -101,7 +101,7 @@ function sameLineProducts(p, n) {
 
 // Datos clave bajo el nombre (categoria, presentacion, tamano...).
 function pdpKeyFacts(p) {
-  const tone = deptTone(p.dept);
+  const tone = productTone(p);
   const out = [['Categoría', p.tipo !== 'Otros' ? p.tipo : catName(p.cat)]];
   if (tone === 'battery') {
     if (batterySize(p)) out.push(['Tamaño', batterySize(p)]);
@@ -168,7 +168,7 @@ function renderProductPage(pid) {
   lightboxState.images = getProductImages(p);
   if (!lightboxState.images[lightboxState.index]) lightboxState.index = 0;
   pdpQty = 1;
-  const tone = deptTone(p.dept);
+  const tone = productTone(p);
   const d = DEPARTMENT_BY_ID[p.dept];
   const c = CATEGORY_BY_ID[p.cat];
   const lvl = stockLevel(p);
@@ -178,7 +178,7 @@ function renderProductPage(pid) {
   const badges = flags.map(f => `<span class="badge badge-${f.key}">${ICONS[f.icon]}${f.key === 'new' ? 'Nuevo ingreso' : f.key === 'vol' ? 'Disponible para volumen' : f.badge}</span>`);
   if (isBestSeller(p)) badges.push('<span class="badge badge-best">Más vendido</span>');
   const crumbs = [['#/', 'Inicio']];
-  if (d) crumbs.push(['#/d/' + d.id, d.name]);
+  if (d) crumbs.push(['#/m/' + d.id, d.name]);
   if (c) crumbs.push(['#/c/' + c.id, c.name]);
   if (c && p.tipo !== 'Otros') crumbs.push(['#/c/' + c.id + '/' + slugify(p.tipo), p.tipo]);
 
@@ -257,6 +257,7 @@ function renderProductPage(pid) {
         ${railHTML(suggested, { title: line.length >= 2 ? 'También te puede interesar' : 'Productos relacionados', sub: 'Productos que se usan junto con este o lo complementan.', cls: 'rail-sugg' })}
         ${railHTML(similar, { title: `Otras opciones de ${p.tipo !== 'Otros' ? p.tipo : catName(p.cat)}`, sub: 'Del mismo tipo de producto.', more: c ? '#/c/' + c.id + (p.tipo !== 'Otros' ? '/' + slugify(p.tipo) : '') : '' })}
         ${railHTML(sameBrandProducts(p, 16), { title: `Más de ${p.brand}`, more: brandHash(p.brand), moreLabel: `Ver los ${brandCount}` })}
+        ${d ? railHTML(complementPick(p, 14), { title: `Complementa tu pedido en ${d.name}`, sub: `Otras categorías del mercado ${d.name}, con stock en bodega.`, more: '#/m/' + d.id, moreLabel: `Ir a ${d.name}` }) : ''}
       </div>
       <div class="home-back-end">${homeBackHTML('is-outline')}</div>
       ${lvl.key === 'out' ? '' : `
