@@ -156,7 +156,7 @@ function orderLineHTML(p) {
       <a href="#/p/${p.id}" onclick="closeOrderReview()" class="oi-img"><img src="${productImgSrc(p)}" alt="${escapeHtml(prettyName(p))}" loading="lazy"></a>
       <div class="oi-info">
         <a class="oi-name" href="#/p/${p.id}" onclick="closeOrderReview()">${escapeHtml(prettyName(p))}</a>
-        <div class="oi-code">Código ${escapeHtml(p.code)}</div>
+        <div class="oi-code">Código ${escapeHtml(p.code)}${variantModel(p) ? ' · Modelo ' + escapeHtml(variantModel(p)) : ''}</div>
         <div class="oi-avail is-${lvl.key}"><i></i>${escapeHtml(lvl.key === 'ok' ? lvl.qty : lvl.key === 'low' ? lvl.short : lvl.label)}</div>
       </div>
       <div class="oi-side">
