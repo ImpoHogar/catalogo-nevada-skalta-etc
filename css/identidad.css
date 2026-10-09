@@ -224,3 +224,11 @@ body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
 @media (max-width: 900px) {
   .needs-sec .needs { grid-auto-columns: 40%; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 4px; }
 }
+
+/* ---------- Calculadora siempre a la vista ---------- */
+.dn-calc { background: var(--c-blue-50); color: var(--c-blue); }
+.dn-calc:hover { background: var(--c-blue); color: #fff; }
+@media (max-width: 1023px) {
+  .tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tabbar a span, .tabbar button span { font-size: 10.5px; letter-spacing: -.01em; }
+}

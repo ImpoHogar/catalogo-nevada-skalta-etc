@@ -128,7 +128,7 @@ function relScore(p, x) {
   relWords(x).forEach(t => { if (w.has(t)) s += 12; });
   const cp = specValue(p, 'Conector'), cx = specValue(x, 'Conector');
   if (cp && cx) s += cp === cx ? 25 : -15;
-  if (p.cat === 'baterias') { if (batterySize(x) === batterySize(p)) s += 60; }
+  if (p.dept === 'baterias') { if (batterySize(x) === batterySize(p)) s += 60; }
   const st = parseInt(x.stock) || 0;
   if (st > 0) s += 20;
   if (x.img) s += 8;

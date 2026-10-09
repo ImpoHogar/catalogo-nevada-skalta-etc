@@ -20,8 +20,7 @@ Lo que cambió es el contenido, porque es otro mercado:
 
 ```
 index.html              Esqueleto de la página
-css/styles.css          Estilos base del catálogo
-css/mercados.css        Estilos de la plataforma multimercado (inicio, mercados, tarjetas)
+css/styles.css          Todos los estilos (idénticos a perfumería + marca escrita)
 img/logo.png            Logos de ImpoHogar
 img/categorias/*.svg    Iconos de las tarjetas de categoría
 img/productos/          FOTOS: una por producto, nombrada con el código de barras
@@ -33,8 +32,7 @@ js/products.js          📦 EL CATÁLOGO (generado desde la plantilla Excel)
 js/stock.js             🔢 LAS CANTIDADES (generado desde el inventario)
 js/relacionados.js      Productos relacionados (complemento / alternativa)
 js/data.js              Pega las cantidades a los productos
-js/taxonomy.js          Mercados, categorías, tipos, filtros y buscador
-js/mercados.js          Inicio, página de mercados y página de cada mercado
+js/taxonomy.js          Departamentos, categorías, tipos, filtros y buscador
 js/catalog.js           Navegación, inicio, listados, tarjetas y buscador
 js/lightbox.js          Ficha del producto (galería, datos, relacionados)
 js/showcase.js          Vitrina de entrada
@@ -151,74 +149,53 @@ en `SELLERS` y se reemplaza su imagen.
 
 ## Diseño y arquitectura (ImpoHogar Market)
 
-**Un solo catálogo B2B para varios mercados.** La estructura es:
+El catálogo está organizado alrededor de tres cosas: **ENCONTRAR** (buscador,
+catálogo, departamentos, marcas), **DESCUBRIR** (nuevos ingresos y
+oportunidades) y **COMPRAR** (Mi pedido, siempre a un toque).
 
-    Catálogo único > Mercados > Categorías > Subcategorías (tipos) > Marcas > Productos
+**Navegación principal:** Inicio · Catálogo · Marcas · Nuevos ingresos ·
+Oportunidades, más el botón **Mi pedido**. Las herramientas secundarias
+(Calculadora, Historial de pedidos, Descargar imágenes, Ayuda, Contactar
+vendedor y modo claro/oscuro) viven en **Más**. En celular, la barra inferior es
+Inicio · Catálogo · Marcas · Mi pedido · Más (Más abre un panel con Nuevos
+ingresos, Oportunidades, departamentos y herramientas).
 
-Todo vive en la misma página, con la misma navegación, el mismo buscador y el
-mismo pedido: el cliente pasa de Belleza a Energía sin "salir" del catálogo.
-
-**Mercados** (`DEPARTMENTS` en `js/taxonomy.js`; en el código siguen llamándose
-departamentos: `p.dept`, `#/d/<id>`):
-
-| Mercado | Categorías | Productos |
-|---|---|---|
-| **Belleza** | Maquillaje · Skincare | 631 |
-| **Cuidado personal** | Cuidado corporal · Cabello · Barbería | 348 |
-| **Tecnología** | Audio · Cables y adaptadores · Computación y gaming · Smart y cámaras · Soportes y accesorios | 392 |
-| **Energía** | Pilas y baterías · Power banks y cargadores | 57 |
-| **Hogar** | Cocina · Cuidado de la ropa | 77 |
-
-(Conteos de octubre 2026: salen solos de los datos.) La agrupación sale de los
-productos reales: skincare pasó a Belleza (junto al maquillaje) y los power
-banks, cargadores y regletas pasaron a Energía (junto a las pilas). Cada
-mercado tiene su `claim`, `headline` y `blurb` (textos editables en
-taxonomy.js). Los cargadores conservan su ficha y filtros de tecnología
-(`tone: 'tech'` en su categoría).
-
-**Navegación:** botón **Mercados** (menú grande con categorías y tipos) ·
-Inicio · los 5 mercados a la vista · Nuevos ingresos · Oportunidades · Marcas ·
-Más (Calculadora, Historial, Descargar imágenes, Ayuda, Contactar vendedor,
-modo claro/oscuro) y **Mi pedido**. En celular: Inicio · Mercados · Marcas ·
-Mi pedido · Más.
+Cada sección tiene su dirección (se puede usar el botón "atrás" del navegador y
+compartir el enlace):
 
 | Dirección | Qué muestra |
 |---|---|
-| `#/` | Inicio (`js/mercados.js`): portada multimercado > Elige tu mercado > Nuevos ingresos > Oportunidades > Un recorrido por cada mercado > Marcas que debes conocer > Compra por necesidad > Cómo pedir |
-| `#/mercados` | Los 5 mercados con sus categorías, marcas y accesos |
-| `#/m/belleza` · `#/m/cuidado-personal` · `#/m/tecnologia` · `#/m/energia` · `#/m/hogar` | Página comercial del mercado: portada, categorías y tipos con foto, marcas, nuevos ingresos, oportunidades (3 motivos), listo para tu pedido (por categoría), explorar todo y otros mercados |
-| `#/d/belleza` (etc.) | Todo el mercado en grilla con filtros. `#/d/maquillaje` y `#/d/baterias` siguen funcionando (llevan a Belleza y Energía) |
-| `#/todo` | Catálogo completo con filtros, filtros rápidos y orden |
+| `#/` | Inicio: buscador > Compra por departamento (5) > Nuevos ingresos > Oportunidades (por motivo) > compra por necesidad > muro de marcas |
+| `#/todo` | Catálogo: departamentos, filtros, filtros rápidos y orden (el buscador es el del encabezado) |
+| `#/d/cuidado-personal` · `#/d/maquillaje` · `#/d/tecnologia` · `#/d/baterias` · `#/d/hogar` | Departamento (`#/d/belleza` sigue funcionando) |
 | `#/c/audio` · `#/c/audio/parlantes` | Categoría y subcategoría |
-| `#/marca/skala` · `#/marcas` | Página de una marca (con sus mercados) / directorio agrupado por mercado |
-| `#/buscar/cargador tipo c` | Resultados de búsqueda (todo el catálogo) |
+| `#/marca/skala` · `#/marcas` | Página de una marca (con chips por tipo) / directorio con buscador |
+| `#/buscar/cargador tipo c` | Resultados de búsqueda |
 | `#/col/nuevos` | Nuevos ingresos |
-| `#/col/oportunidades` · `#/col/ultimas` · `#/col/volumen` · `#/col/volumen/25` | Oportunidades: Selección ImpoHogar, Últimas unidades, Stock para volumen |
-| `#/p/123` | Ficha del producto (con "Complementa tu pedido en <mercado>") |
+| `#/col/oportunidades` · `#/col/ultimas` · `#/col/volumen` · `#/col/volumen/25` | Oportunidades: un solo centro con tres pestañas (Selección ImpoHogar, Últimas unidades, Stock para volumen) |
+| `#/p/123` | Ficha del producto |
 
-**Portada y campañas:** el titular, la etiqueta y el texto están en `INICIO`
-(config.js). El escenario de la derecha rota por los 5 mercados con fotos
-reales; para poner una campaña primero, se agrega en `CAMPANAS_INICIO`
-(config.js) con 1 a 3 códigos de barras. No se usan imágenes inventadas.
+**Departamentos > categorías > subcategorías** (`js/taxonomy.js`):
 
-**Sin datos inventados:** los números son conteos del catálogo; "Más vendidos"
-solo aparece si se llena `MAS_VENDIDOS`; las recomendaciones usan relaciones
-reales (misma marca, misma categoría, mismo tipo, mismo mercado). El
-recorrido por mercado evita repetir lo que ya sale en Nuevos y Oportunidades.
+- **Cuidado personal:** Skincare · Cuidado corporal · Cabello · Barbería.
+- **Maquillaje:** bases y cushions, labios, ojos y cejas, mejillas, correctores y polvos.
+- **Tecnología:** Audio · Cables y adaptadores · Carga y energía · Computación
+  y gaming · Smart y cámaras · Soportes y accesorios.
+- **Baterías:** Pilas AAA, AA, C, D, batería 9V, botón de litio, recargables.
+- **Hogar:** Cocina · Cuidado de la ropa.
 
-Estilos de la plataforma multimercado: `css/mercados.css` (se carga después de
-`css/styles.css`).
+Cada departamento tiene su propia experiencia: colores, datos que muestran las
+tarjetas y orden de los filtros (cuidado personal: presentación, beneficio,
+subtono; tecnología: compatibilidad, conector, conectividad, potencia;
+baterías: tamaño, tipo, presentación, voltaje; hogar: capacidad, velocidades).
+Todo sale del nombre del producto: si un dato no está, no se muestra.
 
-Cada mercado tiene su propia experiencia: colores, datos que muestran las
-tarjetas y orden de los filtros (belleza y cuidado: presentación, beneficio,
-subtono; tecnología: compatibilidad, conector, conectividad, potencia; pilas:
-tamaño, tipo, presentación, voltaje; hogar: capacidad, velocidades). Todo sale
-del nombre del producto: si un dato no está, no se muestra.
-
-**Escaparates del inicio:** Nuevos ingresos (pestañas por mercado) y
+**Escaparates del inicio:** Nuevos ingresos (pestañas por departamento) y
 Oportunidades (pestañas por motivo: Selección ImpoHogar, Últimas unidades y
 Stock para volumen 50+), con tarjetas con "Agregar". Un escaparate sin productos
 no aparece.
+Las tarjetas llevan una línea de color según su estado principal (nuevo,
+oportunidad, pocas unidades, volumen).
 
 **Filtros rápidos:** Disponible, Nuevo, Oportunidad, Volumen y Últimas unidades,
 arriba de los productos (no se repiten en el panel lateral). Orden: Relevancia

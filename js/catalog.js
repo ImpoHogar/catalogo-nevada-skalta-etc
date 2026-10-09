@@ -5,12 +5,9 @@
 //  direccion (se puede volver atras con el boton del navegador y
 //  compartir el enlace):
 //
-//    #/                      Inicio (escaparate de todo el catalogo, mercados.js)
-//    #/mercados              Los mercados (mercados.js)
-//    #/m/<mercado>           Pagina comercial del mercado (mercados.js)
+//    #/                      Inicio ("¿Que quieres comprar hoy?")
 //    #/todo                  Catalogo completo (buscar, filtrar, ordenar)
-//    #/d/<mercado>           Todo un mercado en grilla: belleza, cuidado-personal,
-//                            tecnologia, energia, hogar
+//    #/d/<departamento>      Cuidado personal, Tecnologia, Baterias, Hogar
 //    #/c/<categoria>[/<tipo>]  Ej. #/c/audio/parlantes
 //    #/marca/<marca>         Pagina de una marca
 //    #/marcas                Directorio de marcas
@@ -184,11 +181,6 @@ function parseHash(hashStr) {
   const [a, b, c] = parts;
   if (!a) return { view: 'home' };
   if (a === 'todo') return { view: 'listing', kind: 'all' };
-  if (a === 'mercados') return { view: 'markets' };
-  if (a === 'm') {
-    const id = DEPARTMENT_BY_ID[b] ? b : DEPT_ALIAS[b];
-    if (id) return { view: 'market', market: id };
-  }
   if (a === 'd') {
     const id = DEPARTMENT_BY_ID[b] ? b : DEPT_ALIAS[b];
     if (id) return { view: 'listing', kind: 'dept', dept: id };
@@ -205,7 +197,7 @@ function parseHash(hashStr) {
   return { view: 'home' };
 }
 
-const VIEW_IDS = { home: 'homeView', markets: 'marketsView', market: 'marketView', listing: 'catalogo', brands: 'brandsView', product: 'productView' };
+const VIEW_IDS = { home: 'homeView', listing: 'catalogo', brands: 'brandsView', product: 'productView' };
 
 function showView(view) {
   Object.entries(VIEW_IDS).forEach(([v, id]) => {
@@ -233,16 +225,6 @@ function router() {
     showView('home');
     document.title = 'ImpoHogar Market · Catálogo mayorista';
     window.scrollTo(0, scrollMemory[r.hash] || 0);
-  } else if (r.view === 'markets') {
-    renderMarketsPage();
-    showView('markets');
-    document.title = 'Mercados · ImpoHogar Market';
-    window.scrollTo(0, scrollMemory[r.hash] || 0);
-  } else if (r.view === 'market') {
-    if (prev.hash !== r.hash || !document.getElementById('marketView').innerHTML) renderMarketPage(r.market);
-    showView('market');
-    document.title = deptName(r.market) + ' · ImpoHogar Market';
-    window.scrollTo(0, prev.view === 'product' || prev.view === 'listing' ? (scrollMemory[r.hash] || 0) : 0);
   } else if (r.view === 'brands') {
     renderBrandsDirectory();
     showView('brands');
@@ -290,15 +272,15 @@ function renderNav() {
   if (nav) {
     const nino = collectionActive('dia-nino') ? `<a class="dn-link dn-col" href="#/col/dia-nino">Día del Niño</a>` : '';
     nav.innerHTML = `
-      <button type="button" class="dn-all" id="megaBtn" onclick="toggleMegaMenu()" aria-expanded="false" aria-controls="megaMenu">${ICONS.menu}<span>Mercados</span></button>
-      <a class="dn-link dn-home" href="#/" data-route="home">Inicio</a>
-      <span class="dn-markets">${deptsWithProducts().map(d => `<a class="dn-link dn-mk tone-${d.tone}" href="#/m/${d.id}" data-route="m-${d.id}" onmouseenter="openMegaMenu('${d.id}', true)">${escapeHtml(d.name)}</a>`).join('')}</span>
-      <span class="dn-sep" aria-hidden="true"></span>
+      <button type="button" class="dn-all" id="megaBtn" onclick="toggleMegaMenu()" aria-expanded="false" aria-controls="megaMenu">${ICONS.menu}<span>Departamentos</span></button>
+      <a class="dn-link" href="#/" data-route="home">Inicio</a>
+      <a class="dn-link" href="#/todo" data-route="all">Catálogo</a>
+      <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
       <a class="dn-link dn-nuevos" href="#/col/nuevos" data-route="col-nuevos">${ICONS.spark}Nuevos ingresos</a>
       <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="opp">${ICONS.flame}Oportunidades</a>
-      <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
       ${nino}
       <span class="dn-spacer"></span>
+      <button type="button" class="dn-tool dn-calc" onclick="openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
       <div class="dn-more">
         <button type="button" class="dn-tool" id="moreBtn" onclick="toggleMoreMenu(event)" aria-expanded="false" aria-controls="moreMenu">${ICONS.dots}<span>Más</span>${ICONS.chevD}</button>
         <div class="more-menu" id="moreMenu" role="menu">${toolsMenuHTML()}</div>
@@ -337,7 +319,7 @@ function megaColumnHTML(d) {
   const cats = catsOfDept(d.id);
   return `
     <div class="mm-col tone-${d.tone}" data-dept="${d.id}">
-      <a class="mm-dept" href="#/m/${d.id}">${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span><small>${TAXO_COUNTS.dept[d.id]}</small></a>
+      <a class="mm-dept" href="#/d/${d.id}">${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span><small>${TAXO_COUNTS.dept[d.id]}</small></a>
       ${cats.map(c => `
         <div class="mm-cat">
           <a class="mm-cat-link" href="#/c/${c.id}">${escapeHtml(c.name)}</a>
@@ -356,7 +338,7 @@ function renderMegaMenu() {
     <div class="mm-inner">
       <div class="mm-cols">${deptsWithProducts().map(megaColumnHTML).join('')}</div>
       <div class="mm-foot">
-        <div class="mm-pills"><a href="#/mercados" class="mm-pill">${ICONS.grid}Todos los mercados<small>${deptsWithProducts().length}</small></a>${colLinks}<a href="#/marcas" class="mm-pill">${ICONS.tag}Todas las marcas<small>${BRANDS.length}</small></a></div>
+        <div class="mm-pills">${colLinks}<a href="#/marcas" class="mm-pill">${ICONS.tag}Todas las marcas<small>${BRANDS.length}</small></a></div>
         <a href="#/todo" class="mm-all">Ver todo el catálogo · ${fmt(VISIBLE_PRODUCTS.length)} productos ${ICONS.arrow}</a>
       </div>
     </div>`;
@@ -402,12 +384,13 @@ function renderMobileMenu() {
     </div>
     <div class="mmb-subs">${opp}</div>
     ${nino}
-    <div class="mmb-label">Mercados</div>
+    <div class="mmb-label">Explorar</div>
+    <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Catálogo completo</span><small>${fmt(VISIBLE_PRODUCTS.length)}</small></a>
+    <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Marcas</span><small>${BRANDS.length}</small></a>
     ${deptsWithProducts().map(d => `
       <details class="mmb-dept tone-${d.tone}">
         <summary>${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span><small>${TAXO_COUNTS.dept[d.id]}</small>${ICONS.chevD}</summary>
-        <a class="mmb-seeall" href="#/m/${d.id}">Entrar a ${escapeHtml(d.name)}</a>
-        <a class="mmb-seeall is-sub" href="#/d/${d.id}">Ver los ${fmt(TAXO_COUNTS.dept[d.id])} productos</a>
+        <a class="mmb-seeall" href="#/d/${d.id}">Ver todo ${escapeHtml(d.name)}</a>
         ${catsOfDept(d.id).map(c => `
           <div class="mmb-cat">
             <a class="mmb-cat-link" href="#/c/${c.id}">${escapeHtml(c.name)}<small>${TAXO_COUNTS.cat[c.id]}</small></a>
@@ -415,9 +398,6 @@ function renderMobileMenu() {
               `<a href="#/c/${c.id}/${slugify(t.label)}">${escapeHtml(t.label)}</a>`).join('')}</div>
           </div>`).join('')}
       </details>`).join('')}
-    <div class="mmb-label">Explorar</div>
-    <a class="mmb-row" href="#/todo">${ICONS.grid}<span>Catálogo completo</span><small>${fmt(VISIBLE_PRODUCTS.length)}</small></a>
-    <a class="mmb-row" href="#/marcas">${ICONS.tag}<span>Marcas</span><small>${BRANDS.length}</small></a>
     <div class="mmb-label">Herramientas</div>
     <div class="mmb-tools">${toolsMenuHTML()}</div>`;
 }
@@ -435,9 +415,6 @@ function closeMobileMenu() {
 
 function routeKey(r) {
   if (r.view === 'home') return 'home';
-  if (r.view === 'market') return 'm-' + r.market;
-  if (r.kind === 'dept') return 'm-' + r.dept;
-  if (r.kind === 'cat' && CATEGORY_BY_ID[r.cat]) return 'm-' + CATEGORY_BY_ID[r.cat].dept;
   if (r.view === 'brands' || r.kind === 'brand') return 'brands';
   if (r.kind === 'all') return 'all';
   if (r.kind === 'col') return OPP_COLS.includes(r.col) ? 'opp' : 'col-' + r.col;
@@ -447,8 +424,6 @@ function updateNavActive() {
   const r = currentRoute;
   const key = routeKey(r);
   document.querySelectorAll('#deptNav .dn-link').forEach(a => a.classList.toggle('active', !!key && a.dataset.route === key));
-  const mb = document.getElementById('megaBtn');
-  if (mb) mb.classList.toggle('active', r.view === 'markets');
 }
 
 function updateMobileTabs() {
@@ -457,7 +432,7 @@ function updateMobileTabs() {
   let id = '';
   if (r.view === 'home') id = 'tabHome';
   else if (r.view === 'brands' || r.kind === 'brand') id = 'tabBrands';
-  else if (r.view === 'markets' || r.view === 'market' || r.view === 'listing' || r.view === 'product') id = 'tabCatalog';
+  else if (r.view === 'listing' || r.view === 'brands' || r.view === 'product') id = 'tabCatalog';
   const el = id && document.getElementById(id);
   if (el) el.classList.add('active');
 }
@@ -488,7 +463,7 @@ function variantModel(p) {
 
 function keySpec(p) {
   const specs = p._specs || (p._specs = productSpecs(p));
-  const tone = productTone(p);
+  const tone = deptTone(p.dept);
   const get = l => (specs.find(s => s.label === l) || {}).value;
   const model = variantModel(p);
   let list;
@@ -537,7 +512,7 @@ function primaryFlag(p) {
 }
 
 function cardHTML(p) {
-  const tone = productTone(p);
+  const tone = deptTone(p.dept);
   const name = prettyName(p);
   const safeName = escapeHtml(name);
   const lvl = stockLevel(p);
@@ -575,7 +550,7 @@ function rowHTML(p) {
   const lvl = stockLevel(p);
   const qty = qtyMap[p.id] || 0;
   return `
-    <article class="pr tone-${productTone(p)}${qty > 0 ? ' has-qty' : ''}${lvl.key === 'out' ? ' is-out' : ''}" id="card-${p.id}" data-card="${p.id}">
+    <article class="pr tone-${deptTone(p.dept)}${qty > 0 ? ' has-qty' : ''}${lvl.key === 'out' ? ' is-out' : ''}" id="card-${p.id}" data-card="${p.id}">
       <a class="pr-media" href="#/p/${p.id}" aria-label="Ver ficha de ${name}"><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></a>
       <div class="pr-main">
         <a class="pr-brand" href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a>
@@ -595,7 +570,7 @@ function railCardHTML(p) {
   const specs = keySpec(p);
   const qty = qtyMap[p.id] || 0;
   return `
-    <article class="rc tone-${productTone(p)}${qty > 0 ? ' has-qty' : ''}${lvl.key === 'out' ? ' is-out' : ''}" data-card="${p.id}">
+    <article class="rc tone-${deptTone(p.dept)}${qty > 0 ? ' has-qty' : ''}${lvl.key === 'out' ? ' is-out' : ''}" data-card="${p.id}">
       <a class="rc-media" href="#/p/${p.id}" aria-label="Ver ${name}">
         <span class="pc-badges">${cardBadges(p)}</span>
         <img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async">
@@ -655,6 +630,77 @@ function deptBrands(deptId, n) {
   const c = {};
   VISIBLE_PRODUCTS.forEach(p => { if (p.dept === deptId) c[p.brand] = (c[p.brand] || 0) + 1; });
   return Object.keys(c).sort((a, b) => c[b] - c[a]).slice(0, n);
+}
+
+// Encabezado del inicio: "¿Que estas buscando?" + buscador.
+function renderHero() {
+  const el = document.getElementById('homeHero');
+  if (!el) return;
+  const cfg = typeof INICIO !== 'undefined' ? INICIO : {};
+  const text = String(cfg.texto || '').replace('{productos}', fmt(VISIBLE_PRODUCTS.length)).replace('{marcas}', BRANDS.length);
+  const popular = (typeof BUSQUEDAS_POPULARES !== 'undefined' ? BUSQUEDAS_POPULARES : []).slice(0, 6);
+  el.innerHTML = `
+    <div class="wh-head">
+      <span class="wh-eyebrow">${escapeHtml(cfg.etiqueta || 'Catálogo mayorista')}</span>
+      <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué estás buscando?')}</h1>
+      ${text ? `<p class="wh-text">${escapeHtml(text)}</p>` : ''}
+      ${bigSearchHTML('homeSearch', 'Busca por producto, marca o código de barras')}
+      ${popular.length ? `<div class="wh-pop"><span>Más buscado:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+// "Compra por departamento": los cinco grandes accesos.
+function renderDeptAccess() {
+  const el = document.getElementById('homeDepts');
+  if (el) el.innerHTML = deptsWithProducts().map(deptAccessHTML).join('');
+}
+
+function deptAccessHTML(d) {
+  const pics = mixedPick(catsOfDept(d.id).map(c => photoPick(VISIBLE_PRODUCTS.filter(p => p.cat === c.id), 2)), 3);
+  if (pics.length < 3) pics.push(...photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id && !pics.includes(p)), 3 - pics.length));
+  const brands = deptBrands(d.id, 4);
+  const cats = catsOfDept(d.id);
+  const sub = cats.length > 1 ? cats.map(c => c.name).join(' · ') : typesOfCat(cats[0].id).filter(t => t.label !== 'Otros').slice(0, 5).map(t => t.label).join(' · ');
+  return `
+    <a class="da-card tone-${d.tone}" href="#/d/${d.id}">
+      <span class="da-top">
+        <span class="da-icon">${iconSVG(d.icon)}</span>
+        <span class="da-txt">
+          <span class="da-name">${escapeHtml(d.name)}</span>
+          <span class="da-count">${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
+        </span>
+      </span>
+      <span class="da-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</span>
+      <span class="da-sub">${escapeHtml(sub)}</span>
+      <span class="da-brands">${brands.map(b => `<i>${escapeHtml(b)}</i>`).join('')}</span>
+      <span class="da-go">Ver ${escapeHtml(d.name)} ${ICONS.arrow}</span>
+    </a>`;
+}
+
+function bigSearchHTML(id, placeholder) {
+  return `
+    <form class="big-search" role="search" onsubmit="event.preventDefault();submitSearch(searchCtxOf('${id}'))" data-search-wrap="${id}">
+      ${ICONS.search}
+      <input id="${id}" type="search" placeholder="${escapeHtml(placeholder)}" autocomplete="off" enterkeyhint="search" aria-label="${escapeHtml(placeholder)}" aria-controls="${id}Results" aria-expanded="false">
+      <button type="submit" class="btn btn-primary">Buscar</button>
+      <div class="search-results" id="${id}Results" role="listbox"></div>
+    </form>`;
+}
+
+// Tarjeta del inicio con un carrusel de sus productos (se mueve solo,
+// se detiene al pasar el mouse y se puede deslizar con el dedo).
+
+function renderTrustBar() {
+  const el = document.getElementById('trustBar');
+  if (!el) return;
+  const conStock = VISIBLE_PRODUCTS.filter(p => stockNum(p) > 0).length;
+  const items = [
+    ['box', `${fmt(VISIBLE_PRODUCTS.length)} productos`, `${fmt(conStock)} disponibles hoy`],
+    ['tag', `${BRANDS.length} marcas`, 'Cuidado personal, tecnología y hogar'],
+    ['file', 'Pedido en Excel', 'Con las fotos de tus productos'],
+    ['chat', 'Tu vendedor por WhatsApp', 'Atención directa y personalizada']
+  ];
+  el.innerHTML = items.map(([i, b, s]) => `<div class="tb-item">${iconSVG(i)}<span><b>${escapeHtml(b)}</b><small>${escapeHtml(s)}</small></span></div>`).join('');
 }
 
 // "¿Que estas buscando?": accesos por necesidad (config.js NECESIDADES)
@@ -848,6 +894,15 @@ function renderShowcases() {
   el.innerHTML = SHOWCASES.filter(sc => showcaseBase(sc).length).map(showcaseHTML).join('');
 }
 
+function renderHome() {
+  renderHero();
+  renderDeptAccess();
+  renderShowcases();
+  renderNeeds();
+  renderHomeBrands();
+  renderTrustBar();
+  bindSearchBox('homeSearch');
+}
 // ============================================================
 //  DIRECTORIO DE MARCAS
 // ============================================================
@@ -862,7 +917,7 @@ function renderBrandsDirectory() {
       ${homeBackHTML()}
       <nav class="crumbs" aria-label="Ruta"><a href="#/">Inicio</a>${ICONS.chevR}<span>Marcas</span></nav>
       <h1 class="page-title">Nuestras marcas</h1>
-      <p class="page-sub">${all.length} marcas en ${deptsWithProducts().length} mercados. Entra a una marca para ver todo su surtido, sus nuevos ingresos y su disponibilidad.</p>
+      <p class="page-sub">${all.length} marcas con todo su surtido disponible. Entra a una marca para ver sus productos, categorías y filtros.</p>
       <div class="brand-tools">
         <label class="brand-search">${ICONS.search}<input type="search" id="brandSearch" placeholder="Buscar marca" autocomplete="off" value="${escapeHtml(brandsQuery)}" oninput="brandsQuery=this.value;filterBrandTiles()" aria-label="Buscar marca"></label>
         <div class="chips-row">
@@ -871,37 +926,18 @@ function renderBrandsDirectory() {
         </div>
       </div>
     </div>
-    <div id="brandDir">${brandsDeptFilter
-      ? `<div class="brand-dir">${all.filter(b => b.depts[brandsDeptFilter]).sort((a, b) => a.name.localeCompare(b.name, 'es')).map(brandTileHTML).join('')}</div>`
-      : brandGroupsHTML(all)}</div>
+    <div class="brand-dir" id="brandDir">${(brandsDeptFilter ? all.filter(b => b.depts[brandsDeptFilter]) : all).slice().sort((a, b) => a.name.localeCompare(b.name, 'es')).map(brandTileHTML).join('')}</div>
     <div class="empty-state" id="brandEmpty" hidden><div class="empty-state-title">Sin marcas con ese nombre</div><div class="empty-state-text">Revisa cómo está escrito o busca el producto en el buscador de arriba.</div></div>
     <div class="home-back-end">${homeBackHTML('is-outline')}</div>`;
   filterBrandTiles();
 }
-// Sin filtro: las marcas agrupadas por mercado (una marca que vende en
-// dos mercados aparece en los dos) y, primero, las que tienen nuevos.
-function brandGroupsHTML(all) {
-  const conNuevos = all.filter(b => b.items.some(isInNuevosIngresosView));
-  const group = (title, sub, list, cls) => list.length ? `
-    <section class="brand-group${cls ? ' ' + cls : ''}">
-      <div class="bg-head"><h2>${escapeHtml(title)}</h2>${sub ? `<span>${escapeHtml(sub)}</span>` : ''}</div>
-      <div class="brand-dir">${list.map(brandTileHTML).join('')}</div>
-    </section>` : '';
-  return group('Con nuevos ingresos', 'Marcas que acaban de recibir productos nuevos', conNuevos.slice().sort((a, b) => b.items.filter(isInNuevosIngresosView).length - a.items.filter(isInNuevosIngresosView).length), 'is-new') +
-    deptsWithProducts().map(d => group(d.name, `${all.filter(b => b.depts[d.id]).length} marcas · ${fmt(TAXO_COUNTS.dept[d.id])} productos`,
-      all.filter(b => b.depts[d.id]).sort((a, b) => b.depts[d.id] - a.depts[d.id]), 'tone-' + d.tone)).join('');
-}
 function filterBrandTiles() {
   const q = normText(brandsQuery).trim();
   let n = 0;
-  const seen = new Set();
   document.querySelectorAll('#brandDir .brand-tile').forEach(t => {
-    // Buscando, cada marca sale una sola vez (aunque venda en dos mercados).
-    const ok = !q || ((t.dataset.brand.includes(q) || t.dataset.brand.replace(/\s/g, '').includes(q.replace(/\s/g, ''))) && !t.closest('.is-new') && !seen.has(t.dataset.brand));
-    if (ok && q) seen.add(t.dataset.brand);
+    const ok = !q || t.dataset.brand.includes(q) || t.dataset.brand.replace(/\s/g, '').includes(q.replace(/\s/g, ''));
     t.hidden = !ok; if (ok) n++;
   });
-  document.querySelectorAll('#brandDir .brand-group').forEach(g => { g.hidden = !g.querySelector('.brand-tile:not([hidden])'); });
   const e = document.getElementById('brandEmpty');
   if (e) e.hidden = n > 0;
 }
@@ -969,7 +1005,7 @@ const FLAG_ORDER = FLAG_DEFS.map(f => f.facet);
 // battery / home; vacio = siempre). Solo se muestran si hay al menos 2
 // opciones. El orden de cada departamento esta en FACET_ORDER.
 const FACETS = [
-  { id: 'dept',    label: 'Mercado',        get: p => p.dept, name: deptName, when: r => ['all', 'search', 'col', 'brand'].includes(r.kind) },
+  { id: 'dept',    label: 'Departamento',   get: p => p.dept, name: deptName, when: r => ['all', 'search', 'col', 'brand'].includes(r.kind) },
   { id: 'cat',     label: 'Categoría',      get: p => p.cat, name: catName, when: r => r.kind !== 'cat' },
   { id: 'tipo',    label: 'Subcategoría',   get: p => p.cat + '|' + p.tipo, name: tipoName, when: r => r.kind !== 'all' && !(r.kind === 'cat' && r.type) },
   { id: 'brand',   label: 'Marca',          get: p => p.brand, when: r => r.kind !== 'brand' },
@@ -1015,7 +1051,7 @@ function valuesOf(f, p) {
 }
 
 function scopeTones(list) {
-  return new Set(list.map(p => productTone(p)));
+  return new Set(list.map(p => deptTone(p.dept)));
 }
 
 function matchesFacets(p, except) {
@@ -1080,10 +1116,10 @@ function listingMeta(r) {
   let title = 'Catálogo', sub = 'Busca, filtra y ordena entre todos nuestros productos.', eyebrow = '', tone = '';
   if (r.kind === 'dept') {
     const d = DEPARTMENT_BY_ID[r.dept];
-    crumbs.push(['#/mercados', 'Mercados']); crumbs.push(['#/m/' + d.id, d.name]); crumbs.push(['', 'Todos los productos']); title = d.name; sub = d.blurb; tone = d.tone; eyebrow = 'Mercado';
+    crumbs.push(['#/todo', 'Catálogo']); crumbs.push(['', d.name]); title = d.name; sub = d.blurb; tone = d.tone; eyebrow = 'Departamento';
   } else if (r.kind === 'cat') {
     const c = CATEGORY_BY_ID[r.cat], d = DEPARTMENT_BY_ID[c.dept];
-    crumbs.push(['#/m/' + d.id, d.name]);
+    crumbs.push(['#/d/' + d.id, d.name]);
     if (r.type) { crumbs.push(['#/c/' + c.id, c.name]); crumbs.push(['', r.type]); title = r.type; sub = `${c.name} · ${d.name}`; }
     else { crumbs.push(['', c.name]); title = c.name; sub = `${typesOfCat(c.id).filter(t => t.label !== 'Otros').map(t => t.label).join(', ')}.`; }
     tone = d.tone; eyebrow = d.name;
@@ -1157,14 +1193,12 @@ function brandHeadHTML(r) {
   const list = VISIBLE_PRODUCTS.filter(p => p.brand === r.brand);
   const cats = [...new Set(list.map(p => p.cat))].sort((a, b) => catIndex({ cat: a }) - catIndex({ cat: b }));
   const pics = photoPick(list, 4);
-  const mkts = [...new Set(list.map(p => p.dept))].sort((a, b) => list.filter(p => p.dept === b).length - list.filter(p => p.dept === a).length);
   return `
     <div class="brand-hero tone-${deptTone(list[0] ? list[0].dept : '')}">
       <div class="bh-copy">
         <span class="page-eyebrow">Marca · ${fmt(list.length)} ${list.length === 1 ? 'producto' : 'productos'}</span>
         ${brandMarkHTML(r.brand, 'bh-mark')}
         <p>${escapeHtml(listingMeta(r).sub)}</p>
-        <div class="bh-mkts"><span>${mkts.length === 1 ? 'Mercado' : 'Mercados'}:</span>${mkts.map(m => `<a class="tone-${deptTone(m)}" href="#/m/${m}">${escapeHtml(deptName(m))}</a>`).join('')}</div>
         <div class="bh-cats">${cats.map(c => `<a href="#/c/${c}">${escapeHtml(catName(c))}<small>${list.filter(p => p.cat === c).length}</small></a>`).join('')}</div>
       </div>
       <div class="bh-pics" aria-hidden="true">${pics.map(p => `<span><img src="${productImgSrc(p)}" alt="" loading="lazy" decoding="async"></span>`).join('')}</div>
@@ -1206,12 +1240,11 @@ function deptHeadHTML(r) {
     <div class="dept-hero tone-${d.tone}">
       <span class="dh-icon">${iconSVG(d.icon)}</span>
       <div>
-        <span class="page-eyebrow">Mercado · todos los productos · ${fmt(TAXO_COUNTS.dept[d.id])}</span>
+        <span class="page-eyebrow">Departamento · ${fmt(TAXO_COUNTS.dept[d.id])} productos</span>
         <h1 class="page-title">${escapeHtml(d.name)}</h1>
         <p class="page-sub">${escapeHtml(d.blurb)}</p>
         <div class="dh-brands"><span>Marcas:</span>${brands.map(b => `<a href="${brandHash(b)}">${escapeHtml(b)}</a>`).join('')}</div>
       </div>
-      <a class="dh-landing" href="#/m/${d.id}">${ICONS.spark}<span>Novedades, marcas y oportunidades de ${escapeHtml(d.name)}</span>${ICONS.arrow}</a>
     </div>`;
 }
 
@@ -1223,9 +1256,9 @@ function catalogHeadHTML() {
       <div>
         <span class="page-eyebrow">Encontrar</span>
         <h1 class="page-title">Catálogo</h1>
-        <p class="page-sub">${fmt(VISIBLE_PRODUCTS.length)} productos de ${BRANDS.length} marcas. Busca arriba por nombre, marca o código, o entra por mercado.</p>
+        <p class="page-sub">${fmt(VISIBLE_PRODUCTS.length)} productos de ${BRANDS.length} marcas. Busca arriba por nombre, marca o código, o filtra por departamento.</p>
       </div>
-      <nav class="ch-depts" aria-label="Mercados">${deptsWithProducts().map(d => {
+      <nav class="ch-depts" aria-label="Departamentos">${deptsWithProducts().map(d => {
         const pic = photoPick(VISIBLE_PRODUCTS.filter(p => p.dept === d.id), 1)[0];
         return `<a class="ch-dept tone-${d.tone}" href="#/d/${d.id}">
           <span class="ch-pic">${pic ? `<img src="${productImgSrc(pic)}" alt="" loading="lazy" decoding="async">` : ''}</span>
@@ -1301,7 +1334,7 @@ function facetGroupsHTML() {
   return order.map(id => FACET_BY_ID[id]).filter(Boolean).map(f => {
     if (f.panel === false || (f.when && !f.when(r))) return '';
     if (f.tones && !f.tones.some(t => tones.has(t))) return '';
-    if (f.tones && tones.size > 1 && ![...tones].every(t => f.tones.includes(t)) && r.kind !== 'search' && r.kind !== 'dept') return '';
+    if (f.tones && tones.size > 1 && ![...tones].every(t => f.tones.includes(t)) && r.kind !== 'search') return '';
     const base = scope.filter(p => matchesFacets(p, f.id));
     const counts = {};
     base.forEach(p => valuesOf(f, p).forEach(v => { counts[v] = (counts[v] || 0) + 1; }));
@@ -1491,15 +1524,12 @@ function groupHeadersHTML(p) {
       html += `<div class="grid-brand"><a href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a><span>${fmt(n)} ${n === 1 ? 'producto' : 'productos'}</span></div>`;
     }
   }
-  // Subtitulos por tipo solo en la pagina de una marca: en los demas
-  // listados cortaban filas con 1 o 2 productos y dejaban huecos.
-  if (currentRoute.kind !== 'brand') return html;
   const k = p.cat + '|' + p.tipo;
   if (k !== lastGroup) {
     lastGroup = k;
     const n = filteredProducts.filter(x => x.brand === p.brand && x.cat === p.cat && x.tipo === p.tipo).length;
     const label = p.tipo !== 'Otros' ? p.tipo : catName(p.cat);
-    html += `<div class="grid-group tone-${productTone(p)}"><i></i>${escapeHtml(label)}${currentRoute.kind === 'cat' ? '' : `<em>${escapeHtml(catName(p.cat))}</em>`}<span>${n}</span></div>`;
+    html += `<div class="grid-group tone-${deptTone(p.dept)}"><i></i>${escapeHtml(label)}${currentRoute.kind === 'cat' ? '' : `<em>${escapeHtml(catName(p.cat))}</em>`}<span>${n}</span></div>`;
   }
   return html;
 }
@@ -1520,7 +1550,7 @@ function searchEmptyHTML(q) {
       </ul>
       ${parts.length ? `<div class="empty-block"><span>Prueba con una sola palabra</span><div class="empty-chips">${parts.map(x => `<button type="button" class="fchip" data-q="${escapeHtml(x.t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(x.t)}<small>${fmt(x.n)}</small></button>`).join('')}</div></div>` : ''}
       <div class="empty-block"><span>Buscar por marca</span><div class="empty-chips">${brands.map(b => `<a class="fchip" href="${brandHash(b.name)}">${escapeHtml(b.name)}<small>${fmt(b.count)}</small></a>`).join('')}<a class="fchip fchip-more" href="#/marcas">Todas las marcas ${ICONS.arrow}</a></div></div>
-      <div class="empty-block"><span>Explorar mercados</span><div class="empty-chips">${deptsWithProducts().map(d => `<a class="fchip tone-${d.tone}" href="#/m/${d.id}">${iconSVG(d.icon)}${escapeHtml(d.name)}</a>`).join('')}</div></div>
+      <div class="empty-block"><span>Explorar departamentos</span><div class="empty-chips">${deptsWithProducts().map(d => `<a class="fchip tone-${d.tone}" href="#/d/${d.id}">${iconSVG(d.icon)}${escapeHtml(d.name)}</a>`).join('')}</div></div>
       <div class="empty-actions"><a class="btn btn-primary" href="#/todo">Ver todo el catálogo</a></div>
     </div>`;
 }
@@ -1642,8 +1672,8 @@ function taxoSuggestions(tokens) {
       if (t.label !== 'Otros' && test(t.label)) out.push({ href: '#/c/' + c.id + '/' + slugify(t.label), label: t.label, where: c.name, count: t.count });
     });
   });
-  DEPARTMENTS.forEach(d => { if (TAXO_COUNTS.dept[d.id] && test(d.name)) out.push({ href: '#/m/' + d.id, label: d.name, where: 'Mercados', count: TAXO_COUNTS.dept[d.id], market: true }); });
-  return out.sort((a, b) => (b.market ? 1e6 : 0) + b.count - (a.market ? 1e6 : 0) - a.count).slice(0, 4);
+  DEPARTMENTS.forEach(d => { if (TAXO_COUNTS.dept[d.id] && test(d.name)) out.push({ href: '#/d/' + d.id, label: d.name, where: 'Departamento', count: TAXO_COUNTS.dept[d.id] }); });
+  return out.sort((a, b) => b.count - a.count).slice(0, 4);
 }
 
 function renderSearchResults(ctx) {
@@ -1661,8 +1691,8 @@ function renderSearchResults(ctx) {
         <div class="sr-chips">${rec.map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="${run}">${ICONS.clock}${escapeHtml(t)}</button>`).join('')}</div>` : ''}
       <div class="sr-label">Búsquedas populares</div>
       <div class="sr-chips">${(typeof BUSQUEDAS_POPULARES !== 'undefined' ? BUSQUEDAS_POPULARES : []).map(t => `<button type="button" class="sr-chip" data-q="${escapeHtml(t)}" onclick="${run}">${ICONS.search}${escapeHtml(t)}</button>`).join('')}</div>
-      <div class="sr-label">Mercados</div>
-      <div class="sr-depts">${deptsWithProducts().map(d => `<a href="#/m/${d.id}" class="sr-dept tone-${d.tone}">${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span></a>`).join('')}</div>
+      <div class="sr-label">Departamentos</div>
+      <div class="sr-depts">${deptsWithProducts().map(d => `<a href="#/d/${d.id}" class="sr-dept tone-${d.tone}">${iconSVG(d.icon)}<span>${escapeHtml(d.name)}</span></a>`).join('')}</div>
       <p class="sr-tip">Tip: puedes buscar por <b>código de barras</b>, marca o tipo de producto (ej. “cargador tipo C”).</p>`;
     openSearchResults(ctx);
     return;
