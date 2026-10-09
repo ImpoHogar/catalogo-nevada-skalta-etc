@@ -20,7 +20,8 @@ Lo que cambió es el contenido, porque es otro mercado:
 
 ```
 index.html              Esqueleto de la página
-css/styles.css          Todos los estilos (idénticos a perfumería + marca escrita)
+css/styles.css          Estilos base del catálogo
+css/identidad.css       Paleta oficial (azul del logo, esmeralda, lima, grafito, blanco); se carga al final
 img/logo.png            Logos de ImpoHogar
 img/categorias/*.svg    Iconos de las tarjetas de categoría
 img/productos/          FOTOS: una por producto, nombrada con el código de barras
