@@ -73,33 +73,14 @@ const VITRINA_MAX_POR_FILA = 40;
 //  BARRAS exactos, como en el resto del catalogo.
 // ============================================================
 
-// Portada del inicio. Se puede usar {productos}, {marcas} y {mercados}:
-// se reemplazan solos por las cantidades reales del catalogo. En "titulo"
-// la barra | separa la segunda linea (sale resaltada).
+// Textos del encabezado del inicio ("¿Que estas buscando?").
+// En "texto" se puede usar {productos} y {marcas}: se reemplazan solos
+// por las cantidades reales del catalogo.
 const INICIO = {
   etiqueta: 'Catálogo mayorista · Grupo ImpoHogar',
-  titulo: 'Todo lo que tu negocio vende,|en un solo catálogo.',
-  texto: '{productos} productos de {marcas} marcas en {mercados} mercados. Arma tu pedido y envíalo a tu vendedor por WhatsApp.'
+  titulo: '¿Qué estás buscando?',
+  texto: '{productos} productos de {marcas} marcas con disponibilidad real de bodega.'
 };
-
-// Campanas de la portada (opcional). Cada campana activa sale PRIMERO en
-// el escenario de la portada, antes de los mercados, con fotos de sus
-// productos. Solo se muestra si al menos un codigo existe y tiene foto.
-//   titulo   texto grande (obligatorio)
-//   texto    frase corta debajo
-//   etiqueta texto chico de arriba (ej. 'Campaña de temporada')
-//   pestana  nombre corto en las pestanas del escenario
-//   enlace   a donde lleva: '#/col/oportunidades', '#/marca/tirtir',
-//            '#/c/audio', '#/buscar/cushion'...
-//   boton    texto del enlace (ej. 'Ver la campaña')
-//   tono     beauty, care, tech, battery o home (color del fondo)
-//   codigos  codigos de barras de 1 a 3 productos para las fotos
-//   activa   false para apagarla sin borrarla
-// Ejemplo:
-//   { titulo: 'Temporada de cushions', texto: 'Los tonos más pedidos de TirTir.',
-//     pestana: 'Cushions', enlace: '#/c/maquillaje/bases-y-cushions', tono: 'beauty',
-//     codigos: ['8809679696451', '8800288642488'] }
-const CAMPANAS_INICIO = [];
 
 // ------------------------------------------------------------
 //  NUEVOS INGRESOS
@@ -194,7 +175,7 @@ const STOCK_TOPE_VISIBLE = 100;
 //  "¿QUE ESTAS BUSCANDO?" (comprar por necesidad)
 // ------------------------------------------------------------
 //  Accesos pensados para el cliente que no conoce las marcas.
-//  destino: '#/c/<categoria>', '#/c/<categoria>/<tipo>', '#/m/<mercado>',
+//  destino: '#/c/<categoria>', '#/c/<categoria>/<tipo>', '#/d/<departamento>',
 //           '#/buscar/<palabras>' o '#/marca/<marca>'.
 //  icono: makeup, face, hair, body, tech, cable, bolt, battery, mouse,
 //         watch, stand, home, iron, box, tag.
@@ -204,11 +185,11 @@ const NECESIDADES = [
   { nombre: 'Cuidado del cabello',     icono: 'hair',    destino: '#/c/cabello' },
   { nombre: 'Cuidado corporal',        icono: 'body',    destino: '#/c/cuidado-corporal' },
   { nombre: 'Barbería',                icono: 'hair',    destino: '#/c/barberia' },
-  { nombre: 'Cables y adaptadores',    icono: 'cable',   destino: '#/c/cables-adaptadores' },
+  { nombre: 'Accesorios tecnológicos', icono: 'cable',   destino: '#/d/tecnologia' },
   { nombre: 'Audio',                   icono: 'tech',    destino: '#/c/audio' },
-  { nombre: 'Power banks y cargadores', icono: 'bolt',   destino: '#/c/carga-energia' },
-  { nombre: 'Pilas y baterías',        icono: 'battery', destino: '#/c/baterias' },
-  { nombre: 'Cocina',                  icono: 'home',    destino: '#/c/cocina' }
+  { nombre: 'Cargadores y energía',    icono: 'bolt',    destino: '#/c/carga-energia' },
+  { nombre: 'Baterías',                icono: 'battery', destino: '#/d/baterias' },
+  { nombre: 'Hogar y cocina',          icono: 'home',    destino: '#/d/hogar' }
 ];
 
 // Sugerencias del buscador cuando todavia no se escribio nada.
