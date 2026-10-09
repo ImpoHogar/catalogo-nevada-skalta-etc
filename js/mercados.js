@@ -295,32 +295,15 @@ function marketPick(id, n) {
 function renderMarketRows() {
   const el = document.getElementById('homeMarketRows');
   if (!el) return;
-  el.innerHTML = `
-    ${mxHead({ eyebrow: 'Surtido', title: 'Un recorrido por cada mercado', id: 'rowsTitle',
-      sub: 'Lo que hay disponible hoy en cada línea, listo para agregar a tu pedido.' })}
-    ${marketsList().map((d, i) => {
-      const m = mx(d.id);
-      const items = marketPick(d.id, 10);
-      if (!items.length) return '';
-      const rid = 'mrow-' + d.id;
-      return `
-      <div class="mrow tone-${d.tone}" id="${rid}">
-        <div class="mrow-intro">
-          <span class="mrow-num">${two(i + 1)} · Mercado</span>
-          <h3 class="mrow-name"><a href="${marketHref(d.id)}">${escapeHtml(d.name)}</a></h3>
-          <p class="mrow-text">${escapeHtml(d.headline)}</p>
-          <ul class="mrow-cats">${m.cats.map(c => `<li><a href="#/c/${c.id}">${escapeHtml(c.name)}<small>${fmt(TAXO_COUNTS.cat[c.id])}</small></a></li>`).join('')}</ul>
-          <a class="mrow-go" href="${marketHref(d.id)}">Entrar a ${escapeHtml(d.name)} ${ICONS.arrow}</a>
-        </div>
-        <div class="mrow-rail">
-          <div class="mrow-track" data-track>${items.map(cardHTML).join('')}<a class="mx-endcard" href="#/d/${d.id}"><span>Ver los ${fmt(m.list.length)} productos de ${escapeHtml(d.name)}</span>${ICONS.arrow}</a></div>
-          <div class="rail-arrows mrow-arrows">
-            <button type="button" class="rail-arrow" onclick="mxScroll('${rid}',-1)" aria-label="Anteriores">${ICONS.chevL}</button>
-            <button type="button" class="rail-arrow" onclick="mxScroll('${rid}',1)" aria-label="Siguientes">${ICONS.chevR}</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('')}`;
+  // Un solo bloque con una pestana por mercado (antes eran cinco filas):
+  // misma informacion, la mitad de largo.
+  const tabs = marketsList().map(d => {
+    const m = mx(d.id);
+    return { key: d.id, label: d.name, items: marketPick(d.id, 12), total: m.list.length,
+      more: { href: marketHref(d.id), label: `Entrar a ${d.name}: ${fmt(m.list.length)} productos` } };
+  });
+  el.innerHTML = mxTabsRail('home-surtido', tabs, { eyebrow: 'Disponible hoy', title: 'Surtido por mercado', id: 'rowsTitle',
+    sub: 'Productos con stock en bodega en cada mercado, listos para agregar a tu pedido.', cls: 'surtido-sec' });
 }
 
 // ---------- D. Marcas que debes conocer ----------
@@ -342,18 +325,9 @@ function brandSpotHTML(b) {
 function renderBrandSpot() {
   const el = document.getElementById('homeBrandSpot');
   if (!el) return;
-  const list = featuredBrands().filter(b => b.items.some(p => p.img)).slice(0, 8);
   el.innerHTML = `
-    ${mxHead({ eyebrow: 'Marcas', title: 'Marcas que debes conocer', id: 'spotTitle',
-      sub: 'Cada marca con todo su surtido, sus nuevos ingresos y su disponibilidad.', more: '#/marcas', moreLabel: `Ver las ${BRANDS.length} marcas` })}
-    <div class="bspot-rail" id="bspotRail">
-      <div class="bspot-track" data-track>${list.map(brandSpotHTML).join('')}</div>
-      <div class="rail-arrows">
-        <button type="button" class="rail-arrow" onclick="mxScroll('bspotRail',-1)" aria-label="Anteriores">${ICONS.chevL}</button>
-        <button type="button" class="rail-arrow" onclick="mxScroll('bspotRail',1)" aria-label="Siguientes">${ICONS.chevR}</button>
-      </div>
-    </div>
-    <div class="bw-head"><span>Todas nuestras marcas</span></div>
+    ${mxHead({ eyebrow: 'Marcas', title: 'Nuestras marcas', id: 'spotTitle',
+      sub: 'Entra a una marca para ver todo su surtido, sus nuevos ingresos y su disponibilidad.', more: '#/marcas', moreLabel: `Ver las ${BRANDS.length} marcas` })}
     <div class="brand-wall" id="homeBrands"></div>`;
   renderHomeBrands();
 }

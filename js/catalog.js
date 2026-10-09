@@ -1491,6 +1491,9 @@ function groupHeadersHTML(p) {
       html += `<div class="grid-brand"><a href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a><span>${fmt(n)} ${n === 1 ? 'producto' : 'productos'}</span></div>`;
     }
   }
+  // Subtitulos por tipo solo en la pagina de una marca: en los demas
+  // listados cortaban filas con 1 o 2 productos y dejaban huecos.
+  if (currentRoute.kind !== 'brand') return html;
   const k = p.cat + '|' + p.tipo;
   if (k !== lastGroup) {
     lastGroup = k;

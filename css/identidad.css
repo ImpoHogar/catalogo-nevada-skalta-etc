@@ -1,0 +1,226 @@
+/* ==========================================================================
+   ImpoHogar Market — identidad visual (paleta oficial)
+   Se carga AL FINAL (despues de styles.css y mercados.css): define el
+   sistema de color y lo aplica a todos los componentes. Para volver a la
+   version anterior basta con quitar el <link> de este archivo.
+
+   Paleta:
+     Azul ImpoHogar  #19438E  logo (medido en img/logo.png), identidad,
+                              navegacion, enlaces y accion principal
+     Verde esmeralda #08B88A  disponibilidad, "en tu pedido", detalles
+     Verde lima      #B7FF38  nuevos ingresos, etiquetas especiales,
+                              oportunidades (siempre con texto grafito)
+     Blanco          #FFFFFF  fondo, tarjetas
+     Negro grafito   #202124  titulos, textos y secciones de contraste
+   El lima no se usa nunca como color de texto sobre blanco (no se lee):
+   va de fondo con texto grafito, o como texto sobre grafito.
+   ========================================================================== */
+
+:root {
+  /* Paleta base */
+  --c-blue: #19438E;
+  --c-blue-700: #12346F;
+  --c-blue-900: #0E2654;
+  --c-blue-50: #EDF2FA;
+  --c-blue-100: #DCE6F5;
+  --c-emerald: #08B88A;
+  --c-emerald-ink: #067A5C;      /* esmeralda legible sobre blanco (5.3:1) */
+  --c-emerald-50: #E6F8F2;
+  --c-lime: #B7FF38;
+  --c-lime-ink: #3E6B00;         /* tono oliva para iconos sobre blanco */
+  --c-lime-50: #F3FFE0;
+  --c-graphite: #202124;
+  --c-graphite-2: #2D2F33;
+
+  /* Tokens del sistema (styles.css / mercados.css los usan) */
+  --ink: #202124;
+  --ink-2: #3C4043;
+  --muted: #5F6368;
+  --faint: #9AA0A6;
+  --line: #E6E8EB;
+  --line-strong: #D3D6DB;
+  --surface-2: #F4F5F7;
+  --surface-3: #E8EAED;
+
+  --brand: var(--c-blue);
+  --brand-hover: var(--c-blue-700);
+  --brand-deep: var(--c-blue-900);
+  --brand-soft: var(--c-blue-50);
+  --primary: var(--c-blue);
+  --primary-hover: var(--c-blue-700);
+
+  --accent: var(--c-blue);
+  --accent-strong: var(--c-blue-700);
+  --accent-soft: var(--c-lime-50);
+
+  --new: var(--c-lime-ink);
+  --ok: var(--c-emerald-ink);
+  --opp: var(--c-graphite);
+  --opp-soft: var(--c-lime-50);
+  --deal: var(--c-lime);
+
+  --avail-ok: var(--c-emerald-ink);
+  --avail-ok-soft: var(--c-emerald-50);
+  /* Pocas unidades y agotado son estados de aviso: se quedan en ambar y rojo */
+  --avail-low: #8A5300;
+  --avail-low-dot: #E59F00;
+  --avail-low-soft: #FFF5DC;
+}
+
+body.dark {
+  --c-emerald-ink: #34D6A8;
+  --c-emerald-50: rgba(8,184,138,.14);
+  --c-lime-ink: #B7FF38;
+  --c-lime-50: rgba(183,255,56,.12);
+  --c-blue-50: rgba(91,140,230,.16);
+  --ink: #E8EAED;
+  --ink-2: #C4C7CC;
+  --muted: #9AA0A6;
+  --brand: #6F9BEA;
+  --brand-hover: #8FB2F0;
+  --brand-soft: rgba(111,155,234,.14);
+  --primary: #4F80DC;
+  --accent: #6F9BEA;
+  --new: #B7FF38;
+  --ok: #34D6A8;
+  --opp: #E8EAED;
+  --opp-soft: rgba(183,255,56,.12);
+  --avail-ok: #34D6A8;
+  --avail-ok-soft: rgba(8,184,138,.14);
+}
+
+::selection { background: var(--c-lime); color: #202124; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); }
+
+/* ---------- Mercados: un acento de la paleta para cada uno ----------
+   Mismo sistema, personalidad sutil: el acento marca puntos, titulos
+   chicos y el fondo de las fotos (un tinte muy suave del mismo color). */
+.tone-beauty  { --tone: #067A5C; --tone-soft: #E6F8F2; --tone-band: #F5FBF8; --stage: #F1F8F5; }
+.tone-care    { --tone: #0B6F80; --tone-soft: #E4F3F5; --tone-band: #F5FAFB; --stage: #EFF6F7; }
+.tone-tech    { --tone: #19438E; --tone-soft: #EDF2FA; --tone-band: #F6F8FC; --stage: #F0F3F9; }
+.tone-battery { --tone: #3E6B00; --tone-soft: #F0FAD9; --tone-band: #FAFDF3; --stage: #F4F9E8; }
+.tone-home    { --tone: #202124; --tone-soft: #EEEFF1; --tone-band: #F8F8F9; --stage: #F3F3F4; }
+body.dark .tone-beauty  { --tone: #34D6A8; --tone-soft: rgba(52,214,168,.13); }
+body.dark .tone-care    { --tone: #5CC6D6; --tone-soft: rgba(92,198,214,.13); }
+body.dark .tone-tech    { --tone: #8FB2F0; --tone-soft: rgba(143,178,240,.13); }
+body.dark .tone-battery { --tone: #B7FF38; --tone-soft: rgba(183,255,56,.12); }
+body.dark .tone-home    { --tone: #E8EAED; --tone-soft: rgba(232,234,237,.1); }
+
+/* ---------- Encabezado ---------- */
+.hdr-util { background: var(--c-graphite); color: #E8EAED; }
+.hdr-util svg { color: var(--c-lime); }
+.hu-link { color: #fff; }
+.hu-link:hover { color: var(--c-lime); }
+.cart-btn { background: var(--c-blue); color: #fff; }
+.cart-btn:hover { background: var(--c-blue-700); }
+.cart-badge, .tab-badge { background: var(--c-lime); color: #202124; box-shadow: 0 0 0 2px var(--surface); }
+.dn-link.active, .dn-mk.active { color: var(--c-blue); }
+.dn-link::after { background: var(--c-blue); }
+.dn-mk::after { background: var(--tone); }
+.dn-nuevos { color: var(--ink); }
+.dn-nuevos svg { color: var(--c-lime-ink); }
+.dn-opp svg { color: var(--ink); }
+.dn-all:hover, body.mega-open .dn-all, .dn-all.active { background: var(--c-blue); color: #fff; }
+.search-go, .big-search .btn-primary { background: var(--c-blue); }
+
+/* ---------- Botones ---------- */
+.btn-primary, .xbtn-primary { background: var(--c-blue); color: #fff; }
+.btn-primary:hover, .xbtn-primary:hover { background: var(--c-blue-700); }
+.xbtn-light { color: var(--c-graphite); }
+.xbtn-light:hover { background: var(--c-lime); }
+.xbtn-light svg { color: #1FAF54; }
+body.dark .xbtn-primary, body.dark .btn-primary { background: #4F80DC; }
+
+/* ---------- Etiquetas (una sola por tarjeta) ---------- */
+.badge-new, body.dark .badge-new, body.dark .pc-badges .badge-new { background: var(--c-lime); color: #202124; }
+.badge-opp, body.dark .badge-opp, body.dark .pc-badges .badge-opp { background: var(--c-graphite); color: var(--c-lime); }
+body.dark .badge-opp { box-shadow: inset 0 0 0 1px rgba(183,255,56,.35); }
+.badge-vol { background: var(--c-blue-50); color: var(--c-blue); }
+body.dark .badge-vol { color: #8FB2F0; }
+.badge-best { background: var(--c-blue); color: #fff; }
+.badge-new svg, .badge-opp svg { color: inherit; }
+
+/* ---------- Tarjeta de producto ---------- */
+.pc-add { background: var(--c-blue-50); color: var(--c-blue); }
+.pc-add:hover { background: var(--c-blue); color: #fff; }
+/* "Ya esta en tu pedido": esmeralda */
+.pc-stepper, .has-qty .pc-stepper { background: var(--c-emerald-ink); }
+body.dark .pc-stepper { background: #08B88A; color: #0B1F18; }
+.pc.has-qty .pc-media { box-shadow: inset 0 0 0 2px var(--c-emerald); }
+.pr.has-qty { background: var(--c-emerald-50); }
+.pc-stock.is-ok b, .rc-stock.is-ok b { color: var(--avail-ok); }
+.pc-stock i, .rc-stock i { background: var(--c-emerald); }
+.pc-vol { color: var(--c-blue); }
+.pc-note { background: var(--c-lime-50); color: var(--ink); }
+.pc-note svg { color: var(--c-lime-ink); }
+.pc-brand { color: var(--tone); }
+.pc-code b { color: var(--ink); }
+
+/* ---------- Filtros rapidos, pestanas y chips ---------- */
+.qf.on, .mx-tab.on, .home .sc-tab.on, .sc-tab.on, .fchip.on { background: var(--c-blue); color: #fff; box-shadow: none; }
+.qf-new:not(.on) svg { color: var(--c-lime-ink); }
+.qf-opp:not(.on) svg { color: var(--ink); }
+.qf-vol:not(.on) svg { color: var(--c-blue); }
+
+/* ---------- Escaparates del inicio ---------- */
+.sc-nuevos { --sc: var(--c-lime-ink); --sc-soft: var(--c-lime-50); }
+.sc-oportunidades { --sc: var(--c-graphite); --sc-soft: var(--c-lime-50); }
+.home .sc-claim { color: var(--muted); }
+.home .sc-nuevos .sc-claim::before, .home .sc-oportunidades .sc-claim::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 2px; background: var(--c-lime); box-shadow: inset 0 0 0 1px rgba(32,33,36,.18); vertical-align: 1px; }
+.mx-eyebrow { color: var(--c-blue); }
+body.dark .mx-eyebrow { color: #8FB2F0; }
+
+/* ---------- Portada ---------- */
+.hx-title em { color: var(--c-blue); text-decoration: underline; text-decoration-color: var(--c-lime); text-decoration-thickness: .13em; text-underline-offset: .1em; text-decoration-skip-ink: none; }
+body.dark .hx-title em { color: #8FB2F0; }
+.hx-tab i::after { background: var(--c-blue); }
+.mx-stats dd { color: var(--ink); }
+
+/* ---------- Puertas de los mercados ---------- */
+.door-opp { background: var(--c-graphite); }
+.door-opp .door-top, .door-opp .door-num, .dmo svg { color: var(--c-lime); }
+.door-opp .door-go svg { color: var(--c-lime); }
+
+/* ---------- Como pedir y bloques de contraste ---------- */
+.how-in { background: var(--c-graphite); }
+.how-copy .mx-eyebrow { color: var(--c-lime); }
+.how-steps b { color: var(--c-lime); opacity: .9; }
+.how-steps li { border-left-color: rgba(255,255,255,.14); }
+.mkts-opp, .mk-all { background: var(--c-graphite); }
+.mkts-opp > svg:first-child { color: var(--c-lime); }
+.mk-all .mx-eyebrow { color: var(--c-lime); }
+.mk-all:hover i { color: var(--c-lime); }
+body.dark .how-in, body.dark .mkts-opp, body.dark .mk-all, body.dark .door-opp { background: #2A2C30; }
+
+/* ---------- Marcas ---------- */
+.bspot-nums .is-new b { color: var(--c-lime-ink); }
+.brand-group.is-new .bg-head h2 { color: var(--ink); }
+.brand-group.is-new .bg-head h2::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 3px; background: var(--c-lime); vertical-align: 2px; }
+.bt-new b { color: var(--c-lime-ink); }
+
+/* ---------- Pie ---------- */
+.site-footer { background: var(--c-graphite); color: #C4C7CC; }
+.footer-legal { border-top-color: rgba(255,255,255,.08); color: #9AA0A6; }
+.footer-nav b { color: #fff; }
+.footer-nav a:hover, .footer-nav button:hover { color: var(--c-lime); }
+
+/* ---------- Celular: barra inferior ---------- */
+.tabbar a.active, .tabbar button.active { color: var(--c-blue); }
+body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
+
+/* ---------- Mi pedido ---------- */
+.oi-avail.is-ok i { background: var(--c-emerald); }
+
+/* ---------- Inicio compacto ---------- */
+/* Marcas arriba: muro de logos en una o dos filas */
+.home .bspot-sec .brand-wall { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+/* Compra por necesidad: una fila de accesos (no una grilla grande) */
+.needs-sec .needs { display: grid; grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: minmax(128px, 1fr); gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.needs-sec .needs::-webkit-scrollbar { display: none; }
+.needs-sec .need { padding: 10px; }
+.needs-sec .need-pic { aspect-ratio: 1.25; }
+.needs-sec .need-name { font-size: 13.5px; }
+@media (max-width: 900px) {
+  .needs-sec .needs { grid-auto-columns: 40%; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 4px; }
+}
