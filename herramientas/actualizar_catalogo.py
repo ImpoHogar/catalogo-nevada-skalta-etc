@@ -145,6 +145,13 @@ def categoria_de(cat_sistema, nombre):
     return OTROS
 
 
+# Correcciones por codigo de barras: productos que el sistema tiene bajo
+# otra marca (ej. el set Divina Cor es de Skala, no de Salon Line).
+MARCA_POR_CODIGO = {
+    "7897042017881": "SKALA",
+}
+
+
 def marca_de(cat_sistema):
     c = clave(cat_sistema)
     if c in MARCA_PUBLICADA:
@@ -331,7 +338,7 @@ def main():
         prev = previos.get(f["code"], {})
         p = {
             "id": prev.get("id") or siguiente_id,
-            "brand": marca_de(f["cat"]),
+            "brand": MARCA_POR_CODIGO.get(f["code"], marca_de(f["cat"])),
             "code": f["code"],
             "name": f["name"],
             "categoria": categoria_de(f["cat"], f["name"]),

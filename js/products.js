@@ -789,7 +789,7 @@ const PRODUCTS = [
   {"id":781,"brand":"NEVADA","code":"847610036193","name":"SERUM P/PESTAÑA NEVADA 15ML BIOTINA & RO","categoria":"Cuidado facial","img":"847610036193.webp"},
   {"id":782,"brand":"NEVADA","code":"847610036209","name":"SERUM P/PESTAÑA NEVADA 15ML RICINO","categoria":"Cuidado facial","img":"847610036209.webp"},
   {"id":783,"brand":"INOAR","code":"7898581083153","name":"SET CAPILAR 250ML POS PROGRES","categoria":"Cabello y barbería","img":"7898581083153.webp"},
-  {"id":784,"brand":"SALON LINE","code":"7897042017881","name":"SET CAPILAR DIVINA COR 2 PZA","categoria":"Cabello y barbería","img":"7897042017881.webp"},
+  {"id":784,"brand":"SKALA","code":"7897042017881","name":"SET CAPILAR DIVINA COR 2 PZA","categoria":"Cabello y barbería","img":"7897042017881.webp"},
   {"id":785,"brand":"SKALA","code":"7897042013746","name":"SET CAPILAR SKALA 325ML AGUACATE 2PZA","categoria":"Cabello y barbería","img":"7897042013746.webp"},
   {"id":786,"brand":"SKALA","code":"7897042018451","name":"SET CAPILAR SKALA 325ML DIVINO POTAO CRE","categoria":"Cabello y barbería","img":"7897042018451.webp"},
   {"id":787,"brand":"SKALA","code":"7897042013296","name":"SET CAPILAR SKALA 325ML MARACUYA Y OLEO","categoria":"Cabello y barbería","img":"7897042013296.webp"},
