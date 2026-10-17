@@ -154,12 +154,24 @@ El catálogo está organizado alrededor de tres cosas: **ENCONTRAR** (buscador,
 catálogo, departamentos, marcas), **DESCUBRIR** (nuevos ingresos y
 oportunidades) y **COMPRAR** (Mi pedido, siempre a un toque).
 
-**Navegación principal:** Inicio · Catálogo · Marcas · Nuevos ingresos ·
-Oportunidades, más el botón **Mi pedido**. Las herramientas secundarias
-(Calculadora, Historial de pedidos, Descargar imágenes, Ayuda, Contactar
-vendedor y modo claro/oscuro) viven en **Más**. En celular, la barra inferior es
-Inicio · Catálogo · Marcas · Mi pedido · Más (Más abre un panel con Nuevos
-ingresos, Oportunidades, departamentos y herramientas).
+**Navegación principal:** Departamentos (menú grande) · Inicio · Catálogo ·
+Marcas · Nuevos ingresos · Oportunidades · Últimas unidades · Compra por volumen
+· **Calculadora** · Más, y el botón **Mi pedido** (muestra productos y
+unidades). En la barra superior quedan siempre a mano Historial de pedidos,
+Calculadora, Ayuda y Contactar vendedor. En celular, la barra inferior es
+Inicio · Catálogo · Marcas · Calculadora · Mi pedido · Más (Más abre un panel
+con Nuevos ingresos, Oportunidades, departamentos y herramientas).
+
+**Centro de compras (inicio):** debajo del buscador hay accesos rápidos con
+conteos reales: Nuevos ingresos, Oportunidades, Últimas unidades, Compra por
+volumen, Marcas, Catálogo completo y Mi pedido (con sus totales).
+
+**Pedido mayorista rápido:** en cada tarjeta se escribe la cantidad y Enter (o
+"Agregar"); vacío agrega 1. Después aparece el contador − / + para ajustar.
+
+**Listados:** ordenar por relevancia, novedades, nombre, **código**, marca o
+disponibilidad. Cada listado recuerda sus filtros y su orden: al ir a una ficha,
+a otra marca o volver atrás, se encuentra tal como se dejó.
 
 Cada sección tiene su dirección (se puede usar el botón "atrás" del navegador y
 compartir el enlace):

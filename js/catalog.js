@@ -208,6 +208,8 @@ function showView(view) {
 }
 
 const scrollMemory = {};
+const LISTING_MEMORY = {};
+function cloneFacets(f) { const o = {}; Object.keys(f || {}).forEach(k => { o[k] = new Set(f[k]); }); return o; }
 function router() {
   window.__appNav = (window.__appNav || 0) + 1;
   const prevHash = currentRoute.hash;
@@ -235,11 +237,15 @@ function router() {
     const same = listingState.key === key;
     lastListingHash = key;
     if (!same) {
+      // Cada listado recuerda sus filtros y su orden: al volver a una
+      // marca, categoria o busqueda se encuentra tal como se dejo.
+      if (listingState.key) LISTING_MEMORY[listingState.key] = { facets: cloneFacets(listingState.facets), sort: listingState.sort, minStock: listingState.minStock };
+      const mem = LISTING_MEMORY[key];
       listingState.key = key;
-      listingState.facets = {};
+      listingState.facets = mem ? cloneFacets(mem.facets) : {};
       listingState.q = r.q || '';
-      listingState.sort = defaultSort(r);
-      listingState.minStock = (r.kind === 'col' && r.col === 'volumen') ? (r.min || VOL_LEVEL_START) : 0;
+      listingState.sort = mem ? mem.sort : defaultSort(r);
+      listingState.minStock = mem ? mem.minStock : (r.kind === 'col' && r.col === 'volumen') ? (r.min || VOL_LEVEL_START) : 0;
       renderListing(true);
     }
     showView('listing');
@@ -278,6 +284,8 @@ function renderNav() {
       <a class="dn-link" href="#/marcas" data-route="brands">Marcas</a>
       <a class="dn-link dn-nuevos" href="#/col/nuevos" data-route="col-nuevos">${ICONS.spark}Nuevos ingresos</a>
       <a class="dn-link dn-opp" href="#/col/oportunidades" data-route="opp">${ICONS.flame}Oportunidades</a>
+      <a class="dn-link dn-low" href="#/col/ultimas" data-route="col-ultimas">${ICONS.bolt}<span class="dn-long">Últimas unidades</span><span class="dn-short">Últimas</span></a>
+      <a class="dn-link dn-vol" href="#/col/volumen" data-route="col-volumen">${ICONS.box}<span class="dn-long">Compra por volumen</span><span class="dn-short">Volumen</span></a>
       ${nino}
       <span class="dn-spacer"></span>
       <button type="button" class="dn-tool dn-calc" onclick="openCalculator()">${ICONS.calc}<span>Calculadora</span></button>
@@ -417,7 +425,7 @@ function routeKey(r) {
   if (r.view === 'home') return 'home';
   if (r.view === 'brands' || r.kind === 'brand') return 'brands';
   if (r.kind === 'all') return 'all';
-  if (r.kind === 'col') return OPP_COLS.includes(r.col) ? 'opp' : 'col-' + r.col;
+  if (r.kind === 'col') return r.col === 'oportunidades' ? 'opp' : 'col-' + r.col;
   return '';
 }
 function updateNavActive() {
@@ -491,12 +499,21 @@ function availHTML(p, cls) {
   return `<span class="${cls || 'pc-stock'} is-${lvl.key}"><i></i><b>${lvl.label}</b>${lvl.qty ? `<span>${escapeHtml(lvl.qty)}</span>` : ''}</span>`;
 }
 
+// Pedido mayorista: se escribe la cantidad y Enter (o Agregar). Vacio = 1.
+function quickAdd(id, input) {
+  const n = Math.max(1, parseInt(input && input.value) || 1);
+  if (input) input.value = '';
+  setQty(id, (qtyMap[id] || 0) + n);
+}
 function qtyControlHTML(p, compact) {
   const name = escapeHtml(prettyName(p));
   const qty = qtyMap[p.id] || 0;
   if (stockLevel(p).key === 'out') return `<div class="pc-soldout">Sin stock por ahora</div>`;
   return `
-    <button type="button" class="pc-add" onclick="changeQty(${p.id},1)" aria-label="Agregar ${name} al pedido">${ICONS.plus}<span>${compact ? 'Agregar' : 'Agregar al pedido'}</span></button>
+    <div class="pc-quick">
+      <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" class="pc-qin" placeholder="1" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAdd(${p.id},this)}" aria-label="Cantidad para agregar de ${name}">
+      <button type="button" class="pc-add" onclick="quickAdd(${p.id},this.previousElementSibling)" aria-label="Agregar ${name} al pedido">${ICONS.plus}<span>${compact ? 'Agregar' : 'Agregar al pedido'}</span></button>
+    </div>
     <div class="pc-stepper" role="group" aria-label="Cantidad de ${name}">
       <button type="button" onclick="changeQty(${p.id},-1)" aria-label="Quitar una unidad">−</button>
       <input type="number" min="0" inputmode="numeric" pattern="[0-9]*" value="${qty}" data-qty-for="${p.id}" onchange="setQty(${p.id}, this.value)" onfocus="this.select()" aria-label="Cantidad a pedir de ${name}">
@@ -645,8 +662,25 @@ function renderHero() {
       <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué estás buscando?')}</h1>
       ${text ? `<p class="wh-text">${escapeHtml(text)}</p>` : ''}
       ${bigSearchHTML('homeSearch', 'Busca por producto, marca o código de barras')}
-      ${popular.length ? `<div class="wh-pop"><span>Más buscado:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
-    </div>`;
+      ${popular.length ? `<div class="wh-pop"><span>Sugerencias:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>
+    <nav class="wh-quick" id="homeQuick" aria-label="Accesos rápidos">${quickAccessHTML()}</nav>`;
+}
+
+// Centro de compras: accesos directos con conteos reales y el pedido actual.
+function quickAccessHTML() {
+  const vol = VISIBLE_PRODUCTS.filter(p => stockNum(p) >= VOL_LEVEL_START).length;   // lo mismo que abre #/col/volumen
+  const t = typeof cartTotals === 'function' ? cartTotals() : { products: 0, units: 0 };
+  const items = [
+    ['#/col/nuevos', 'spark', 'Nuevos ingresos', collectionCount('nuevos'), 'qa-new'],
+    ['#/col/oportunidades', 'flame', 'Oportunidades', collectionCount('oportunidades'), 'qa-opp'],
+    ['#/col/ultimas', 'bolt', 'Últimas unidades', collectionCount('ultimas'), 'qa-low'],
+    ['#/col/volumen', 'box', 'Compra por volumen', vol, 'qa-vol'],
+    ['#/marcas', 'tag', 'Marcas', BRANDS.length, ''],
+    ['#/todo', 'grid', 'Catálogo completo', VISIBLE_PRODUCTS.length, '']
+  ].filter(x => x[3] > 0);
+  return items.map(([h, i, l, n, c]) => `<a class="qa ${c}" href="${h}">${iconSVG(i)}<span>${escapeHtml(l)}</span><small>${fmt(n)}</small></a>`).join('') +
+    `<button type="button" class="qa qa-order${t.products ? ' has-items' : ''}" onclick="openOrderReview()">${ICONS.bag}<span>Mi pedido</span><small data-quick-order>${t.products ? `${fmt(t.products)} prod. · ${fmt(t.units)} uds.` : 'Vacío'}</small></button>`;
 }
 
 // "Compra por departamento": los cinco grandes accesos.
@@ -1082,6 +1116,7 @@ function sortList(list, sort) {
     opp: (a, b) => (OPORT_RANK[a.id] || 1e9) - (OPORT_RANK[b.id] || 1e9),
     bestseller: (a, b) => (MAS_VENDIDOS_RANK[a.code] || 1e9) - (MAS_VENDIDOS_RANK[b.code] || 1e9),
     stock: (a, b) => stockNum(b) - stockNum(a),
+    code: (a, b) => TEXT_ORDER.compare(String(a.code), String(b.code)),
     'stock-asc': (a, b) => (stockNum(a) <= 0) - (stockNum(b) <= 0) || stockNum(a) - stockNum(b),
     az: (a, b) => TEXT_ORDER.compare(sortKeys(a).name, sortKeys(b).name),
     brand: (a, b) => {
@@ -1106,6 +1141,7 @@ const SORT_OPTIONS = [
   ['bestseller', 'Más vendidos', r => r.kind === 'col' && r.col === 'mas-vendidos'],
   ['recent', 'Novedades', () => true],
   ['az', 'Nombre (A–Z)', () => true],
+  ['code', 'Código', () => true],
   ['brand', 'Marca', () => true],
   ['stock', 'Mayor disponibilidad', () => true],
   ['stock-asc', 'Menor disponibilidad', () => true]
