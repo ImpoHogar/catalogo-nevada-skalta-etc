@@ -36,6 +36,7 @@ https://impohogar.github.io/catalogo-nevada-skalta-etc/
 | `INSTALAR.bat` / `instalar_todo.ps1` | Instalación de un solo paso (configura, prueba, sincroniza y programa). |
 | `instalar_tarea.ps1` | Programa la sincronización cada 15 minutos. |
 | `desinstalar_tarea.ps1` | Quita la tarea programada. |
+| `exportar_no_catalogo.bat` | Genera `articulos_no_catalogo.xlsx`: artículos con existencia en el sistema que no están en el catálogo (código, descripción, marca, cantidad; sin costos ni precios). |
 | `sincronizar_inventario.log` | Registro de cada ejecución (se crea solo). |
 
 ## Instalación rápida (un solo paso)
