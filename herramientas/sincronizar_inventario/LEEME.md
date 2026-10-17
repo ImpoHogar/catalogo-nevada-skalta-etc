@@ -81,7 +81,13 @@ sincronización y deja programada la tarea cada 15 minutos.
 - **`No se encuentra la tabla`**: la PC no ve el servidor. Abre
   `\\Servidor\interakzion` en el Explorador e inicia sesión si lo pide.
 - **`Falta la clave secreta`**: falta pegar la clave en `config.json`.
-- **`HTTP 401/403`**: la clave secreta no es correcta o la tabla no se creó
-  (paso 1).
+- **`HTTP 401/403`**: la clave secreta no es correcta (cópiala con el botón
+  de copiar del panel; debe empezar con `sb_secret_`) o la tabla no se creó
+  (paso 1). El script ya manda la clave solo en `apikey` y con un
+  User-Agent propio: Supabase rechaza las claves secretas cuando la petición
+  parece venir de un navegador.
+- **`Leidos ... codigos` pero las muestras dicen `(no esta)`**: versión vieja
+  del script (no leía bien los campos de texto variable de FoxPro).
+  Reemplaza `sincronizar_inventario.ps1` por la versión nueva.
 - **El catálogo no muestra "Inventario actualizado"**: revisa
   `sincronizar_inventario.log`; mientras tanto, el catálogo usa `stock.js`.
