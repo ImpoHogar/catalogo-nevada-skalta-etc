@@ -65,7 +65,11 @@ function isBestSeller(p) { return !!MAS_VENDIDOS_RANK[p.code]; }
 const OPORT_RANK = {};
 const OPORT_NOTE = {};
 let OPORT_IS_AUTO = false;
-(function buildOpportunities() {
+// Se puede volver a llamar si cambia el stock (inventario en vivo).
+function buildOpportunities() {
+  Object.keys(OPORT_RANK).forEach(k => delete OPORT_RANK[k]);
+  Object.keys(OPORT_NOTE).forEach(k => delete OPORT_NOTE[k]);
+  OPORT_IS_AUTO = false;
   const entries = typeof OPORTUNIDADES !== 'undefined' ? OPORTUNIDADES : [];
   let list = [];
   entries.forEach(e => {
@@ -85,7 +89,8 @@ let OPORT_IS_AUTO = false;
     while (list.length < n && byCat.some(g => g.length)) byCat.forEach(g => { if (g.length && list.length < n) list.push(g.shift()); });
   }
   list.forEach((p, i) => { OPORT_RANK[p.id] = i + 1; });
-})();
+}
+buildOpportunities();
 function isOpportunity(p) { return !!OPORT_RANK[p.id]; }
 function isVolume(p) { return stockNum(p) >= VOLUMEN_MIN; }
 function isLowStock(p) { const s = stockNum(p); return s > 0 && s <= LOW_STOCK; }
@@ -660,7 +665,7 @@ function renderHero() {
     <div class="wh-head">
       <span class="wh-eyebrow">${escapeHtml(cfg.etiqueta || 'Catálogo mayorista')}</span>
       <h1 class="wh-title">${escapeHtml(cfg.titulo || '¿Qué estás buscando?')}</h1>
-      ${text ? `<p class="wh-text">${escapeHtml(text)}</p>` : ''}
+      ${text ? `<p class="wh-text">${escapeHtml(text)}${typeof stockActualizadoTexto === 'function' && stockActualizadoTexto() ? ` <span class="wh-live"><i></i>${escapeHtml(stockActualizadoTexto())}</span>` : ''}</p>` : ''}
       ${bigSearchHTML('homeSearch', 'Busca por producto, marca o código de barras')}
       ${popular.length ? `<div class="wh-pop"><span>Sugerencias:</span>${popular.map(t => `<button type="button" data-q="${escapeHtml(t)}" onclick="runSearch(this.dataset.q)">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
     </div>

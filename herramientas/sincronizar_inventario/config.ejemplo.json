@@ -1,0 +1,7 @@
+{
+  "supabase_url": "https://wzntsmbnsiafebfojaww.supabase.co",
+  "clave_secreta": "PEGA_AQUI_LA_CLAVE_SECRETA_sb_secret_...",
+  "tabla_dbf": "\\\\Servidor\\interakzion\\SISTEMA\\tablas\\tabla01.dbf",
+  "tabla_supabase": "nevada_inventario",
+  "minimo_codigos": 1000
+}

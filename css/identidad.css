@@ -310,3 +310,7 @@ body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
   .dept-nav .dn-link svg { display: none; }
   .dept-nav .dn-link { padding: 0 9px; font-size: 14px; }
 }
+
+/* Inventario en vivo: hora de la ultima sincronizacion */
+.wh-live { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 12.5px; font-weight: 600; color: #fff; white-space: nowrap; }
+.wh-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--c-emerald); box-shadow: 0 0 0 3px rgba(8,184,138,.25); }

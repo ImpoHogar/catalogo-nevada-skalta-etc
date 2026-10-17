@@ -172,6 +172,24 @@ const STOCK_MODO = 'aproximado';
 const STOCK_TOPE_VISIBLE = 100;
 
 // ------------------------------------------------------------
+//  INVENTARIO EN VIVO (Supabase)
+// ------------------------------------------------------------
+//  Las existencias se leen de Supabase, tabla "nevada_inventario"
+//  (propia de este catalogo; no usa la tabla "productos" de
+//  perfumeria). La llena el sincronizador de
+//  herramientas/sincronizar_inventario cada 15 minutos desde el
+//  sistema Interakzion (SISTEMA IMPOHOGAR, tabla01.dbf).
+//  Si Supabase no responde a tiempo, el catalogo usa js/stock.js.
+//  La clave es la PUBLICA (solo lectura); la secreta nunca va aqui.
+const INVENTARIO_EN_VIVO = {
+  activo: true,
+  url: 'https://wzntsmbnsiafebfojaww.supabase.co',
+  clavePublica: 'sb_publishable_5eCDbAxlk-Q6nreXo0dhgQ_Gjq7pY0s',
+  tabla: 'nevada_inventario',
+  esperaMs: 3500
+};
+
+// ------------------------------------------------------------
 //  "¿QUE ESTAS BUSCANDO?" (comprar por necesidad)
 // ------------------------------------------------------------
 //  Accesos pensados para el cliente que no conoce las marcas.
