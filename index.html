@@ -33,8 +33,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20261020a">
-<link rel="stylesheet" href="css/identidad.css?v=20261020a">
+<link rel="stylesheet" href="css/styles.css?v=20261021a">
+<link rel="stylesheet" href="css/identidad.css?v=20261021a">
 </head>
 <body>
 <noscript>
@@ -124,7 +124,10 @@
       <span class="hu-claim"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5 12v8h14v-8M10 20v-5h4v5"/></svg>Distribuidor mayorista · Costa Rica</span>
       <span class="hu-claim hu-hide-sm">Pedido en Excel + fotos · atención directa con tu vendedor por WhatsApp</span>
       <nav class="hu-links" aria-label="Herramientas">
-        <button type="button" class="hu-link" onclick="openSellerModal('contacto')">Contactar vendedor por WhatsApp</button>
+        <button type="button" class="hu-link" onclick="openOrderHistory()">Historial de pedidos</button>
+        <button type="button" class="hu-link" onclick="openCalculator()">Calculadora</button>
+        <button type="button" class="hu-link" onclick="openHelp()">Ayuda</button>
+        <button type="button" class="hu-link hu-wa" onclick="openSellerModal('contacto')">Contactar vendedor</button>
       </nav>
     </div>
   </div>
@@ -148,7 +151,7 @@
     <nav class="header-actions" aria-label="Pedido">
       <button id="reviewOrderBtn" type="button" class="cart-btn" onclick="openOrderReview()" aria-label="Ver mi pedido">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
-        <span class="cart-btn-label">Mi pedido</span>
+        <span class="cart-btn-label">Mi pedido<small id="cartBtnSub" hidden></small></span>
         <span id="reviewBadge" class="cart-badge" style="display:none;">0</span>
       </button>
     </nav>
@@ -462,24 +465,24 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
-<script defer src="js/config.js?v=20261020a"></script>
-<script defer src="js/products.js?v=20261020a"></script>
-<script defer src="js/stock.js?v=20261020a"></script>
-<script defer src="js/data.js?v=20261020a"></script>
-<script defer src="js/utils.js?v=20261020a"></script>
-<script defer src="js/ui.js?v=20261020a"></script>
-<script defer src="js/taxonomy.js?v=20261020a"></script>
-<script defer src="js/relacionados.js?v=20261020a"></script>
-<script defer src="js/catalog.js?v=20261020a"></script>
-<script defer src="js/cart.js?v=20261020a"></script>
-<script defer src="js/theme.js?v=20261020a"></script>
-<script defer src="js/order.js?v=20261020a"></script>
-<script defer src="js/history.js?v=20261020a"></script>
-<script defer src="js/calculator.js?v=20261020a"></script>
-<script defer src="js/lightbox.js?v=20261020a"></script>
-<script defer src="js/showcase.js?v=20261020a"></script>
-<script defer src="js/gate.js?v=20261020a"></script>
-<script defer src="js/feedback.js?v=20261020a"></script>
-<script defer src="js/main.js?v=20261020a"></script>
+<script defer src="js/config.js?v=20261021a"></script>
+<script defer src="js/products.js?v=20261021a"></script>
+<script defer src="js/stock.js?v=20261021a"></script>
+<script defer src="js/data.js?v=20261021a"></script>
+<script defer src="js/utils.js?v=20261021a"></script>
+<script defer src="js/ui.js?v=20261021a"></script>
+<script defer src="js/taxonomy.js?v=20261021a"></script>
+<script defer src="js/relacionados.js?v=20261021a"></script>
+<script defer src="js/catalog.js?v=20261021a"></script>
+<script defer src="js/cart.js?v=20261021a"></script>
+<script defer src="js/theme.js?v=20261021a"></script>
+<script defer src="js/order.js?v=20261021a"></script>
+<script defer src="js/history.js?v=20261021a"></script>
+<script defer src="js/calculator.js?v=20261021a"></script>
+<script defer src="js/lightbox.js?v=20261021a"></script>
+<script defer src="js/showcase.js?v=20261021a"></script>
+<script defer src="js/gate.js?v=20261021a"></script>
+<script defer src="js/feedback.js?v=20261021a"></script>
+<script defer src="js/main.js?v=20261021a"></script>
 </body>
 </html>

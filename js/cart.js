@@ -79,6 +79,9 @@ function updateOrderBar() {
   if (bar) bar.classList.toggle('has-items', products > 0);
   document.body.classList.toggle('has-order', products > 0);
   document.querySelectorAll('[data-cart-units]').forEach(b => { b.textContent = units > 99 ? '99+' : units; b.hidden = !units; });
+  document.querySelectorAll('[data-quick-order]').forEach(el => { el.textContent = products ? `${products.toLocaleString('es-CR')} prod. · ${units.toLocaleString('es-CR')} uds.` : 'Vacío'; el.closest('.qa') && el.closest('.qa').classList.toggle('has-items', products > 0); });
+  const sub = document.getElementById('cartBtnSub');
+  if (sub) { sub.textContent = products ? `${products.toLocaleString('es-CR')} prod. · ${units.toLocaleString('es-CR')} uds.` : ''; sub.hidden = !products; }
   const badge = document.getElementById('reviewBadge');
   if (units > 0) {
     badge.textContent = units;
