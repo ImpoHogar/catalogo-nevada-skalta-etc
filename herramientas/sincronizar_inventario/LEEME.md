@@ -33,11 +33,19 @@ https://impohogar.github.io/catalogo-nevada-skalta-etc/
 | `sincronizar_inventario.ps1` | Lee el DBF y sube las existencias. |
 | `probar_lectura.bat` | Solo lee y muestra un resumen. **No sube nada.** |
 | `ejecutar_ahora.bat` | Sincroniza en este momento y muestra el resultado. |
+| `INSTALAR.bat` / `instalar_todo.ps1` | Instalación de un solo paso (configura, prueba, sincroniza y programa). |
 | `instalar_tarea.ps1` | Programa la sincronización cada 15 minutos. |
 | `desinstalar_tarea.ps1` | Quita la tarea programada. |
 | `sincronizar_inventario.log` | Registro de cada ejecución (se crea solo). |
 
-## Instalación (una sola vez)
+## Instalación rápida (un solo paso)
+
+Con la tabla ya creada en Supabase (paso 1 de abajo) y la carpeta copiada en la
+PC del inventario: **doble clic en `INSTALAR.bat`**, pega la clave secreta
+cuando la pida y presiona Enter. Configura, prueba la lectura, hace la primera
+sincronización y deja programada la tarea cada 15 minutos.
+
+## Instalación paso a paso (una sola vez)
 
 1. **Crear la tabla en Supabase.** Entra al proyecto (el mismo de
    perfumería) → **SQL Editor** → **New query** → pega todo
@@ -73,7 +81,13 @@ https://impohogar.github.io/catalogo-nevada-skalta-etc/
 - **`No se encuentra la tabla`**: la PC no ve el servidor. Abre
   `\\Servidor\interakzion` en el Explorador e inicia sesión si lo pide.
 - **`Falta la clave secreta`**: falta pegar la clave en `config.json`.
-- **`HTTP 401/403`**: la clave secreta no es correcta o la tabla no se creó
-  (paso 1).
+- **`HTTP 401/403`**: la clave secreta no es correcta (cópiala con el botón
+  de copiar del panel; debe empezar con `sb_secret_`) o la tabla no se creó
+  (paso 1). El script ya manda la clave solo en `apikey` y con un
+  User-Agent propio: Supabase rechaza las claves secretas cuando la petición
+  parece venir de un navegador.
+- **`Leidos ... codigos` pero las muestras dicen `(no esta)`**: versión vieja
+  del script (no leía bien los campos de texto variable de FoxPro).
+  Reemplaza `sincronizar_inventario.ps1` por la versión nueva.
 - **El catálogo no muestra "Inventario actualizado"**: revisa
   `sincronizar_inventario.log`; mientras tanto, el catálogo usa `stock.js`.

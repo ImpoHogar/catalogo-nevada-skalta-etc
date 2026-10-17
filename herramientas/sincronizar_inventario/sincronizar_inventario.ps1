@@ -96,7 +96,12 @@ try {
   for ($r = 0; $r -lt $maxReg; $r++) {
     $base = $hl + $r * $rl
     if ($b[$base] -eq 42) { continue }                      # registro borrado (*)
-    $code = $enc.GetString($b, $base + $fc.o, $fc.l).Trim([char]0, ' ')
+    # Campo 'V' (varchar de Visual FoxPro): si el valor es mas corto que el
+    # campo, su largo real va en el ultimo byte. Se respeta ese largo y se
+    # quitan espacios y caracteres de control sobrantes.
+    $largo = $fc.l
+    if ($fc.t -eq 'V') { $ult = $b[$base + $fc.o + $fc.l - 1]; if ($ult -lt $fc.l) { $largo = $ult } }
+    $code = $enc.GetString($b, $base + $fc.o, $largo) -replace '^[\x00-\x20]+|[\x00-\x20]+$', ''
     if (-not $code) { $sinCodigo++; continue }
     $q = [Math]::Round([double](Num ($base + $fq.o) $fq))
     if ($q -lt 0) { $negativos++; $q = 0 }                  # negativo = agotado
@@ -135,12 +140,14 @@ try {
   [void]$sb.Append('}}]')
   $body = [Text.Encoding]::UTF8.GetBytes($sb.ToString())
 
+  # Las claves sb_secret_ van SOLO en el encabezado apikey (no son JWT) y
+  # Supabase las rechaza (401) si el User-Agent parece de navegador
+  # ("Mozilla/..."), que es el que manda PowerShell por defecto.
   $headers = @{
-    apikey          = $key
-    Authorization   = "Bearer $key"
-    Prefer          = 'resolution=merge-duplicates,return=minimal'
+    apikey = $key
+    Prefer = 'resolution=merge-duplicates,return=minimal'
   }
-  Invoke-RestMethod -Method Post -Uri $url -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body | Out-Null
+  Invoke-RestMethod -Method Post -Uri $url -Headers $headers -UserAgent 'ImpoHogar-Nevada-Sincronizador/1.0' -ContentType 'application/json; charset=utf-8' -Body $body | Out-Null
   Log ("OK: {0} codigos subidos a Supabase ({1})." -f $total, $tabla)
   exit 0
 }
