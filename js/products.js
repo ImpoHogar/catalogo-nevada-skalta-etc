@@ -1526,5 +1526,8 @@ const PRODUCTS = [
   {"id":1518,"brand":"TIRTIR","code":"8809679692514","name":"TIRTIR CONTORNO DE OJOS COLAGENO 15ML","categoria":"Cuidado facial","img":"8809679692514.webp","dateAdded":"2026-10-17"},
   {"id":1519,"brand":"KARA BEAUTY","code":"819297026989","name":"HOLY BALM GRAPEFRUIT CLEANSING BALM","categoria":"Cuidado facial","img":"819297026989.webp","dateAdded":"2026-10-17"},
   {"id":1520,"brand":"KARA BEAUTY","code":"819297027689","name":"BROW LIFT - EYEBROW SETTING GLUE (100% V","categoria":"Maquillaje","img":"819297027689.webp","dateAdded":"2026-10-17"},
-  {"id":1521,"brand":"KARA BEAUTY","code":"810112880717","name":"ESSENTIALS - FACIAL  PRIMER","categoria":"Maquillaje","img":"810112880717.webp","dateAdded":"2026-10-17"}
+  {"id":1521,"brand":"KARA BEAUTY","code":"810112880717","name":"ESSENTIALS - FACIAL  PRIMER","categoria":"Maquillaje","img":"810112880717.webp","dateAdded":"2026-10-17"},
+  {"id":1522,"brand":"KARA BEAUTY","code":"810112889970","name":"POLAR POP! - HYDRATING COOLING STICK","categoria":"Cuidado facial","img":"810112889970.webp","dateAdded":"2026-10-17"},
+  {"id":1523,"brand":"TREE HUT","code":"075371015144","name":"TH MTQ CORPORAL CHERRY RAVE 240G","categoria":"Cuidado corporal","img":"075371015144.webp","dateAdded":"2026-10-17"},
+  {"id":1524,"brand":"KARA BEAUTY","code":"810112883169","name":"TRANSLUCENT LIGHT - SOFT FOCUS - LOOSE S","categoria":"Maquillaje","img":"810112883169.webp","dateAdded":"2026-10-17"}
 ];
