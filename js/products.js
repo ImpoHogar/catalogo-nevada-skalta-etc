@@ -1521,5 +1521,10 @@ const PRODUCTS = [
   {"id":1513,"brand":"UNNO TEKNO","code":"728662222638","name":"SP9012RD PARLANTE BRAZZA USB 2.0 - NE.RO","categoria":"Tecnología","img":"728662222638.webp"},
   {"id":1514,"brand":"UNNO TEKNO","code":"728662223840","name":"SP9210RD PARLANTE REEF ROJO","categoria":"Tecnología","img":"728662223840.webp"},
   {"id":1515,"brand":"UNNO TEKNO","code":"850030983800","name":"SP9215BL PARLANTE SPIN AZUL 20W","categoria":"Tecnología","img":"850030983800.webp"},
-  {"id":1516,"brand":"XTRACARE","code":"6928001836173","name":"EXFOLIANTE CORPORAL WOKALI CARBON","categoria":"Cuidado corporal","img":"6928001836173.webp"}
+  {"id":1516,"brand":"XTRACARE","code":"6928001836173","name":"EXFOLIANTE CORPORAL WOKALI CARBON","categoria":"Cuidado corporal","img":"6928001836173.webp"},
+  {"id":1517,"brand":"ARGOM","code":"886540000409","name":"AC-1222 360 GEL MOUSE PAD AC22","categoria":"Tecnología","img":"886540000409.webp","dateAdded":"2026-10-17"},
+  {"id":1518,"brand":"TIRTIR","code":"8809679692514","name":"TIRTIR CONTORNO DE OJOS COLAGENO 15ML","categoria":"Cuidado facial","img":"8809679692514.webp","dateAdded":"2026-10-17"},
+  {"id":1519,"brand":"KARA BEAUTY","code":"819297026989","name":"HOLY BALM GRAPEFRUIT CLEANSING BALM","categoria":"Cuidado facial","img":"819297026989.webp","dateAdded":"2026-10-17"},
+  {"id":1520,"brand":"KARA BEAUTY","code":"819297027689","name":"BROW LIFT - EYEBROW SETTING GLUE (100% V","categoria":"Maquillaje","img":"819297027689.webp","dateAdded":"2026-10-17"},
+  {"id":1521,"brand":"KARA BEAUTY","code":"810112880717","name":"ESSENTIALS - FACIAL  PRIMER","categoria":"Maquillaje","img":"810112880717.webp","dateAdded":"2026-10-17"}
 ];
