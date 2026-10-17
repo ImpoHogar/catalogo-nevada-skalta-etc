@@ -1,1 +1,3 @@
 __pycache__/
+herramientas/sincronizar_inventario/config.json
+herramientas/sincronizar_inventario/*.log

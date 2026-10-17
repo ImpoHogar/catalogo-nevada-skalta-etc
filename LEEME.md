@@ -34,6 +34,7 @@ js/stock.js             🔢 LAS CANTIDADES (generado desde el inventario)
 js/relacionados.js      Productos relacionados (complemento / alternativa)
 js/data.js              Pega las cantidades a los productos
 js/taxonomy.js          Departamentos, categorías, tipos, filtros y buscador
+js/stock-en-vivo.js     Existencias en vivo desde Supabase (respaldo: js/stock.js)
 js/catalog.js           Navegación, inicio, listados, tarjetas y buscador
 js/lightbox.js          Ficha del producto (galería, datos, relacionados)
 js/showcase.js          Vitrina de entrada
@@ -77,7 +78,15 @@ El script:
 - Si una marca nueva no tiene categoría asignada, la manda a "Otros" y lo
   avisa: se agrega en `POR_MARCA` dentro del script.
 
-## Para actualizar solo cantidades
+## Cantidades automáticas (inventario en vivo)
+
+Las existencias se sincronizan solas cada 15 minutos desde Interakzion
+(SISTEMA IMPOHOGAR, `tabla01.dbf`) a Supabase (tabla `nevada_inventario`), y el
+catálogo las lee al abrir. Instalación y detalles en
+`herramientas/sincronizar_inventario/LEEME.md`. Si Supabase no responde, el
+catálogo usa `js/stock.js` (que se puede seguir actualizando como abajo).
+
+## Para actualizar solo cantidades (manual / respaldo)
 
 Con el Excel de inventario de siempre (Código / Nombre / Bod Principal):
 

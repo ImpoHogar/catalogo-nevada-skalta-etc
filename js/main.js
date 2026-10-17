@@ -54,7 +54,10 @@ document.addEventListener('keydown', e => {
   if (fb && fb.classList.contains('open') && typeof closeFeedback === 'function') closeFeedback();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Existencias en vivo (Supabase) antes de pintar; si no llegan a
+  // tiempo se sigue con js/stock.js.
+  if (typeof cargarStockEnVivo === 'function') await cargarStockEnVivo();
   try {
     initTheme();
     restoreCartFromStorage();
