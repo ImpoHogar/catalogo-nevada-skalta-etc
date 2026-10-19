@@ -314,3 +314,47 @@ body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
 /* Inventario en vivo: hora de la ultima sincronizacion */
 .wh-live { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 12.5px; font-weight: 600; color: #fff; white-space: nowrap; }
 .wh-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--c-emerald); box-shadow: 0 0 0 3px rgba(8,184,138,.25); }
+
+/* ---------- Ingreso con codigo de cliente + contrasena ---------- */
+.gate-step { display: flex; flex-direction: column; }
+.gate-step[hidden] { display: none; }
+.gate-step .gate-label { margin-top: 14px; }
+.gate-step .gate-title + .gate-label { margin-top: 0; }
+.gate-input {
+  width: 100%; height: 54px; padding: 0 18px; border: none; border-radius: 14px;
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  font-size: 16px; color: var(--ink); transition: box-shadow var(--t-fast);
+}
+.gate-input[type="password"] { letter-spacing: .06em; }
+.gate-input::placeholder { letter-spacing: 0; color: var(--faint); }
+.gate-input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--ink); }
+#gateBtn, .gate-submit { margin-top: 18px; }
+.gate-submit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 54px; border: none; border-radius: 14px;
+  background: var(--primary); color: var(--primary-ink); font-size: 15.5px; font-weight: 600;
+}
+.gate-submit svg { width: 18px; height: 18px; }
+.gate-submit:hover { background: var(--primary-hover); }
+#gateBtn:disabled, .gate-submit:disabled { opacity: .7; cursor: progress; }
+.gate-error { min-height: 20px; margin-top: 12px; font-size: 13.5px; font-weight: 500; color: var(--danger); }
+.gate-intro { margin: -14px 0 18px; font-size: 14.5px; line-height: 1.5; color: var(--muted); }
+.gate-link { padding: 0; border: none; background: none; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.hu-cliente {
+  max-width: 260px; height: 26px; padding: 0 10px;
+  border-radius: 6px; background: rgba(255,255,255,.1); color: #fff; font-size: 12.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 26px;
+}
+.hu-cliente[hidden], .hu-salir[hidden] { display: none; }
+@media (max-width: 1380px) { .hu-cliente { max-width: 180px; } }
+/* Celular/tablet angosta: el ingreso ocupa todo el ancho (sin la columna de fotos). */
+@media (max-width: 860px) {
+  .gate-shell { grid-template-columns: minmax(0, 1fr); }
+  .gate-visual { display: none; }
+  .gate-card { padding: 40px 20px; }
+}
+/* Con el cliente en la barra superior: sin cortes de linea y, en laptops,
+   sin la frase del medio para que todo quepa en una sola fila. */
+.hu-links .hu-link, .hu-cliente { white-space: nowrap; flex: none; }
+@media (max-width: 1500px) { .hdr-util .hu-hide-sm { display: none; } }
+@media (max-width: 1300px) { .hu-cliente { max-width: 150px; } }

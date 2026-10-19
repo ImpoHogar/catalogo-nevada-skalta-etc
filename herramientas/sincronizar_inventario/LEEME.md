@@ -14,8 +14,12 @@ Supabase → tabla nevada_inventario  (una fila: {"código": cantidad})
 https://impohogar.github.io/catalogo-nevada-skalta-etc/
 ```
 
-- **Solo se leen `CODIGO` y `CANTIDAD`.** Costos, precios y el resto de
-  columnas de `tabla01.dbf` nunca salen de la red de la empresa.
+- **Solo se leen `CODIGO` y `CANTIDAD`** de `tabla01.dbf`, y de `tabla04.dbf`
+  solo el precio **P4** (con IVA) de cada artículo. Costos, márgenes y las
+  demás listas de precios nunca salen de la red de la empresa.
+- **Los precios P4 no son públicos:** se guardan en un esquema privado de
+  Supabase y solo los recibe un cliente que inició sesión, al generar el
+  Excel de su pedido.
 - **No toca perfumería.** El sistema de perfumería (`\\SERVIDOR\local`, acceso
   "SISTEMA PERFUMES") y su tabla `productos` en Supabase no se leen ni se
   modifican. El script se niega a correr si la ruta apunta a perfumería.
@@ -36,6 +40,7 @@ https://impohogar.github.io/catalogo-nevada-skalta-etc/
 | `INSTALAR.bat` / `instalar_todo.ps1` | Instalación de un solo paso (configura, prueba, sincroniza y programa). |
 | `instalar_tarea.ps1` | Programa la sincronización cada 15 minutos. |
 | `desinstalar_tarea.ps1` | Quita la tarea programada. |
+| `administrar_clientes.bat` | Contraseñas de los clientes del catálogo: nueva temporal, alta, desactivar o reactivar. Ver `../acceso_clientes/LEEME.md`. |
 | `exportar_no_catalogo.bat` | Genera `articulos_no_catalogo.xlsx`: artículos con existencia en el sistema que no están en el catálogo (código, descripción, marca, cantidad; sin costos ni precios). |
 | `sincronizar_inventario.log` | Registro de cada ejecución (se crea solo). |
 

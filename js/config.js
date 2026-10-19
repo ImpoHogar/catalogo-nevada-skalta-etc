@@ -190,6 +190,21 @@ const INVENTARIO_EN_VIVO = {
 };
 
 // ------------------------------------------------------------
+//  ACCESO DE CLIENTES Y PRECIOS P4
+// ------------------------------------------------------------
+//  Cada cliente entra con su codigo del sistema y su contrasena.
+//  Las valida Supabase (funciones public.nevada_*; ver
+//  herramientas/acceso_clientes). Los precios P4 (IVA incluido) NO
+//  estan en este codigo: se piden a Supabase con la sesion del
+//  cliente solo al generar el Excel del pedido, y nunca se muestran
+//  en pantalla.
+const ACCESO_CLIENTES = {
+  url: INVENTARIO_EN_VIVO.url,
+  clavePublica: INVENTARIO_EN_VIVO.clavePublica,
+  esperaMs: 12000
+};
+
+// ------------------------------------------------------------
 //  "¿QUE ESTAS BUSCANDO?" (comprar por necesidad)
 // ------------------------------------------------------------
 //  Accesos pensados para el cliente que no conoce las marcas.

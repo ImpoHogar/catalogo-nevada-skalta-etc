@@ -43,7 +43,7 @@ function openCustomerModal() {
   }
   try {
     const saved = JSON.parse(localStorage.getItem('impohogar_tec_customer') || '{}');
-    document.getElementById('custName').value = saved.name || '';
+    document.getElementById('custName').value = saved.name || (typeof SESION !== 'undefined' && SESION ? SESION.nombre : '');
     document.getElementById('custPhone').value = saved.phone || '';
   } catch (err) {}
   const { products, units } = cartTotals();
@@ -99,38 +99,83 @@ async function generateExcel() {
     const customerName = (currentCustomer.name || '').trim();
     const customerPhone = (currentCustomer.phone || '').trim();
 
+    // Precios P4 (IVA incluido): se piden a Supabase con la sesion del
+    // cliente. Si no llegan, el Excel sale igual, sin precios.
+    const precios = typeof cargarPreciosP4 === 'function' ? await cargarPreciosP4() : null;
+    const cliente = typeof SESION !== 'undefined' && SESION ? SESION : null;
+
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Pedido');
 
     sheet.getColumn(1).width = 20;
     sheet.getColumn(2).width = 50;
-    sheet.getColumn(3).width = 20;
+    sheet.getColumn(3).width = 12;
+    sheet.getColumn(4).width = 22;
+    sheet.getColumn(5).width = 18;
 
-    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad']);
+    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad', 'Precio unitario (IVA incl.)', 'Subtotal (IVA incl.)']);
     headerRow.font = { bold: true };
 
     const historyItems = [];
     const photoItems = [];
+    let total = 0;
+    let sinPrecio = 0;
 
     ids.forEach(id => {
       const p = PRODUCTS_BY_ID[id];
-      historyItems.push({ code: p.code, name: p.name, brand: p.brand, qty: qtyMap[id] });
-      sheet.addRow([p.code, p.name, qtyMap[id]]);
+      const qty = qtyMap[id];
+      historyItems.push({ code: p.code, name: p.name, brand: p.brand, qty });
+      const precio = precios && Number(precios.datos[p.code]) > 0 ? Number(precios.datos[p.code]) : null;
+      const row = sheet.addRow([p.code, p.name, qty, precio, null]);
+      if (precio !== null) {
+        const sub = Math.round(precio * qty * 100) / 100;
+        total += sub;
+        row.getCell(5).value = { formula: `C${row.number}*D${row.number}`, result: sub };
+      } else {
+        sinPrecio++;
+      }
+      row.getCell(4).numFmt = '#,##0.00';
+      row.getCell(5).numFmt = '#,##0.00';
       if (p.img) {
         photoItems.push(p);
       }
     });
 
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Hoja "Resumen": cliente, totales y aclaraciones del precio.
+    const res = workbook.addWorksheet('Resumen');
+    res.getColumn(1).width = 30;
+    res.getColumn(2).width = 48;
+    const filasResumen = [
+      ['Cliente', cliente ? `${cliente.codigo} · ${cliente.nombre}` : customerName],
+      ['Nombre en el pedido', customerName],
+      ['Teléfono', customerPhone],
+      ['Fecha', today],
+      ['Productos', historyItems.length],
+      ['Unidades', historyItems.reduce((sum, it) => sum + it.qty, 0)],
+      ['Total con IVA', precios ? Math.round(total * 100) / 100 : 'Sin precios (no se pudieron cargar)'],
+      ['Productos sin precio', precios ? sinPrecio : '-'],
+      ['Nota', 'Precios con IVA incluido, sujetos a confirmación de tu vendedor. Los productos sin precio te los confirma tu vendedor.']
+    ];
+    filasResumen.forEach(f => {
+      const r = res.addRow(f);
+      r.getCell(1).font = { bold: true };
+      r.getCell(2).alignment = { wrapText: true, vertical: 'top' };
+    });
+    if (precios) res.getCell('B7').numFmt = '#,##0.00';
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const today = new Date().toISOString().slice(0, 10);
-    const fileTag = customerName ? `_${sanitizeFilename(customerName)}` : '';
+    const fileTag = (cliente ? `_${cliente.codigo}` : '') + (customerName ? `_${sanitizeFilename(customerName)}` : '');
     lastExcel = { blob, filename: `Pedido${fileTag}_${today}.xlsx` };
     downloadBlob(lastExcel.blob, lastExcel.filename);
 
-    setStatus('✓ Excel descargado.', false);
+    setStatus(precios ? '✓ Excel descargado.' : '✓ Excel descargado (sin precios: no se pudieron cargar).', false);
+    if (!precios && typeof notify === 'function') notify('El Excel salió sin precios: no se pudieron cargar. Revisa tu conexión o vuelve a ingresar.', true);
     saveOrderToHistory(customerName, customerPhone, historyItems);
     lastOrderSummary = {
+      codigo: cliente ? cliente.codigo : '',
       name: customerName,
       phone: customerPhone,
       totalProducts: historyItems.length,
@@ -340,18 +385,25 @@ function closeSellerModal() {
   document.getElementById('sellerModal').classList.remove('open');
 }
 
+// ", soy NOMBRE (cliente 123)" para los mensajes de WhatsApp.
+function quienSoy() {
+  const c = typeof SESION !== 'undefined' && SESION ? SESION : null;
+  return c ? `, soy ${c.nombre} (cliente ${c.codigo})` : '';
+}
+
 function sendToSeller(key) {
   const seller = SELLERS[key];
   if (!seller) return;
   let message;
   if (sellerMode === 'consulta' && sellerProduct) {
     const p = sellerProduct;
-    message = `Buenas, tengo una consulta sobre este producto: ${prettyName(p)} (${p.brand}) · Código ${p.code}.`;
+    message = `Buenas${quienSoy()}, tengo una consulta sobre este producto: ${prettyName(p)} (${p.brand}) · Código ${p.code}.`;
   } else if (sellerMode === 'contacto') {
-    message = 'Buenas, quisiera hacer una consulta sobre el catálogo.';
+    message = `Buenas${quienSoy()}, quisiera hacer una consulta sobre el catálogo.`;
   } else {
     const s = lastOrderSummary;
-    const intro = s.name ? `Buenas, mi nombre es ${s.name}, este es mi pedido` : 'Buenas, este es mi pedido';
+    const quien = s.codigo ? ` (cliente ${s.codigo})` : '';
+    const intro = s.name ? `Buenas, mi nombre es ${s.name}${quien}, este es mi pedido` : `Buenas${quien}, este es mi pedido`;
     const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
     message = intro + detalle;
   }

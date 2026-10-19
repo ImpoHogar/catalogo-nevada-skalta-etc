@@ -312,7 +312,8 @@ function toolsMenuHTML() {
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();downloadCartPhotos()">${ICONS.download}<span>Descargar imágenes<small>Las fotos de los productos de tu pedido</small></span></button>
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openHelp()">${ICONS.help}<span>Ayuda<small>Cómo armar y enviar tu pedido</small></span></button>
     <button type="button" role="menuitem" onclick="closeMoreMenu();closeMobileMenu();openSellerModal('contacto')">${ICONS.chat}<span>Contactar vendedor<small>Escríbenos por WhatsApp</small></span></button>
-    <button type="button" role="menuitem" onclick="toggleTheme()">${typeof THEME_ICON_MOON !== 'undefined' ? THEME_ICON_MOON : ''}<span>Modo claro / oscuro</span></button>`;
+    <button type="button" role="menuitem" onclick="toggleTheme()">${typeof THEME_ICON_MOON !== 'undefined' ? THEME_ICON_MOON : ''}<span>Modo claro / oscuro</span></button>
+    <button type="button" role="menuitem" onclick="salirDelCatalogo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10"/></svg><span>Cerrar sesión<small>${typeof SESION !== 'undefined' && SESION ? escapeHtml('Cliente ' + SESION.codigo + ' · ' + SESION.nombre) : 'Salir de tu cuenta'}</small></span></button>`;
 }
 function toggleMoreMenu(e) {
   if (e) e.stopPropagation();
