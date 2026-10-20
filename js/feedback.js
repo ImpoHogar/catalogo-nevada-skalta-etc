@@ -734,7 +734,7 @@ async function sendFeedback() {
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
+cuandoListo(() => {
 
   try {
 

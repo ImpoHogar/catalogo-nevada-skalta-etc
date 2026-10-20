@@ -423,7 +423,7 @@ function entrarAlCatalogo() {
 //  bienvenida termina. Para saberlo se observa el propio elemento de
 //  bienvenida, sin tocar js/gate.js ni copiar sus tiempos.
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+cuandoListo(() => {
   try {
     renderVitrina();
   } catch (err) {

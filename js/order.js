@@ -83,6 +83,20 @@ function confirmCustomerInfo() {
   generateExcel();
 }
 
+// Guarda el pedido en Supabase para el panel administrativo (Pedidos y
+// Ranking). El cliente queda identificado por su sesion. Nunca frena
+// el pedido: si falla, el Excel ya se descargo igual.
+let ultimoPedidoId = null;
+function registrarPedidoEnPanel(nombre, telefono, items) {
+  ultimoPedidoId = null;
+  if (typeof SESION === 'undefined' || !SESION || typeof accesoRpc !== 'function') return;
+  accesoRpc('nevada_registrar_pedido', {
+    p_token: SESION.token, p_nombre: nombre, p_telefono: telefono,
+    p_items: items.map(it => ({ code: it.code, name: it.name, brand: it.brand, qty: it.qty }))
+  }).then(r => { if (r && r.ok) ultimoPedidoId = r.id; })
+    .catch(err => console.warn('No se pudo registrar el pedido en el panel', err));
+}
+
 async function generateExcel() {
   try {
     if (typeof ExcelJS === 'undefined') {
@@ -140,6 +154,7 @@ async function generateExcel() {
     downloadBlob(lastExcel.blob, lastExcel.filename);
 
     setStatus(precios ? '✓ Excel descargado.' : '✓ Excel descargado (sin precios: no se pudieron cargar).', false);
+    registrarPedidoEnPanel(customerName, customerPhone, historyItems);
     if (!precios && typeof notify === 'function') notify('El Excel salió sin precios: no se pudieron cargar. Revisa tu conexión o vuelve a ingresar.', true);
     saveOrderToHistory(customerName, customerPhone, historyItems);
     lastOrderSummary = {
@@ -301,7 +316,11 @@ function sellerPhoneLabel(phone) {
   return `(506) ${n.slice(0, 4)}-${n.slice(4)}`;
 }
 function sellerCardInner(s) {
-  return `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role)}" loading="lazy" width="480" height="480">
+  // Vendedor agregado desde el panel sin foto todavia: tarjeta de texto.
+  const foto = s.img
+    ? `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role || '')}" loading="lazy" width="480" height="480">`
+    : `<span class="seller-sinfoto"><b>${escapeHtml(s.name)}</b>${s.role ? `<small>${escapeHtml(s.role)}</small>` : ''}</span>`;
+  return `${foto}
     <span class="seller-phone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>${sellerPhoneLabel(s.phone)}</span>`;
 }
 // El ultimo vendedor que eligio el cliente sale primero y marcado
@@ -328,7 +347,7 @@ function renderSellers() {
   if (foot) foot.innerHTML = Object.values(SELLERS).map(s =>
     `<a class="seller-option" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</a>`).join('');
 }
-document.addEventListener('DOMContentLoaded', renderSellers);
+cuandoListo(renderSellers);
 
 function openSellerModal(mode, pid) {
   sellerMode = mode || 'pedido';
@@ -374,6 +393,9 @@ function sendToSeller(key) {
     const intro = s.name ? `Buenas, mi nombre es ${s.name}${quien}, este es mi pedido` : `Buenas${quien}, este es mi pedido`;
     const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
     message = intro + detalle;
+  }
+  if (sellerMode === 'pedido' && ultimoPedidoId && typeof SESION !== 'undefined' && SESION) {
+    accesoRpc('nevada_pedido_vendedor', { p_token: SESION.token, p_id: ultimoPedidoId, p_vendedor: seller.name }).catch(() => {});
   }
   const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
   try { localStorage.setItem(SELLER_KEY, key); } catch (e) {}

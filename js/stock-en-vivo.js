@@ -19,6 +19,12 @@ let STOCK_FUENTE = { origen: 'stock.js', actualizado: null };
 async function cargarStockEnVivo() {
   const cfg = typeof INVENTARIO_EN_VIVO !== 'undefined' ? INVENTARIO_EN_VIVO : null;
   if (!cfg || !cfg.activo || !cfg.url || !cfg.clavePublica) return false;
+  // Si Supabase ya no respondio al cargar los productos, no se vuelve
+  // a esperar: se sigue de una vez con stock.js.
+  if (typeof PRODUCTOS_FUENTE !== 'undefined' && PRODUCTOS_FUENTE.sinRespuesta) {
+    console.warn('Inventario en vivo no disponible, se usa stock.js: Supabase no respondió');
+    return false;
+  }
   const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = setTimeout(() => ctl && ctl.abort(), cfg.esperaMs || 3500);
   try {
