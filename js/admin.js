@@ -1,32 +1,33 @@
 // ============================================================
 //  PANEL ADMINISTRATIVO (oculto)
 // ============================================================
-//  Mismo panel del catalogo de perfumeria, adaptado a Nevada. Se
-//  activa haciendo 5 clics seguidos sobre el logo (del encabezado,
-//  de la pantalla de ingreso o de la vitrina) en menos de 3 segundos.
-//  Pide iniciar sesion con la cuenta de administrador (Supabase Auth,
-//  las mismas cuentas de perfumeria). Solo entran las cuentas que
-//  esten en la lista de administradores de Nevada (nevada.admins).
+//  Mismo panel del catalogo de perfumeria, adaptado a Nevada. Gerencia
+//  y el personal tambien son clientes: quien inicia sesion en el
+//  catalogo con su codigo de cliente y su contraseña, y esta marcado
+//  como administrador en Supabase (nevada.admins_clientes), abre el
+//  panel haciendo 5 clics seguidos sobre el logo del encabezado en
+//  menos de 3 segundos. No se pide otro usuario ni otra contraseña.
+//  Para cualquier otro cliente el logo funciona como siempre.
 //
-//  Todo lo que se lee y se guarda aqui vive en las tablas de Nevada
-//  (nevada_productos, nevada_ajustes, nevada_pedidos,
-//  nevada_auditoria y el esquema privado nevada). Nunca toca las
-//  tablas de perfumeria.
+//  Niveles (los da la base, nevada.admins_clientes):
+//    admin   = todo.
+//    editor  = ve todo; edita la ficha de los productos y corrige el
+//              stock a mano (hasta la siguiente sincronizacion).
+//    lectura = ve todo, no cambia nada.
+//  Los botones y campos que una persona no puede usar se marcan con
+//  data-req="admin" o data-req="editor" y se quitan o bloquean solos.
+//  La base revisa lo mismo: esconder un boton no es la proteccion.
+//
+//  Todo pasa por funciones public.nevada_panel_* que reciben el token
+//  de la sesion del cliente y revisan en la base que sea administrador
+//  (ver herramientas/panel_admin/panel_por_cliente.sql). Los cambios
+//  quedan en el historial desde la propia base.
 //
 //  Los precios nunca se muestran aqui: solo van en el Excel del
 //  pedido del cliente.
 // ============================================================
 
-const ADMIN_SESSION_KEY = 'impohogar_nevada_admin_session';
-
-// Dominio "falso" para poder iniciar sesion con un usuario corto (ej.
-// "roy") en vez de escribir un correo. Supabase Auth siempre exige un
-// correo, asi que si lo que se escribe no trae "@" se le agrega este
-// dominio por detras. Es el mismo que usa el panel de perfumeria, para
-// que las mismas cuentas sirvan en los dos.
-const ADMIN_USERNAME_DOMAIN = 'impohogar-admin.local';
-
-let adminSession = null; // { access_token, expires_at, email, rol }
+let adminSession = null; // { codigo, nombre, rol: 'admin' | 'editor' | 'lectura' }
 let adminTab = 'productos';
 let adminEditingId = null; // id de producto, codigo de cliente o id de pedido en edicion
 // Si se cambio algo que el catalogo ya armo al cargar (productos,
@@ -41,214 +42,102 @@ function adminCfg() {
 (function setupAdminTrigger() {
   let clicks = 0;
   let timer = null;
-  function onLogoClick(e) {
-    clicks++;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => { clicks = 0; }, 3000);
-    if (clicks >= 5) {
-      clicks = 0;
-      clearTimeout(timer);
-      e.preventDefault();
-      openAdminEntry();
-    }
-  }
   cuandoListo(() => {
-    ['headerLogo', 'gateLogo', 'vitrinaLogo'].forEach(id => {
-      const logo = document.getElementById(id);
-      if (logo) logo.addEventListener('click', onLogoClick);
+    const logo = document.getElementById('headerLogo');
+    if (!logo) return;
+    logo.addEventListener('click', (e) => {
+      clicks++;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { clicks = 0; }, 3000);
+      if (clicks >= 5) {
+        clicks = 0;
+        clearTimeout(timer);
+        e.preventDefault();
+        openAdminEntry();
+      }
     });
   });
 })();
 
-function openAdminEntry() {
-  restoreAdminSession();
-  if (adminSession) {
-    openAdminPanel();
-  } else {
-    openAdminLogin();
-  }
-}
-
-// ---------- Sesion (sessionStorage: se pierde al cerrar la pestaña) ----------
-function restoreAdminSession() {
+let adminEntrando = false;
+async function openAdminEntry() {
+  if (adminEntrando) return;
+  if (typeof SESION === 'undefined' || !SESION || !SESION.token) return;
+  adminEntrando = true;
   try {
-    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.access_token && parsed.rol && parsed.expires_at > Date.now()) {
-      adminSession = parsed;
-    } else {
-      sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    }
-  } catch (err) {}
-}
-
-function saveAdminSession(session) {
-  adminSession = session;
-  try {
-    sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-  } catch (err) {}
-}
-
-function clearAdminSession() {
-  adminSession = null;
-  try { sessionStorage.removeItem(ADMIN_SESSION_KEY); } catch (err) {}
-}
-
-// ---------- Login ----------
-function openAdminLogin() {
-  document.getElementById('adminLoginError').textContent = '';
-  document.getElementById('adminLoginEmail').value = '';
-  document.getElementById('adminLoginPassword').value = '';
-  document.getElementById('adminLoginModal').classList.add('open');
-  setTimeout(() => document.getElementById('adminLoginEmail').focus(), 50);
-}
-
-function closeAdminLogin() {
-  document.getElementById('adminLoginModal').classList.remove('open');
-}
-
-async function submitAdminLogin() {
-  let email = document.getElementById('adminLoginEmail').value.trim();
-  const password = document.getElementById('adminLoginPassword').value;
-  const errEl = document.getElementById('adminLoginError');
-  const btn = document.getElementById('adminLoginBtn');
-  errEl.textContent = '';
-  if (!email || !password) {
-    errEl.textContent = 'Completa usuario y contraseña.';
-    return;
-  }
-  email = email.toLowerCase();
-  if (!email.includes('@')) {
-    email = `${email}@${ADMIN_USERNAME_DOMAIN}`;
-  }
-  if (btn) btn.disabled = true;
-  try {
-    const cfg = adminCfg();
-    const resp = await fetch(`${cfg.url}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { apikey: cfg.clavePublica, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok || !data.access_token) {
-      errEl.textContent = 'Usuario o contraseña incorrectos.';
-      return;
-    }
-    const session = {
-      access_token: data.access_token,
-      expires_at: Date.now() + ((data.expires_in || 3600) * 1000) - 30000,
-      email: ((data.user && data.user.email) || email).toLowerCase()
-    };
-    const rol = await fetchAdminRol(session.access_token);
-    if (!rol) {
-      errEl.textContent = 'Esta cuenta no tiene acceso al panel de Nevada.';
-      return;
-    }
-    session.rol = rol;
-    saveAdminSession(session);
-    closeAdminLogin();
+    const r = await adminRpc('nevada_panel_rol', {});
+    // Un cliente que no es administrador no ve nada: el panel sigue oculto.
+    if (!r || !r.rol) { adminSession = null; return; }
+    adminSession = { codigo: r.codigo, nombre: r.nombre, rol: r.rol };
     openAdminPanel();
   } catch (err) {
-    errEl.textContent = 'No se pudo conectar. Revisa tu internet.';
+    if (typeof notify === 'function') notify('No se pudo abrir el panel. Revisa tu internet.', true);
   } finally {
-    if (btn) btn.disabled = false;
+    adminEntrando = false;
   }
 }
 
-function adminLogout() {
-  clearAdminSession();
-  closeAdminPanel();
-}
-
-// ---------- Llamadas autenticadas a Supabase ----------
-function adminSesionVencida() {
-  clearAdminSession();
-  closeAdminPanel();
-  openAdminLogin();
-  document.getElementById('adminLoginError').textContent = 'La sesión venció. Vuelve a iniciar sesión.';
-}
-
-async function adminFetch(path, options = {}) {
-  if (!adminSession || adminSession.expires_at <= Date.now()) {
-    adminSesionVencida();
-    throw new Error('Sesión expirada');
+// ---------- Llamadas a Supabase con la sesion del cliente ----------
+// Llama una funcion nevada_panel_* agregando el token de la sesion.
+// Devuelve lo que responde, o lanza un error con el mensaje de la base.
+async function adminRpc(fn, args) {
+  if (typeof SESION === 'undefined' || !SESION || !SESION.token) {
+    adminSinPermiso();
+    throw new Error('Sin sesión');
   }
   const cfg = adminCfg();
-  const resp = await fetch(`${cfg.url}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      apikey: cfg.clavePublica,
-      Authorization: `Bearer ${adminSession.access_token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
+  const resp = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: cfg.clavePublica, 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ p_token: SESION.token }, args || {}))
   });
-  if (resp.status === 401) {
-    adminSesionVencida();
-    throw new Error('Sesión expirada');
-  }
-  return resp;
-}
-
-// Llama una funcion de la base de datos (rpc). Devuelve lo que
-// responde, o lanza un error con el mensaje que mando la base.
-async function adminRpc(fn, args) {
-  const resp = await adminFetch(`rpc/${fn}`, { method: 'POST', body: JSON.stringify(args || {}) });
   const data = await resp.json().catch(() => null);
-  if (!resp.ok) throw new Error((data && data.message) || ('HTTP ' + resp.status));
+  if (!resp.ok) {
+    const msg = (data && data.message) || ('HTTP ' + resp.status);
+    if (/No autorizado/.test(msg)) { adminSinPermiso(); throw new Error('Sin permiso'); }
+    throw new Error(msg);
+  }
   if (data && data.ok === false) throw new Error(data.error || 'No se pudo completar.');
   return data;
 }
 
-// ---------- Rol del administrador (nevada.admins) ----------
-// 'admin' = acceso completo; 'pedidos' = solo Pedidos y Ranking;
-// null = la cuenta existe pero no es administradora de Nevada.
-async function fetchAdminRol(token) {
-  const cfg = adminCfg();
-  const resp = await fetch(`${cfg.url}/rest/v1/rpc/nevada_admin_rol`, {
-    method: 'POST',
-    headers: { apikey: cfg.clavePublica, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: '{}'
-  });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const rol = await resp.json();
-  return rol === 'admin' || rol === 'pedidos' ? rol : null;
+// La sesion vencio, se cerro, o la cuenta dejo de ser administradora.
+function adminSinPermiso() {
+  const abierto = document.getElementById('adminPanelModal').classList.contains('open');
+  adminSession = null;
+  closeAdminPanel();
+  if (abierto && typeof notify === 'function') notify('Tu sesión ya no tiene acceso al panel administrativo.', true);
 }
 
-function adminEsCompleto() {
-  return !!adminSession && adminSession.rol === 'admin';
+// nivel: 'admin' (solo acceso completo) o 'editor' (completo o edicion).
+function adminPuede(nivel) {
+  const rol = adminSession && adminSession.rol;
+  if (nivel === 'admin') return rol === 'admin';
+  if (nivel === 'editor') return rol === 'admin' || rol === 'editor';
+  return !!rol;
 }
+
+// Quita los botones y bloquea los campos que esta persona no puede usar.
+function aplicarPermisosAdmin(root) {
+  root.querySelectorAll('[data-req]').forEach(el => {
+    if (adminPuede(el.dataset.req)) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.disabled = true;
+    else el.remove();
+  });
+}
+cuandoListo(() => {
+  const body = document.getElementById('adminListBody');
+  if (body && 'MutationObserver' in window) {
+    new MutationObserver(() => aplicarPermisosAdmin(body)).observe(body, { childList: true, subtree: true });
+  }
+});
+
+const ADMIN_ROL_TEXTO = { admin: 'Acceso completo', editor: 'Edición', lectura: 'Solo lectura' };
 
 function applyAdminRoleUI() {
-  const isLimited = !adminEsCompleto();
-  ['adminTabProductos', 'adminTabClientes', 'adminTabStock', 'adminTabAjustes', 'adminTabHistorial'].forEach(id => {
-    document.getElementById(id).style.display = isLimited ? 'none' : '';
-  });
   const userEl = document.getElementById('adminSidebarUser');
-  if (userEl) {
-    userEl.innerHTML = `${escapeAdminHtml((adminSession && adminSession.email) || '')}<span class="admin-role-badge">${isLimited ? 'Pedidos' : 'Admin'}</span>`;
-  }
-}
-
-// ---------- Historial de cambios (nevada_auditoria) ----------
-// Se llama despues de cada accion que modifica algo. Nunca bloquea ni
-// muestra error si falla: el historial es un extra, no una condicion
-// para que la accion principal funcione.
-async function logAdminAction(accion, entidad, entidadId, detalle) {
-  try {
-    await adminFetch('nevada_auditoria', {
-      method: 'POST',
-      body: JSON.stringify([{
-        admin_email: ((adminSession && adminSession.email) || '').toLowerCase(),
-        accion,
-        entidad,
-        entidad_id: entidadId != null ? String(entidadId) : null,
-        detalle: detalle || null
-      }])
-    });
-  } catch (err) {
-    // silencioso a proposito
+  if (userEl && adminSession) {
+    userEl.innerHTML = `Cliente ${escapeAdminHtml(adminSession.codigo)} · ${escapeAdminHtml(adminSession.nombre)}<span class="admin-role-badge">${ADMIN_ROL_TEXTO[adminSession.rol] || ''}</span>`;
   }
 }
 
@@ -265,7 +154,7 @@ function openAdminPanel() {
   document.getElementById('adminPanelModal').classList.add('open');
   document.body.classList.add('admin-abierto');
   applyAdminRoleUI();
-  switchAdminTab(adminEsCompleto() ? 'productos' : 'pedidos');
+  switchAdminTab('productos');
 }
 
 function closeAdminPanel() {
@@ -282,7 +171,6 @@ function closeAdminPanel() {
 }
 
 function switchAdminTab(tab) {
-  if (!adminEsCompleto() && tab !== 'pedidos' && tab !== 'ranking') tab = 'pedidos';
   adminTab = tab;
   adminEditingId = null;
   adminShowPapelera = false;
@@ -294,9 +182,11 @@ function switchAdminTab(tab) {
   const search = document.getElementById('adminSearchInput');
   search.value = '';
   search.style.display = (tab === 'ajustes' || tab === 'ranking' || tab === 'stock') ? 'none' : '';
-  document.getElementById('adminAddBtn').style.display = (tab === 'productos' || tab === 'clientes') ? '' : 'none';
+  // Agregar y papelera: solo acceso completo.
+  const conAlta = (tab === 'productos' || tab === 'clientes') && adminPuede('admin');
+  document.getElementById('adminAddBtn').style.display = conAlta ? '' : 'none';
   const papeleraBtn = document.getElementById('adminPapeleraBtn');
-  papeleraBtn.style.display = (tab === 'productos' || tab === 'clientes') ? '' : 'none';
+  papeleraBtn.style.display = conAlta ? '' : 'none';
   papeleraBtn.textContent = 'Ver papelera';
   document.getElementById('adminPedidosFilters').style.display = tab === 'pedidos' ? 'flex' : 'none';
   document.getElementById('adminProductosFilters').style.display = tab === 'productos' ? 'flex' : 'none';
@@ -306,7 +196,7 @@ function switchAdminTab(tab) {
   if (tab === 'productos') search.placeholder = 'Buscar por código, nombre o marca...';
   else if (tab === 'clientes') search.placeholder = 'Buscar por código, nombre, teléfono o correo...';
   else if (tab === 'pedidos') search.placeholder = 'Buscar por cliente, código o teléfono...';
-  else if (tab === 'historial') search.placeholder = 'Buscar por acción, entidad o correo...';
+  else if (tab === 'historial') search.placeholder = 'Buscar por acción, entidad o código...';
   document.getElementById('adminMsg').textContent = '';
   document.getElementById('adminListBody').innerHTML = '';
   if (tab === 'productos') loadProductosAdmin(true);
@@ -400,18 +290,8 @@ function descargarExcelAdmin(wb, nombre) {
 let adminProductosCache = null; // todas las filas, incluida la papelera
 
 async function fetchAllProductosAdmin() {
-  const PAGE = 1000;
-  const out = [];
-  for (let from = 0; from < 50000; from += PAGE) {
-    const resp = await adminFetch('nevada_productos?select=*&order=id.asc', {
-      headers: { Range: `${from}-${from + PAGE - 1}` }
-    });
-    if (!resp.ok && resp.status !== 206) throw new Error('HTTP ' + resp.status + ' al leer productos');
-    const batch = await resp.json();
-    out.push(...batch);
-    if (batch.length < PAGE) break;
-  }
-  return out;
+  const rows = await adminRpc('nevada_panel_productos', {});
+  return Array.isArray(rows) ? rows : [];
 }
 
 function stockAdmin(code) {
@@ -573,46 +453,46 @@ function productEditFormHtml(p) {
       <div class="admin-edit-grid">
         <div>
           <label class="field-label" for="pf_brand">Marca</label>
-          <input class="field-input" id="pf_brand" value="${escapeAdminHtml(p.brand)}">
+          <input class="field-input" data-req="editor" id="pf_brand" value="${escapeAdminHtml(p.brand)}">
         </div>
         <div>
           <label class="field-label" for="pf_name">Nombre</label>
-          <input class="field-input" id="pf_name" value="${escapeAdminHtml(p.name)}">
+          <input class="field-input" data-req="editor" id="pf_name" value="${escapeAdminHtml(p.name)}">
         </div>
         <div>
           <label class="field-label" for="pf_code">Código de barras</label>
-          <input class="field-input" id="pf_code" value="${escapeAdminHtml(p.code)}">
+          <input class="field-input" data-req="editor" id="pf_code" value="${escapeAdminHtml(p.code)}">
         </div>
         <div>
-          <label class="field-label">Stock (lo actualiza el sincronizador)</label>
-          <input class="field-input" value="${stockAdmin(p.code)}" disabled>
+          <label class="field-label" for="pf_stock">Stock (se corrige a mano solo hasta la próxima sincronización)</label>
+          <input class="field-input" data-req="editor" id="pf_stock" type="number" min="0" step="1" inputmode="numeric" value="${stockAdmin(p.code)}" data-original="${stockAdmin(p.code)}">
         </div>
         <div>
           <label class="field-label" for="pf_categoria">Categoría</label>
-          <select class="field-input" id="pf_categoria">${adminCategoriaOptions(p.categoria)}</select>
+          <select class="field-input" data-req="editor" id="pf_categoria">${adminCategoriaOptions(p.categoria)}</select>
         </div>
         <div>
           <label class="field-label" for="pf_img">Archivo de foto (img/productos/)</label>
-          <input class="field-input" id="pf_img" value="${escapeAdminHtml(p.img || '')}" placeholder="ej: ${escapeAdminHtml(p.code)}.webp (vacío = sin foto)">
+          <input class="field-input" data-req="editor" id="pf_img" value="${escapeAdminHtml(p.img || '')}" placeholder="ej: ${escapeAdminHtml(p.code)}.webp (vacío = sin foto)">
         </div>
         <div class="field-full">
           <label class="field-label" for="pf_notes">Detalles de la ficha (uno por línea)</label>
-          <textarea class="field-input admin-textarea" id="pf_notes" rows="3">${escapeAdminHtml(notesStr)}</textarea>
+          <textarea class="field-input admin-textarea" data-req="editor" id="pf_notes" rows="3">${escapeAdminHtml(notesStr)}</textarea>
         </div>
       </div>
       <div class="admin-checkbox-row">
-        <input type="checkbox" id="pf_hidden" ${p.hidden ? 'checked' : ''}>
+        <input type="checkbox" data-req="editor" id="pf_hidden" ${p.hidden ? 'checked' : ''}>
         <label for="pf_hidden">Ocultar del catálogo</label>
       </div>
       <div class="admin-checkbox-row">
-        <input type="checkbox" id="pf_nuevo" data-original-date="${escapeAdminHtml(p.date_added || '')}" ${p.date_added ? 'checked' : ''}>
+        <input type="checkbox" data-req="editor" id="pf_nuevo" data-original-date="${escapeAdminHtml(p.date_added || '')}" ${p.date_added ? 'checked' : ''}>
         <label for="pf_nuevo">Marcar como Nuevo Ingreso${p.date_added ? ` (desde ${escapeAdminHtml(p.date_added)})` : ''}</label>
       </div>
       <div class="admin-edit-actions">
-        <button type="button" class="btn btn-danger" onclick="deleteAdminProducto(${p.id})">Enviar a la papelera</button>
+        <span><button type="button" class="btn btn-danger" data-req="admin" onclick="deleteAdminProducto(${p.id})">Enviar a la papelera</button></span>
         <div class="admin-edit-actions-end">
           <button type="button" class="btn btn-ghost" onclick="toggleAdminProductEdit(${p.id})">Cancelar</button>
-          <button type="button" class="btn btn-primary" onclick="saveAdminProducto(${p.id})">Guardar cambios</button>
+          <button type="button" class="btn btn-primary" data-req="editor" onclick="saveAdminProducto(${p.id})">Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -655,50 +535,48 @@ async function saveAdminProducto(id) {
   // se guarda el producto por otro motivo); si se acaba de marcar
   // ahora, se pone la fecha de hoy. Si se desmarca, se quita del todo.
   payload.date_added = nuevoCheckbox.checked ? (nuevoCheckbox.dataset.originalDate || hoyAdmin()) : null;
+  delete payload.actualizado;
   if (!payload.brand || !payload.name || !payload.code) {
     adminSetMsg('Marca, nombre y código son obligatorios.', 'error');
     return;
   }
   const otro = codigoRepetidoAdmin(payload.code, id);
   if (otro && !confirm(`El código ${payload.code} ya lo tiene "${otro.brand} — ${otro.name}". ¿Guardar de todos modos?`)) return;
+  const stockEl = document.getElementById('pf_stock');
+  const stockNuevo = stockEl.value.trim() === '' ? NaN : Number(stockEl.value);
+  const cambiaStock = stockEl.value.trim() !== stockEl.dataset.original;
+  if (cambiaStock && !(Number.isInteger(stockNuevo) && stockNuevo >= 0)) {
+    adminSetMsg('El stock debe ser un número entero, 0 o más.', 'error');
+    return;
+  }
   try {
-    const resp = await adminFetch(`nevada_productos?id=eq.${id}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify(payload)
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
-    if (!rows.length) throw new Error('la base de datos no aceptó el cambio (revisa que tu usuario tenga permiso).');
-    actualizarCacheProducto(rows[0]);
+    const r = await adminRpc('nevada_panel_producto_guardar', { p_id: id, p_datos: payload });
+    actualizarCacheProducto(r.producto);
     adminHuboCambios = true;
-    logAdminAction('editar', 'producto', id, { brand: payload.brand, name: payload.name, code: payload.code });
+    if (cambiaStock) {
+      await adminRpc('nevada_panel_stock_corregir', { p_code: payload.code, p_cantidad: stockNuevo });
+      if (typeof STOCK !== 'undefined') STOCK[payload.code] = stockNuevo;
+    }
     fillAdminProductosFacets();
     renderProductosAdmin();
-    adminSetMsg('Producto actualizado. Se verá en el catálogo al cerrar el panel.', 'ok');
+    adminSetMsg(cambiaStock
+      ? 'Producto y stock actualizados. El stock corregido dura hasta la próxima sincronización con Interakzion.'
+      : 'Producto actualizado. Se verá en el catálogo al cerrar el panel.', 'ok');
   } catch (err) {
     adminSetMsg('Error al guardar: ' + err.message, 'error');
   }
 }
 
-async function patchProductoAdmin(id, cambios) {
-  const resp = await adminFetch(`nevada_productos?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({ ...cambios, actualizado: new Date().toISOString() })
-  });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const rows = await resp.json();
-  if (!rows.length) throw new Error('la base de datos no aceptó el cambio.');
-  actualizarCacheProducto(rows[0]);
+async function papeleraProductoAdmin(id, papelera) {
+  const r = await adminRpc('nevada_panel_producto_papelera', { p_id: id, p_papelera: papelera });
+  actualizarCacheProducto(r.producto);
   adminHuboCambios = true;
 }
 
 async function deleteAdminProducto(id) {
   if (!confirm('¿Enviar este producto a la papelera? Desaparece del catálogo, pero puedes restaurarlo luego desde "Ver papelera".')) return;
   try {
-    await patchProductoAdmin(id, { eliminado_en: new Date().toISOString() });
-    logAdminAction('papelera', 'producto', id, null);
+    await papeleraProductoAdmin(id, true);
     fillAdminProductosFacets();
     renderProductosAdmin();
     adminSetMsg('Producto enviado a la papelera.', 'ok');
@@ -709,8 +587,7 @@ async function deleteAdminProducto(id) {
 
 async function restoreAdminProducto(id) {
   try {
-    await patchProductoAdmin(id, { eliminado_en: null });
-    logAdminAction('restaurar', 'producto', id, null);
+    await papeleraProductoAdmin(id, false);
     fillAdminProductosFacets();
     renderProductosAdmin();
     adminSetMsg('Producto restaurado.', 'ok');
@@ -722,13 +599,9 @@ async function restoreAdminProducto(id) {
 async function permanentDeleteAdminProducto(id) {
   if (!confirm('¿Eliminar este producto DEFINITIVAMENTE de la base de datos? Esta acción no se puede deshacer.')) return;
   try {
-    const resp = await adminFetch(`nevada_productos?id=eq.${id}`, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
-    if (!rows.length) throw new Error('la base de datos no aceptó el cambio.');
+    await adminRpc('nevada_panel_producto_eliminar', { p_id: id });
     adminProductosCache = adminProductosCache.filter(p => p.id !== id);
     adminHuboCambios = true;
-    logAdminAction('eliminar_definitivo', 'producto', id, null);
     renderProductosAdmin();
     adminSetMsg('Producto eliminado definitivamente.', 'ok');
   } catch (err) {
@@ -778,12 +651,7 @@ async function saveAdminNewProduct() {
   const otro = codigoRepetidoAdmin(code, null);
   if (otro && !confirm(`El código ${code} ya lo tiene "${otro.brand} — ${otro.name}". ¿Crear de todos modos?`)) return;
   try {
-    const maxResp = await adminFetch('nevada_productos?select=id&order=id.desc&limit=1');
-    if (!maxResp.ok) throw new Error('HTTP ' + maxResp.status);
-    const maxRows = await maxResp.json();
-    const nextId = maxRows.length ? maxRows[0].id + 1 : 1;
     const payload = {
-      id: nextId,
       brand, name, code,
       categoria: document.getElementById('pfn_categoria').value || 'Otros',
       img: document.getElementById('pfn_img').value.trim() || null,
@@ -791,16 +659,10 @@ async function saveAdminNewProduct() {
       hidden: false,
       date_added: document.getElementById('pfn_nuevo').checked ? hoyAdmin() : null
     };
-    const resp = await adminFetch('nevada_productos', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify([payload])
-    });
-    if (!resp.ok) throw new Error(resp.status === 409 ? 'ese id ya existe, vuelve a intentar.' : 'HTTP ' + resp.status);
-    const rows = await resp.json();
-    actualizarCacheProducto(rows[0]);
+    const r = await adminRpc('nevada_panel_producto_guardar', { p_id: null, p_datos: payload });
+    const nextId = r.producto.id;
+    actualizarCacheProducto(r.producto);
     adminHuboCambios = true;
-    logAdminAction('crear', 'producto', nextId, { brand, name, code });
     fillAdminProductosFacets();
     renderProductosAdmin();
     adminSetMsg(`Producto creado con id ${nextId}.${payload.img ? '' : ' Recuerda subir su foto a img/productos/ y escribir el nombre del archivo.'}`, 'ok');
@@ -866,7 +728,7 @@ async function loadClientesAdmin(term) {
   adminEditingId = null;
   document.getElementById('adminListBody').innerHTML = '';
   try {
-    const rows = await adminRpc('nevada_admin_clientes', { p_buscar: term || '', p_papelera: adminShowPapelera, p_limite: 2000 });
+    const rows = await adminRpc('nevada_panel_clientes', { p_buscar: term || '', p_papelera: adminShowPapelera, p_limite: 2000 });
     adminClientesRows = Array.isArray(rows) ? rows : [];
     renderClientesAdmin();
   } catch (err) {
@@ -954,18 +816,18 @@ function clientEditFormHtml(c) {
         </div>
         <div>
           <label class="field-label" for="cf_vendedor">Vendedor</label>
-          <input class="field-input" id="cf_vendedor" value="${escapeAdminHtml(c.vendedor || '')}">
+          <input class="field-input" data-req="admin" id="cf_vendedor" value="${escapeAdminHtml(c.vendedor || '')}">
         </div>
         <div class="field-full">
           <label class="field-label" for="cf_nombre">Nombre</label>
-          <input class="field-input" id="cf_nombre" value="${escapeAdminHtml(c.nombre)}">
+          <input class="field-input" data-req="admin" id="cf_nombre" value="${escapeAdminHtml(c.nombre)}">
         </div>
-        <div><label class="field-label" for="cf_tel1">Teléfono 1</label><input class="field-input" id="cf_tel1" value="${escapeAdminHtml(c.tel1 || '')}"></div>
-        <div><label class="field-label" for="cf_tel2">Teléfono 2</label><input class="field-input" id="cf_tel2" value="${escapeAdminHtml(c.tel2 || '')}"></div>
-        <div class="field-full"><label class="field-label" for="cf_correo">Correo</label><input class="field-input" id="cf_correo" type="email" value="${escapeAdminHtml(c.correo || '')}"></div>
+        <div><label class="field-label" for="cf_tel1">Teléfono 1</label><input class="field-input" data-req="admin" id="cf_tel1" value="${escapeAdminHtml(c.tel1 || '')}"></div>
+        <div><label class="field-label" for="cf_tel2">Teléfono 2</label><input class="field-input" data-req="admin" id="cf_tel2" value="${escapeAdminHtml(c.tel2 || '')}"></div>
+        <div class="field-full"><label class="field-label" for="cf_correo">Correo</label><input class="field-input" data-req="admin" id="cf_correo" type="email" value="${escapeAdminHtml(c.correo || '')}"></div>
       </div>
       <div class="admin-checkbox-row">
-        <input type="checkbox" id="cf_activo" ${c.activo ? 'checked' : ''} onchange="toggleAdminClienteActivo(${arg}, this.checked)">
+        <input type="checkbox" data-req="admin" id="cf_activo" ${c.activo ? 'checked' : ''} onchange="toggleAdminClienteActivo(${arg}, this.checked)">
         <label for="cf_activo">Puede entrar al catálogo (desmarcar para bloquearlo)</label>
       </div>
       <div class="admin-clave-box" id="cf_claveBox">
@@ -973,13 +835,13 @@ function clientEditFormHtml(c) {
           <b>Contraseña</b>
           <span>${c.debe_cambiar ? 'Tiene una contraseña temporal pendiente de cambiar.' : 'Ya creó su propia contraseña.'} Por seguridad no se puede ver.</span>
         </div>
-        <button type="button" class="btn btn-ghost" onclick="nuevaClaveAdminCliente(${arg})">Generar contraseña temporal</button>
+        <button type="button" class="btn btn-ghost" data-req="admin" onclick="nuevaClaveAdminCliente(${arg})">Generar contraseña temporal</button>
       </div>
       <div class="admin-edit-actions">
-        <button type="button" class="btn btn-danger" onclick="deleteAdminCliente(${arg})">Enviar a la papelera</button>
+        <span><button type="button" class="btn btn-danger" data-req="admin" onclick="deleteAdminCliente(${arg})">Enviar a la papelera</button></span>
         <div class="admin-edit-actions-end">
           <button type="button" class="btn btn-ghost" onclick="toggleAdminClientEdit(${arg})">Cancelar</button>
-          <button type="button" class="btn btn-primary" onclick="saveAdminCliente(${arg})">Guardar cambios</button>
+          <button type="button" class="btn btn-primary" data-req="admin" onclick="saveAdminCliente(${arg})">Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -1009,12 +871,11 @@ function copiarClaveAdmin(codigo, clave) {
 async function nuevaClaveAdminCliente(codigo) {
   if (!confirm(`¿Generar una contraseña temporal nueva para ${codigo}? La contraseña actual deja de servir y su sesión abierta se cierra.`)) return;
   try {
-    const r = await adminRpc('nevada_admin_clave_temporal', { p_codigo: codigo });
+    const r = await adminRpc('nevada_panel_clave_temporal', { p_codigo: codigo });
     const box = document.getElementById('cf_claveBox');
     if (box) box.outerHTML = claveTemporalHtml(codigo, r.clave_temporal);
     const c = adminClientesRows.find(x => x.codigo === codigo);
     if (c) { c.debe_cambiar = true; c.activo = true; }
-    logAdminAction('clave_temporal', 'cliente', codigo, null);
     adminSetMsg('Contraseña temporal generada.', 'ok');
   } catch (err) {
     adminSetMsg('Error al generar la contraseña: ' + err.message, 'error');
@@ -1023,10 +884,9 @@ async function nuevaClaveAdminCliente(codigo) {
 
 async function toggleAdminClienteActivo(codigo, activo) {
   try {
-    await adminRpc('nevada_admin_activo', { p_codigo: codigo, p_activo: activo });
+    await adminRpc('nevada_panel_cliente_activo', { p_codigo: codigo, p_activo: activo });
     const c = adminClientesRows.find(x => x.codigo === codigo);
     if (c) c.activo = activo;
-    logAdminAction(activo ? 'activar' : 'bloquear', 'cliente', codigo, null);
     adminSetMsg(activo ? 'Cliente activado: ya puede entrar.' : 'Cliente bloqueado: ya no puede entrar y su sesión se cerró.', 'ok');
   } catch (err) {
     const chk = document.getElementById('cf_activo');
@@ -1049,10 +909,9 @@ async function saveAdminCliente(codigo) {
     return;
   }
   try {
-    await adminRpc('nevada_admin_cliente_guardar', datos);
+    await adminRpc('nevada_panel_cliente_guardar', datos);
     const c = adminClientesRows.find(x => x.codigo === codigo);
     if (c) Object.assign(c, { nombre: datos.p_nombre, vendedor: datos.p_vendedor || null, tel1: datos.p_tel1 || null, tel2: datos.p_tel2 || null, correo: datos.p_correo || null });
-    logAdminAction('editar', 'cliente', codigo, { nombre: datos.p_nombre });
     renderClientesAdmin();
     adminSetMsg('Cliente actualizado.', 'ok');
   } catch (err) {
@@ -1063,8 +922,7 @@ async function saveAdminCliente(codigo) {
 async function deleteAdminCliente(codigo) {
   if (!confirm('¿Enviar este cliente a la papelera? Ya no podrá entrar al catálogo. Puedes restaurarlo luego desde "Ver papelera".')) return;
   try {
-    await adminRpc('nevada_admin_cliente_papelera', { p_codigo: codigo, p_papelera: true });
-    logAdminAction('papelera', 'cliente', codigo, null);
+    await adminRpc('nevada_panel_cliente_papelera', { p_codigo: codigo, p_papelera: true });
     adminClientesRows = adminClientesRows.filter(c => c.codigo !== codigo);
     renderClientesAdmin();
     adminSetMsg('Cliente enviado a la papelera.', 'ok');
@@ -1075,8 +933,7 @@ async function deleteAdminCliente(codigo) {
 
 async function restoreAdminCliente(codigo) {
   try {
-    await adminRpc('nevada_admin_cliente_papelera', { p_codigo: codigo, p_papelera: false });
-    logAdminAction('restaurar', 'cliente', codigo, null);
+    await adminRpc('nevada_panel_cliente_papelera', { p_codigo: codigo, p_papelera: false });
     adminClientesRows = adminClientesRows.filter(c => c.codigo !== codigo);
     renderClientesAdmin();
     adminSetMsg('Cliente restaurado: ya puede volver a entrar con su contraseña.', 'ok');
@@ -1088,8 +945,7 @@ async function restoreAdminCliente(codigo) {
 async function permanentDeleteAdminCliente(codigo) {
   if (!confirm('¿Eliminar este cliente DEFINITIVAMENTE? Esta acción no se puede deshacer.')) return;
   try {
-    await adminRpc('nevada_admin_cliente_eliminar', { p_codigo: codigo });
-    logAdminAction('eliminar_definitivo', 'cliente', codigo, null);
+    await adminRpc('nevada_panel_cliente_eliminar', { p_codigo: codigo });
     adminClientesRows = adminClientesRows.filter(c => c.codigo !== codigo);
     renderClientesAdmin();
     adminSetMsg('Cliente eliminado definitivamente.', 'ok');
@@ -1145,8 +1001,7 @@ async function saveAdminNewClient() {
   const btn = document.getElementById('cfn_crearBtn');
   btn.disabled = true;
   try {
-    const r = await adminRpc('nevada_admin_cliente_crear', datos);
-    logAdminAction('crear', 'cliente', r.codigo, { nombre: datos.p_nombre });
+    const r = await adminRpc('nevada_panel_cliente_crear', datos);
     document.getElementById('cfn_resultado').innerHTML = claveTemporalHtml(r.codigo, r.clave_temporal);
     btn.remove();
     adminSetMsg(`Cliente creado con código ${r.codigo}.`, 'ok');
@@ -1184,7 +1039,7 @@ async function loadSyncAdmin() {
   const body = document.getElementById('adminListBody');
   body.innerHTML = '';
   try {
-    const r = await adminRpc('nevada_admin_estado_sync', {});
+    const r = await adminRpc('nevada_panel_estado_sync', {});
     const inv = r.inventario || {};
     const pre = r.precios || {};
     const cli = r.clientes || {};
@@ -1258,7 +1113,7 @@ function normNameAdmin(s) { return (s || '').trim().toUpperCase().replace(/\s+/g
 
 async function loadAllClientesForMatching() {
   try {
-    const rows = await adminRpc('nevada_admin_clientes_todos', {});
+    const rows = await adminRpc('nevada_panel_clientes_todos', {});
     adminClientesCache = Array.isArray(rows) ? rows : [];
     adminClientesByCodigo = new Map(adminClientesCache.map(c => [c.codigo, c]));
     adminClientesCacheLoaded = true;
@@ -1301,18 +1156,19 @@ function clearAdminPedidosFilters() {
   loadPedidosAdmin(true);
 }
 
-function buildPedidosUrl(offset) {
-  const search = document.getElementById('adminSearchInput').value.trim();
-  const from = document.getElementById('adminPedidosFrom').value;
-  const to = document.getElementById('adminPedidosTo').value;
-  let url = `nevada_pedidos?select=*&order=creado_en.desc&limit=${ADMIN_PEDIDOS_PAGE_SIZE}&offset=${offset}`;
-  if (search) {
-    const t = encodeURIComponent(search.replace(/[,()*]/g, ''));
-    url += `&or=(cliente_nombre.ilike.*${t}*,cliente_codigo.ilike.*${t}*,cliente_telefono.ilike.*${t}*,vendedor.ilike.*${t}*)`;
-  }
-  if (from) url += `&creado_en=gte.${encodeURIComponent(new Date(from + 'T00:00:00').toISOString())}`;
-  if (to) url += `&creado_en=lte.${encodeURIComponent(new Date(to + 'T23:59:59.999').toISOString())}`;
-  return url;
+// Fechas del filtro (dia completo, hora local) en ISO, o null.
+function adminRangoFechas(idDesde, idHasta) {
+  const from = document.getElementById(idDesde).value;
+  const to = document.getElementById(idHasta).value;
+  return {
+    p_desde: from ? new Date(from + 'T00:00:00').toISOString() : null,
+    p_hasta: to ? new Date(to + 'T23:59:59.999').toISOString() : null
+  };
+}
+
+async function fetchPedidosAdmin(buscar, rango, limite, offset) {
+  const rows = await adminRpc('nevada_panel_pedidos', Object.assign({ p_buscar: buscar || '', p_limite: limite, p_offset: offset }, rango));
+  return Array.isArray(rows) ? rows : [];
 }
 
 async function loadPedidosAdmin(reset) {
@@ -1325,9 +1181,8 @@ async function loadPedidosAdmin(reset) {
   adminSetMsg('Cargando...');
   try {
     if (!adminClientesCacheLoaded) await loadAllClientesForMatching();
-    const resp = await adminFetch(buildPedidosUrl(adminPedidosOffset));
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    const data = await fetchPedidosAdmin(document.getElementById('adminSearchInput').value.trim(),
+      adminRangoFechas('adminPedidosFrom', 'adminPedidosTo'), ADMIN_PEDIDOS_PAGE_SIZE, adminPedidosOffset);
     adminPedidosRows = adminPedidosRows.concat(data);
     renderPedidosRows();
     document.getElementById('adminPedidosLoadMoreWrap').style.display = data.length < ADMIN_PEDIDOS_PAGE_SIZE ? 'none' : 'block';
@@ -1404,7 +1259,7 @@ function toggleAdminPedidoDetail(id) {
         </div>`).join('')
     : '<span class="admin-muted">Sin detalle de productos</span>';
   const linkHtml = match ? '' : `
-    <div class="admin-link-form">
+    <div class="admin-link-form" data-req="admin">
       <input type="text" class="field-input" id="adminVincularInput-${escapeAdminHtml(id)}" list="adminClientesDatalist" placeholder="Buscar cliente del sistema (nombre)...">
       <button type="button" class="btn btn-primary" onclick="vincularPedidoAdmin(${adminJsArg(id)})">Vincular</button>
     </div>
@@ -1422,14 +1277,9 @@ async function vincularPedidoAdmin(id) {
   }
   const codigo = m[1];
   try {
-    const resp = await adminFetch(`nevada_pedidos?id=eq.${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ cliente_codigo: codigo })
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    await adminRpc('nevada_panel_pedido_vincular', { p_id: id, p_codigo: codigo });
     const p = adminPedidosRows.find(x => x.id === id);
     if (p) p.cliente_codigo = codigo;
-    logAdminAction('vincular', 'pedido', id, { cliente_codigo: codigo });
     adminEditingId = null;
     renderPedidosRows();
     renderPedidosSummary();
@@ -1535,14 +1385,7 @@ async function calcularRankingAdmin() {
   const resultEl = document.getElementById('adminRankingResult');
   if (resultEl) resultEl.innerHTML = '';
   try {
-    const from = document.getElementById('adminRankingFrom').value;
-    const to = document.getElementById('adminRankingTo').value;
-    let url = 'nevada_pedidos?select=items,creado_en&order=creado_en.desc';
-    if (from) url += `&creado_en=gte.${encodeURIComponent(new Date(from + 'T00:00:00').toISOString())}`;
-    if (to) url += `&creado_en=lte.${encodeURIComponent(new Date(to + 'T23:59:59.999').toISOString())}`;
-    const resp = await adminFetch(url, { headers: { Range: '0-1999' } });
-    if (!resp.ok && resp.status !== 206) throw new Error('HTTP ' + resp.status);
-    const rows = await resp.json();
+    const rows = await fetchPedidosAdmin('', adminRangoFechas('adminRankingFrom', 'adminRankingTo'), 2000, 0);
     const porProducto = new Map(); // code -> { code, name, brand, qty, pedidos }
     const porMarca = new Map();    // brand -> qty
     rows.forEach(p => {
@@ -1632,7 +1475,9 @@ async function loadAjustesAdmin() {
   adminSetMsg('Cargando...');
   document.getElementById('adminListBody').innerHTML = '';
   try {
-    const resp = await adminFetch('nevada_ajustes?select=clave,valor');
+    // Los ajustes son de lectura publica (el catalogo los usa al cargar).
+    const cfg = adminCfg();
+    const resp = await fetch(`${cfg.url}/rest/v1/nevada_ajustes?select=clave,valor`, { headers: { apikey: cfg.clavePublica }, cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const rows = await resp.json();
     const lr = rows.find(r => r.clave === 'low_rotation');
@@ -1657,17 +1502,17 @@ function renderAjustesAdmin() {
   const batchesHtml = lr.batches.map((batch, i) => `
     <div class="admin-batch-row" data-batch-idx="${i}">
       <span class="admin-batch-n">Lote ${i + 1}</span>
-      <input class="field-input" data-batch-codes value="${escapeAdminHtml(batch.join(', '))}" placeholder="Códigos de barras separados por coma">
-      <button type="button" class="btn btn-ghost" onclick="removeAjusteBatchRow(${i})" title="Eliminar lote" aria-label="Eliminar lote">✕</button>
+      <input class="field-input" data-req="admin" data-batch-codes value="${escapeAdminHtml(batch.join(', '))}" placeholder="Códigos de barras separados por coma">
+      <button type="button" class="btn btn-ghost" data-req="admin" onclick="removeAjusteBatchRow(${i})" title="Eliminar lote" aria-label="Eliminar lote">✕</button>
     </div>
   `).join('');
   const vendedoresHtml = adminAjustesVendedores.map((v, i) => `
     <div class="admin-marca-row admin-vendedor-row" data-vendedor-idx="${i}">
-      <input class="field-input" data-vendedor-nombre value="${escapeAdminHtml(v.name)}" placeholder="Nombre" aria-label="Nombre del vendedor">
-      <input class="field-input" data-vendedor-rol value="${escapeAdminHtml(v.role)}" placeholder="Cargo, ej: Ejecutiva de ventas" aria-label="Cargo">
-      <input class="field-input" data-vendedor-tel value="${escapeAdminHtml(v.phone)}" placeholder="WhatsApp, ej: 50687203737" aria-label="WhatsApp">
-      <input class="field-input" data-vendedor-img value="${escapeAdminHtml(v.img)}" placeholder="Foto, ej: img/vendedores/ana.webp" aria-label="Foto">
-      <button type="button" class="btn btn-ghost" onclick="removeAjusteVendedorRow(${i})" title="Eliminar vendedor" aria-label="Eliminar vendedor">✕</button>
+      <input class="field-input" data-req="admin" data-vendedor-nombre value="${escapeAdminHtml(v.name)}" placeholder="Nombre" aria-label="Nombre del vendedor">
+      <input class="field-input" data-req="admin" data-vendedor-rol value="${escapeAdminHtml(v.role)}" placeholder="Cargo, ej: Ejecutiva de ventas" aria-label="Cargo">
+      <input class="field-input" data-req="admin" data-vendedor-tel value="${escapeAdminHtml(v.phone)}" placeholder="WhatsApp, ej: 50687203737" aria-label="WhatsApp">
+      <input class="field-input" data-req="admin" data-vendedor-img value="${escapeAdminHtml(v.img)}" placeholder="Foto, ej: img/vendedores/ana.webp" aria-label="Foto">
+      <button type="button" class="btn btn-ghost" data-req="admin" onclick="removeAjusteVendedorRow(${i})" title="Eliminar vendedor" aria-label="Eliminar vendedor">✕</button>
     </div>
   `).join('');
   body.innerHTML = `
@@ -1677,13 +1522,13 @@ function renderAjustesAdmin() {
       <div class="admin-edit-grid" style="margin-bottom:12px;">
         <div>
           <label class="field-label" for="ajLowRotationStart">Fecha de inicio de la rotación</label>
-          <input class="field-input" id="ajLowRotationStart" type="date" value="${escapeAdminHtml(lr.start_date || '')}">
+          <input class="field-input" data-req="admin" id="ajLowRotationStart" type="date" value="${escapeAdminHtml(lr.start_date || '')}">
         </div>
       </div>
       <div id="ajBatchesWrap">${batchesHtml || '<p class="admin-msg">Sin lotes todavía.</p>'}</div>
       <div class="admin-edit-actions">
-        <button type="button" class="btn btn-ghost" onclick="addAjusteBatchRow()">+ Agregar lote</button>
-        <button type="button" class="btn btn-primary" onclick="saveAjustesLowRotation()">Guardar rotación</button>
+        <button type="button" class="btn btn-ghost" data-req="admin" onclick="addAjusteBatchRow()">+ Agregar lote</button>
+        <button type="button" class="btn btn-primary" data-req="admin" onclick="saveAjustesLowRotation()">Guardar rotación</button>
       </div>
     </div>
     <div class="admin-ajustes-card">
@@ -1691,8 +1536,8 @@ function renderAjustesAdmin() {
       <p class="admin-msg">Son las opciones que ve el cliente al enviar su pedido por WhatsApp y en "Contactar vendedor". El teléfono debe llevar código de país sin espacios ni signos (ej: 50687203737). La foto se sube aparte al repositorio; si se deja vacía, se muestra una tarjeta con el nombre.</p>
       <div id="ajVendedoresWrap">${vendedoresHtml || '<p class="admin-msg">Sin vendedores todavía.</p>'}</div>
       <div class="admin-edit-actions">
-        <button type="button" class="btn btn-ghost" onclick="addAjusteVendedorRow()">+ Agregar vendedor</button>
-        <button type="button" class="btn btn-primary" onclick="saveAjustesVendedores()">Guardar vendedores</button>
+        <button type="button" class="btn btn-ghost" data-req="admin" onclick="addAjusteVendedorRow()">+ Agregar vendedor</button>
+        <button type="button" class="btn btn-primary" data-req="admin" onclick="saveAjustesVendedores()">Guardar vendedores</button>
       </div>
     </div>
   `;
@@ -1759,21 +1604,7 @@ function sellerKeyFromName(name, usedKeys) {
 }
 
 async function upsertAjusteRow(clave, valor) {
-  const resp = await adminFetch(`nevada_ajustes?clave=eq.${clave}`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({ valor, actualizado_en: new Date().toISOString() })
-  });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const rows = await resp.json();
-  if (rows.length) return;
-  // No existía la fila todavía: se crea ahora.
-  const insResp = await adminFetch('nevada_ajustes', {
-    method: 'POST',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify([{ clave, valor, actualizado_en: new Date().toISOString() }])
-  });
-  if (!insResp.ok) throw new Error('HTTP ' + insResp.status);
+  await adminRpc('nevada_panel_ajuste_guardar', { p_clave: clave, p_valor: valor });
 }
 
 async function saveAjustesLowRotation() {
@@ -1788,7 +1619,6 @@ async function saveAjustesLowRotation() {
     await upsertAjusteRow('low_rotation', valor);
     adminAjustesLowRotation = valor;
     adminHuboCambios = true;
-    logAdminAction('editar', 'low_rotation', null, { start_date: valor.start_date, lotes: valor.batches.length });
     renderAjustesAdmin();
     adminSetMsg('Rotación guardada. Se aplica al catálogo al cerrar el panel.', 'ok');
   } catch (err) {
@@ -1819,7 +1649,6 @@ async function saveAjustesVendedores() {
     await upsertAjusteRow('vendedores', valor);
     adminAjustesVendedores = vendedores;
     adminHuboCambios = true;
-    logAdminAction('editar', 'vendedores', null, { total: vendedores.length });
     renderAjustesAdmin();
     adminSetMsg('Vendedores guardados. Se aplican al catálogo al cerrar el panel.', 'ok');
   } catch (err) {
@@ -1838,7 +1667,8 @@ let adminHistorialRows = [];
 const ADMIN_ACCION_LABELS = {
   crear: 'Creó', editar: 'Editó', eliminar: 'Eliminó', vincular: 'Vinculó',
   papelera: 'Envió a la papelera', restaurar: 'Restauró', eliminar_definitivo: 'Eliminó definitivamente',
-  clave_temporal: 'Generó contraseña temporal para', activar: 'Activó', bloquear: 'Bloqueó'
+  clave_temporal: 'Generó contraseña temporal para', activar: 'Activó', bloquear: 'Bloqueó',
+  corregir_stock: 'Corrigió a mano el stock de'
 };
 const ADMIN_ENTIDAD_LABELS = {
   producto: 'un producto', cliente: 'un cliente', pedido: 'un pedido',
@@ -1849,25 +1679,17 @@ function historialDetalleTexto(row) {
   const d = row.detalle;
   if (!d || typeof d !== 'object') return '';
   const parts = [];
-  if (d.code) parts.push(`código ${d.code}`);
+  if (d.code && !('despues' in d)) parts.push(`código ${d.code}`);
   if (d.name) parts.push(d.name);
   if (d.nombre) parts.push(d.nombre);
   if (d.cliente_codigo) parts.push(`cliente #${d.cliente_codigo}`);
+  if ('despues' in d) parts.push(`stock ${d.antes == null ? '—' : d.antes} → ${d.despues}`);
   if (d.start_date) parts.push(`inicio ${d.start_date}`);
   if (typeof d.lotes === 'number') parts.push(`${d.lotes} lote(s)`);
   if (typeof d.total === 'number') parts.push(`${d.total} vendedor(es)`);
   return parts.join(' · ');
 }
 
-function buildHistorialUrl(offset) {
-  const search = document.getElementById('adminSearchInput').value.trim();
-  let url = `nevada_auditoria?select=*&order=creado_en.desc&limit=${ADMIN_HISTORIAL_PAGE_SIZE}&offset=${offset}`;
-  if (search) {
-    const t = encodeURIComponent(search.replace(/[,()*]/g, ''));
-    url += `&or=(accion.ilike.*${t}*,entidad.ilike.*${t}*,entidad_id.ilike.*${t}*,admin_email.ilike.*${t}*)`;
-  }
-  return url;
-}
 
 async function loadHistorialAdmin(reset) {
   if (reset) {
@@ -1877,9 +1699,10 @@ async function loadHistorialAdmin(reset) {
   }
   adminSetMsg('Cargando...');
   try {
-    const resp = await adminFetch(buildHistorialUrl(adminHistorialOffset));
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    const res = await adminRpc('nevada_panel_historial', {
+      p_buscar: document.getElementById('adminSearchInput').value.trim(), p_limite: ADMIN_HISTORIAL_PAGE_SIZE, p_offset: adminHistorialOffset
+    });
+    const data = Array.isArray(res) ? res : [];
     adminHistorialRows = adminHistorialRows.concat(data);
     renderHistorialAdmin();
     document.getElementById('adminPedidosLoadMoreWrap').style.display = data.length < ADMIN_HISTORIAL_PAGE_SIZE ? 'none' : 'block';
@@ -1904,7 +1727,7 @@ function renderHistorialAdmin() {
       <div class="admin-row admin-row-static">
         <div class="admin-row-main">
           <div class="admin-row-title">${escapeAdminHtml(accionLbl)} ${escapeAdminHtml(entidadLbl)}${row.entidad_id ? ` <span class="admin-muted">(${escapeAdminHtml(row.entidad_id)})</span>` : ''}</div>
-          <div class="admin-row-sub">${escapeAdminHtml(row.admin_email || 'admin')} · ${fmtDateTimeAdmin(row.creado_en)}${detalle ? ' · ' + escapeAdminHtml(detalle) : ''}</div>
+          <div class="admin-row-sub">${escapeAdminHtml(row.admin_cliente ? 'Cliente ' + row.admin_cliente : (row.admin_email || 'admin'))} · ${fmtDateTimeAdmin(row.creado_en)}${detalle ? ' · ' + escapeAdminHtml(detalle) : ''}</div>
         </div>
       </div>
     `;
@@ -1916,9 +1739,8 @@ function loadMoreAdmin() {
   else loadPedidosAdmin(false);
 }
 
-// Escape cierra el panel (o el login) como las demas ventanas.
+// Escape cierra el panel como las demas ventanas.
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (document.getElementById('adminLoginModal').classList.contains('open')) closeAdminLogin();
-  else if (document.getElementById('adminPanelModal').classList.contains('open')) closeAdminPanel();
+  if (document.getElementById('adminPanelModal').classList.contains('open')) closeAdminPanel();
 });
