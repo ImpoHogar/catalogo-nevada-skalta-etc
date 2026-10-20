@@ -521,8 +521,6 @@ body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
 .admin-table-wrap { overflow-x: auto; }
 .btn-danger { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
 .btn-danger:hover { background: var(--danger); color: #fff; }
-.field-error { min-height: 18px; font-size: 13px; color: var(--danger); }
-.order-footer-end { justify-content: flex-end; }
 body.admin-abierto { overflow: hidden; }
 @media (max-width: 860px) {
   .admin-vendedor-row { display: grid; grid-template-columns: 1fr 1fr auto; }

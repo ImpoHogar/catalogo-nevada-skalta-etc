@@ -33,8 +33,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20261025a">
-<link rel="stylesheet" href="css/identidad.css?v=20261025a">
+<link rel="stylesheet" href="css/styles.css?v=20261025b">
+<link rel="stylesheet" href="css/identidad.css?v=20261025b">
 </head>
 <body>
 <noscript>
@@ -70,7 +70,7 @@
       </div>
     </aside>
     <div class="gate-card">
-      <img src="img/logo.png" alt="Grupo Impohogar" class="gate-logo" id="gateLogo">
+      <img src="img/logo.png" alt="Grupo Impohogar" class="gate-logo">
       <div class="eyebrow">Acceso para clientes mayoristas</div>
       <form id="gateLogin" class="gate-step" autocomplete="on" novalidate>
         <h1 class="gate-title">Ingresa a tu catálogo</h1>
@@ -105,7 +105,7 @@
 <!-- ============ VITRINA (antes de la clave) ============ -->
 <div id="vitrina" class="vitrina" role="region" aria-label="Vitrina de ImpoHogar Market">
   <div class="vt-topbar">
-    <img src="img/logo.png" alt="Grupo Impohogar" class="vt-logo" id="vitrinaLogo">
+    <img src="img/logo.png" alt="Grupo Impohogar" class="vt-logo">
     <button type="button" class="vt-skip" onclick="entrarAlCatalogo()" aria-label="Entrar al catálogo">
       Ingresar<span class="vt-skip-long"> al catálogo</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -487,29 +487,10 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
-<script defer src="js/config.js?v=20261025a"></script>
-<script defer src="js/arranque.js?v=20261025a"></script>
-<!-- Panel administrativo (oculto: 5 clics en el logo). Va fuera de #mainContent
-     para poder abrirlo tambien desde la vitrina y la pantalla de ingreso. Ver js/admin.js -->
-<div id="adminLoginModal" class="order-modal" onclick="if(event.target===this) closeAdminLogin()">
-  <div class="order-card order-card-narrow" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
-    <div class="order-header">
-      <h3 id="adminLoginTitle">Panel administrativo</h3>
-      <button type="button" class="icon-btn" onclick="closeAdminLogin()" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    </div>
-    <div class="form-body">
-      <label class="field-label" for="adminLoginEmail">Usuario</label>
-      <input id="adminLoginEmail" class="field-input" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ej: roy" onkeydown="if(event.key==='Enter') document.getElementById('adminLoginPassword').focus()">
-      <label class="field-label" for="adminLoginPassword">Contraseña</label>
-      <input id="adminLoginPassword" class="field-input" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitAdminLogin()">
-      <div id="adminLoginError" class="field-error" role="alert"></div>
-    </div>
-    <div class="order-footer order-footer-end">
-      <button type="button" class="btn btn-primary" id="adminLoginBtn" onclick="submitAdminLogin()">Iniciar sesión</button>
-    </div>
-  </div>
-</div>
-
+<script defer src="js/config.js?v=20261025b"></script>
+<script defer src="js/arranque.js?v=20261025b"></script>
+<!-- Panel administrativo (oculto): se abre con 5 clics en el logo del encabezado,
+     solo con la sesion de un cliente marcado como administrador. Ver js/admin.js -->
 <div id="adminPanelModal" class="admin-modal">
   <div class="admin-shell" role="dialog" aria-modal="true" aria-labelledby="adminPanelTitle">
     <aside class="admin-sidebar">
@@ -554,9 +535,9 @@
       </div>
       <div class="admin-sidebar-bottom">
         <div class="admin-sidebar-user" id="adminSidebarUser"></div>
-        <button type="button" class="admin-nav-item admin-nav-logout" onclick="adminLogout()">
+        <button type="button" class="admin-nav-item admin-nav-logout" onclick="closeAdminPanel()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-          <span>Cerrar sesión</span>
+          <span>Volver al catálogo</span>
         </button>
       </div>
     </aside>

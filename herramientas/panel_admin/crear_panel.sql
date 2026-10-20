@@ -7,10 +7,11 @@
 --  perfumeria (productos, clientes, pedidos, ajustes_catalogo,
 --  auditoria_admin, admin_usuarios).
 --
---  Quien entra al panel: las mismas cuentas de administrador de
---  Supabase Auth que usa perfumeria, pero solo las que esten en
---  nevada.admins (rol 'admin' = todo; rol 'pedidos' = solo Pedidos y
---  Ranking, igual que en perfumeria).
+--  IMPORTANTE: despues de este archivo se corre panel_por_cliente.sql,
+--  que cambia quien entra al panel: ya no las cuentas de Supabase Auth
+--  de perfumeria, sino los clientes de gerencia con su propia sesion del
+--  catalogo. Si alguna vez se vuelve a correr este archivo, correr
+--  tambien panel_por_cliente.sql despues.
 --
 --  Se pega una vez en Supabase -> SQL Editor -> Run (proyecto
 --  "ImpoHogar's Project"). Se puede volver a correr sin perder datos.
