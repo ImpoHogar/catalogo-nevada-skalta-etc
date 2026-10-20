@@ -78,8 +78,8 @@ const VITRINA_MAX_POR_FILA = 40;
 // por las cantidades reales del catalogo.
 const INICIO = {
   etiqueta: 'Catálogo mayorista · Grupo ImpoHogar',
-  titulo: '¿Qué estás buscando?',
-  texto: '{productos} productos de {marcas} marcas con disponibilidad real de bodega.'
+  titulo: '¿Qué vas a surtir hoy?',
+  texto: '{productos} productos de {marcas} marcas, con el stock real de bodega al momento.'
 };
 
 // ------------------------------------------------------------
@@ -132,7 +132,7 @@ const MARCAS_INFO = {
   "ARGOM": { logo: "argom.png" },
   "TIRTIR": { logo: "tirtir.png" },
   "KARA BEAUTY": { logo: "kara-beauty.png" },
-  "NEVADA": { logo: "nevada.png" },
+  "NEVADA": { logo: "nevada-2026.png" },
   "UNNO TEKNO": { logo: "unno-tekno.png" },
   "TREE HUT": { logo: "tree-hut.png" },
   "SKALA": { logo: "skala.png" },
@@ -142,12 +142,9 @@ const MARCAS_INFO = {
   "IMMORTAL": { logo: "immortal.png" },
   "EQQUALBERRY": { logo: "eqqualberry.png" },
   "PATRICIA DE LEÓN": { logo: "patricia-de-leon.png" },
-  "NOSTALGIA": { logo: "nostalgia.png" },
+  "NOSTALGIA": { logo: "nostalgia-2026.png" },
   "INOAR": { logo: "inoar.png" },
-  "NIVEA": { logo: "nivea.svg" },
-  "WAHL": { logo: "wahl.png" },
   "SALON LINE": { logo: "salon-line.png" },
-  "XTRACARE": { logo: "xtracare.png" },
 };
 
 // ------------------------------------------------------------
