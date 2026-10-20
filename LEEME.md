@@ -2,7 +2,7 @@
 
 Catálogo de pedido mayorista hecho **sobre la misma base que el catálogo de
 perfumería** (`Catalogo-Perfumer-a-Web`): mismo diseño, vitrina de entrada,
-clave, carrito, Excel del pedido, envío por WhatsApp, historial, calculadora,
+ingreso, carrito, Excel del pedido, envío por WhatsApp, historial, calculadora,
 modo oscuro y formulario de opinión.
 
 Lo que cambió es el contenido, porque es otro mercado:
@@ -139,10 +139,15 @@ Cuando cambies cualquier archivo de `js/` o `css/`, subí el número `?v=2026092
 en el `index.html` (buscar y reemplazar) para que los clientes no vean la
 versión vieja.
 
+## Acceso de clientes y precios
+
+Cada cliente entra con su **código de cliente** y su contraseña (ya no hay
+clave general) y el Excel del pedido trae el **precio P4 con IVA**. Es propio
+de este catálogo, separado de perfumería. Ver
+`herramientas/acceso_clientes/LEEME.md`.
+
 ## Compartido con perfumería (revisar si se quiere separar)
 
-- **Clave de acceso** (`js/gate.js`): es la misma. Igual que en perfumería, no
-  es seguridad real.
 - **Google Analytics** (`G-QF2TFBMBLR` en `index.html`): mismo ID; las visitas
   se distinguen por la dirección de la página.
 - **Formulario de opinión** (`FEEDBACK_URL` en `js/config.js`): mismo Google

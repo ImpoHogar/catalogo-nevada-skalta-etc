@@ -409,8 +409,9 @@ function entrarAlCatalogo() {
   setTimeout(() => {
     vitrina.style.display = 'none';
     vitrinaDetiene();
-    const pass = document.getElementById('gatePass');
-    if (pass) { try { pass.focus({ preventScroll: true }); } catch (err) { pass.focus(); } }
+    const login = document.getElementById('gateLogin');
+    const campo = document.getElementById(login && !login.hidden ? 'gateCode' : 'gateNueva');
+    if (campo) { try { campo.focus({ preventScroll: true }); } catch (err) { campo.focus(); } }
   }, 480);
 }
 
@@ -422,7 +423,7 @@ function entrarAlCatalogo() {
 //  bienvenida termina. Para saberlo se observa el propio elemento de
 //  bienvenida, sin tocar js/gate.js ni copiar sus tiempos.
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+cuandoListo(() => {
   try {
     renderVitrina();
   } catch (err) {

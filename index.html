@@ -33,8 +33,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20261022c">
-<link rel="stylesheet" href="css/identidad.css?v=20261022c">
+<link rel="stylesheet" href="css/styles.css?v=20261025a">
+<link rel="stylesheet" href="css/identidad.css?v=20261025a">
 </head>
 <body>
 <noscript>
@@ -43,7 +43,7 @@
       <div style="font-size:20px;font-weight:700;color:#0D0E12;margin-bottom:12px;">Este catálogo necesita JavaScript</div>
       <div style="font-size:14px;color:#3C3F47;line-height:1.5;">
         Parece que el archivo se abrió en un visor rápido (por ejemplo, la vista previa de WhatsApp, Correo o Archivos en iPhone/iPad), que no ejecuta JavaScript.<br><br>
-        Para poder ingresar la clave, abre este archivo directamente en <b>Safari</b>: toca el ícono de compartir (el cuadrito con la flecha) y elige <b>"Abrir en Safari"</b>, o desde la app Archivos, mantén presionado el archivo y selecciona <b>"Abrir con" → Safari</b>.
+        Para poder ingresar con tu contraseña, abre este archivo directamente en <b>Safari</b>: toca el ícono de compartir (el cuadrito con la flecha) y elige <b>"Abrir en Safari"</b>, o desde la app Archivos, mantén presionado el archivo y selecciona <b>"Abrir con" → Safari</b>.
       </div>
     </div>
   </div>
@@ -70,14 +70,34 @@
       </div>
     </aside>
     <div class="gate-card">
-      <img src="img/logo.png" alt="Grupo Impohogar" class="gate-logo">
+      <img src="img/logo.png" alt="Grupo Impohogar" class="gate-logo" id="gateLogo">
       <div class="eyebrow">Acceso para clientes mayoristas</div>
-      <h1 class="gate-title">Ingresa a tu catálogo</h1>
-      <label class="gate-label" for="gatePass">Clave de acceso</label>
-      <input id="gatePass" type="password" placeholder="Escribe tu clave" autocomplete="current-password">
-      <button id="gateBtn" type="button">Entrar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      <div id="gateError" role="alert"></div>
-      <p class="gate-help">¿No tienes clave? Escríbenos por WhatsApp al <a href="https://wa.me/50684116868" target="_blank" rel="noopener">(+506) 8411-6868</a>.</p>
+      <form id="gateLogin" class="gate-step" autocomplete="on" novalidate>
+        <h1 class="gate-title">Ingresa a tu catálogo</h1>
+        <label class="gate-label" for="gateCode">Código de cliente</label>
+        <input id="gateCode" class="gate-input" type="text" inputmode="numeric" placeholder="Ej.: 1024" autocomplete="username" autocapitalize="off" spellcheck="false">
+        <label class="gate-label" for="gatePass">Contraseña</label>
+        <input id="gatePass" class="gate-input" type="password" placeholder="Escribe tu contraseña" autocomplete="current-password">
+        <button id="gateBtn" type="submit">Entrar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <div id="gateError" role="alert"></div>
+        <p class="gate-help">¿No tienes tu contraseña? Pídela a tu vendedor o escríbenos por WhatsApp al <a href="https://wa.me/50684116868" target="_blank" rel="noopener">(+506) 8411-6868</a>.</p>
+      </form>
+      <form id="gateCambio" class="gate-step" autocomplete="on" novalidate hidden>
+        <h1 class="gate-title">Crea tu contraseña</h1>
+        <p class="gate-intro" id="gateCambioIntro">Por seguridad, cambia la contraseña temporal por una tuya.</p>
+        <input type="text" id="gateCambioUser" autocomplete="username" hidden>
+        <div id="gateActualWrap" hidden>
+          <label class="gate-label" for="gateActual">Contraseña temporal</label>
+          <input id="gateActual" class="gate-input" type="password" placeholder="La que te dio tu vendedor" autocomplete="current-password">
+        </div>
+        <label class="gate-label" for="gateNueva">Nueva contraseña</label>
+        <input id="gateNueva" class="gate-input" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" minlength="8">
+        <label class="gate-label" for="gateNueva2">Repite la nueva contraseña</label>
+        <input id="gateNueva2" class="gate-input" type="password" placeholder="Escríbela otra vez" autocomplete="new-password" minlength="8">
+        <button id="gateCambioBtn" class="gate-submit" type="submit">Guardar y entrar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <div id="gateCambioError" class="gate-error" role="alert"></div>
+        <p class="gate-help"><button type="button" class="gate-link" onclick="salirDelCatalogo()">Usar otra cuenta</button></p>
+      </form>
     </div>
   </div>
 </div>
@@ -85,7 +105,7 @@
 <!-- ============ VITRINA (antes de la clave) ============ -->
 <div id="vitrina" class="vitrina" role="region" aria-label="Vitrina de ImpoHogar Market">
   <div class="vt-topbar">
-    <img src="img/logo.png" alt="Grupo Impohogar" class="vt-logo">
+    <img src="img/logo.png" alt="Grupo Impohogar" class="vt-logo" id="vitrinaLogo">
     <button type="button" class="vt-skip" onclick="entrarAlCatalogo()" aria-label="Entrar al catálogo">
       Ingresar<span class="vt-skip-long"> al catálogo</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -96,7 +116,7 @@
     <div class="vt-hero-copy">
       <span class="chip chip-accent">Catálogo mayorista</span>
       <h1 class="vt-title">Belleza, cuidado personal,<br>tecnología y hogar. <span>En un solo pedido.</span></h1>
-      <p class="vt-lead">Esto es parte de lo que tenemos hoy en bodega. Entra con tu clave para ver el catálogo completo, elegir cantidades y generar tu pedido.</p>
+      <p class="vt-lead">Esto es parte de lo que tenemos hoy en bodega. Entra con tu código de cliente y contraseña para ver el catálogo completo, elegir cantidades y generar tu pedido.</p>
       <button type="button" class="btn btn-primary btn-lg" onclick="entrarAlCatalogo()">Entrar al catálogo
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
@@ -111,7 +131,7 @@
     <button type="button" class="btn btn-primary btn-lg" onclick="entrarAlCatalogo()">Entrar al catálogo
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </button>
-    <p class="vt-foot-note">Acceso con clave · exclusivo para clientes mayoristas</p>
+    <p class="vt-foot-note">Acceso con código de cliente · exclusivo para clientes mayoristas</p>
   </footer>
 </div>
 
@@ -128,12 +148,14 @@
         <button type="button" class="hu-link" onclick="openCalculator()">Calculadora</button>
         <button type="button" class="hu-link" onclick="openHelp()">Ayuda</button>
         <button type="button" class="hu-link hu-wa" onclick="openSellerModal('contacto')">Contactar vendedor</button>
+        <span class="hu-cliente" id="huCliente" hidden></span>
+        <button type="button" class="hu-link hu-salir" id="huSalir" onclick="salirDelCatalogo()" hidden>Salir</button>
       </nav>
     </div>
   </div>
 
   <div class="hdr-main">
-    <a class="header-logo" href="#/" aria-label="Grupo Impohogar, ir al inicio">
+    <a class="header-logo" id="headerLogo" href="#/" aria-label="Grupo Impohogar, ir al inicio">
       <img class="brand-logo" src="img/logo.png" alt="Grupo Impohogar">
       <img class="brand-logo-dark" src="img/logo-dark.png" alt="Grupo Impohogar">
       <span class="logo-tag">Market</span>
@@ -239,7 +261,7 @@
     <nav class="footer-nav" aria-label="Catálogo">
       <div><b>Departamentos</b><a href="#/d/cuidado-personal">Cuidado personal</a><a href="#/d/maquillaje">Maquillaje</a><a href="#/d/tecnologia">Tecnología</a><a href="#/d/baterias">Baterías</a><a href="#/d/hogar">Hogar</a></div>
       <div><b>Explora</b><a href="#/todo">Catálogo</a><a href="#/marcas">Marcas</a><a href="#/col/nuevos">Nuevos ingresos</a><a href="#/col/oportunidades">Oportunidades</a><a href="#/col/ultimas">· Últimas unidades</a><a href="#/col/volumen">· Stock para volumen</a></div>
-      <div><b>Herramientas</b><button type="button" onclick="openCalculator()">Calculadora</button><button type="button" onclick="openOrderHistory()">Historial de pedidos</button><button type="button" onclick="downloadCartPhotos()">Descargar imágenes</button><button type="button" onclick="openHelp()">Ayuda</button><button type="button" onclick="openSellerModal('contacto')">Contactar vendedor</button></div>
+      <div><b>Herramientas</b><button type="button" onclick="openCalculator()">Calculadora</button><button type="button" onclick="openOrderHistory()">Historial de pedidos</button><button type="button" onclick="downloadCartPhotos()">Descargar imágenes</button><button type="button" onclick="openHelp()">Ayuda</button><button type="button" onclick="openSellerModal('contacto')">Contactar vendedor</button><button type="button" onclick="salirDelCatalogo()">Cerrar sesión</button></div>
     </nav>
     <div class="footer-links">
       <a href="https://impohogarcr.com/" target="_blank" rel="noopener" class="fl-web"><span class="fl-ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-line"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.1 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.1-3.6-8.5s1.2-6.2 3.6-8.5z"/></svg></span><span class="fl-tx"><b>Página web</b><span>impohogarcr.com</span></span></a>
@@ -465,25 +487,149 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
-<script defer src="js/config.js?v=20261022c"></script>
-<script defer src="js/products.js?v=20261022c"></script>
-<script defer src="js/stock.js?v=20261022c"></script>
-<script defer src="js/data.js?v=20261022c"></script>
-<script defer src="js/utils.js?v=20261022c"></script>
-<script defer src="js/ui.js?v=20261022c"></script>
-<script defer src="js/taxonomy.js?v=20261022c"></script>
-<script defer src="js/relacionados.js?v=20261022c"></script>
-<script defer src="js/catalog.js?v=20261022c"></script>
-<script defer src="js/stock-en-vivo.js?v=20261022c"></script>
-<script defer src="js/cart.js?v=20261022c"></script>
-<script defer src="js/theme.js?v=20261022c"></script>
-<script defer src="js/order.js?v=20261022c"></script>
-<script defer src="js/history.js?v=20261022c"></script>
-<script defer src="js/calculator.js?v=20261022c"></script>
-<script defer src="js/lightbox.js?v=20261022c"></script>
-<script defer src="js/showcase.js?v=20261022c"></script>
-<script defer src="js/gate.js?v=20261022c"></script>
-<script defer src="js/feedback.js?v=20261022c"></script>
-<script defer src="js/main.js?v=20261022c"></script>
+<script defer src="js/config.js?v=20261025a"></script>
+<script defer src="js/arranque.js?v=20261025a"></script>
+<!-- Panel administrativo (oculto: 5 clics en el logo). Va fuera de #mainContent
+     para poder abrirlo tambien desde la vitrina y la pantalla de ingreso. Ver js/admin.js -->
+<div id="adminLoginModal" class="order-modal" onclick="if(event.target===this) closeAdminLogin()">
+  <div class="order-card order-card-narrow" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
+    <div class="order-header">
+      <h3 id="adminLoginTitle">Panel administrativo</h3>
+      <button type="button" class="icon-btn" onclick="closeAdminLogin()" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="form-body">
+      <label class="field-label" for="adminLoginEmail">Usuario</label>
+      <input id="adminLoginEmail" class="field-input" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ej: roy" onkeydown="if(event.key==='Enter') document.getElementById('adminLoginPassword').focus()">
+      <label class="field-label" for="adminLoginPassword">Contraseña</label>
+      <input id="adminLoginPassword" class="field-input" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitAdminLogin()">
+      <div id="adminLoginError" class="field-error" role="alert"></div>
+    </div>
+    <div class="order-footer order-footer-end">
+      <button type="button" class="btn btn-primary" id="adminLoginBtn" onclick="submitAdminLogin()">Iniciar sesión</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminPanelModal" class="admin-modal">
+  <div class="admin-shell" role="dialog" aria-modal="true" aria-labelledby="adminPanelTitle">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-top">
+        <div class="admin-sidebar-brand">
+          <span class="admin-brand-mark">IH</span>
+          <div class="admin-brand-text">
+            <b>ImpoHogar Nevada</b>
+            <span>Panel administrativo</span>
+          </div>
+        </div>
+        <nav class="admin-nav">
+          <button type="button" id="adminTabProductos" class="admin-nav-item" onclick="switchAdminTab('productos')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+            <span>Productos</span>
+          </button>
+          <button type="button" id="adminTabClientes" class="admin-nav-item" onclick="switchAdminTab('clientes')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M15.7 14.2c2.8.4 4.8 2.4 4.8 5.3"/></svg>
+            <span>Clientes</span>
+          </button>
+          <button type="button" id="adminTabStock" class="admin-nav-item" onclick="switchAdminTab('stock')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l2-7h14l2 7"/><path d="M3 11v8a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8"/><path d="M3 11h18"/><path d="M9 15h6"/></svg>
+            <span>Sincronización</span>
+          </button>
+          <button type="button" id="adminTabPedidos" class="admin-nav-item" onclick="switchAdminTab('pedidos')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-1.5 10a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 6Z"/><path d="M8 6V5a4 4 0 0 1 8 0v1"/></svg>
+            <span>Pedidos</span>
+          </button>
+          <button type="button" id="adminTabRanking" class="admin-nav-item" onclick="switchAdminTab('ranking')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/></svg>
+            <span>Ranking</span>
+          </button>
+          <button type="button" id="adminTabAjustes" class="admin-nav-item" onclick="switchAdminTab('ajustes')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+            <span>Ajustes</span>
+          </button>
+          <button type="button" id="adminTabHistorial" class="admin-nav-item" onclick="switchAdminTab('historial')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+            <span>Historial</span>
+          </button>
+        </nav>
+      </div>
+      <div class="admin-sidebar-bottom">
+        <div class="admin-sidebar-user" id="adminSidebarUser"></div>
+        <button type="button" class="admin-nav-item admin-nav-logout" onclick="adminLogout()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-main-header">
+        <h3 id="adminPanelTitle">Productos</h3>
+        <button type="button" class="admin-close-btn" onclick="closeAdminPanel()" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="admin-body">
+        <div class="admin-toolbar">
+          <input id="adminSearchInput" class="field-input" type="search" placeholder="Buscar..." oninput="onAdminSearch()">
+          <button type="button" id="adminPapeleraBtn" class="btn btn-ghost" style="display:none;" onclick="toggleAdminPapelera()">Ver papelera</button>
+          <button type="button" id="adminAddBtn" class="btn btn-primary" onclick="onAdminAdd()">+ Agregar</button>
+        </div>
+        <div id="adminProductosFilters" class="admin-toolbar" style="display:none; flex-wrap:wrap;">
+          <div>
+            <label class="field-label" for="adminFiltroMarca">Marca</label>
+            <select id="adminFiltroMarca" class="field-input admin-filters-select" onchange="onAdminProductosFilterChange()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="adminFiltroCategoria">Categoría</label>
+            <select id="adminFiltroCategoria" class="field-input admin-filters-select" onchange="onAdminProductosFilterChange()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <label class="admin-filters-check"><input type="checkbox" id="adminFiltroSinFoto" onchange="onAdminProductosFilterChange()"> Sin foto</label>
+          <label class="admin-filters-check"><input type="checkbox" id="adminFiltroAgotados" onchange="onAdminProductosFilterChange()"> Agotados</label>
+          <label class="admin-filters-check"><input type="checkbox" id="adminFiltroOcultos" onchange="onAdminProductosFilterChange()"> Ocultos</label>
+          <label class="admin-filters-check"><input type="checkbox" id="adminFiltroNuevo" onchange="onAdminProductosFilterChange()"> Nuevo ingreso</label>
+          <button type="button" class="btn btn-ghost admin-toolbar-btn" onclick="clearAdminProductosFilters()">Limpiar filtros</button>
+          <button type="button" class="btn btn-primary admin-toolbar-btn" onclick="exportAdminCatalogoExcel()">Exportar catálogo a Excel</button>
+        </div>
+        <div id="adminClientesFilters" class="admin-toolbar" style="display:none;">
+          <div>
+            <label class="field-label" for="adminFiltroEstadoCliente">Estado</label>
+            <select id="adminFiltroEstadoCliente" class="field-input admin-filters-select" onchange="onAdminClientesFilterChange()">
+              <option value="">Todos</option>
+              <option value="Activo">Activos (ya crearon su contraseña)</option>
+              <option value="Pendiente">Pendientes (con contraseña temporal)</option>
+              <option value="Bloqueado">Bloqueados</option>
+            </select>
+          </div>
+        </div>
+        <div id="adminPedidosFilters" class="admin-toolbar" style="display:none;">
+          <div>
+            <label class="field-label" for="adminPedidosFrom">Desde</label>
+            <input id="adminPedidosFrom" class="field-input admin-date" type="date">
+          </div>
+          <div>
+            <label class="field-label" for="adminPedidosTo">Hasta</label>
+            <input id="adminPedidosTo" class="field-input admin-date" type="date">
+          </div>
+          <label class="admin-filters-check">
+            <input type="checkbox" id="adminPedidosSoloSinVincular" onchange="onAdminPedidosFilterChange()">
+            Solo sin vincular
+          </label>
+          <button type="button" class="btn btn-ghost admin-toolbar-btn" onclick="onAdminPedidosFilterChange()">Filtrar</button>
+          <button type="button" class="btn btn-ghost admin-toolbar-btn" onclick="clearAdminPedidosFilters()">Limpiar</button>
+          <button type="button" class="btn btn-primary admin-toolbar-btn" onclick="exportAdminPedidosExcel()">Exportar a Excel</button>
+        </div>
+        <div id="adminMsg" class="admin-msg"></div>
+        <div id="adminPedidosSummary" class="admin-summary" style="display:none;"></div>
+        <div id="adminListBody"></div>
+        <div id="adminPedidosLoadMoreWrap" style="display:none; text-align:center; margin-top:14px;">
+          <button type="button" class="btn btn-ghost" onclick="loadMoreAdmin()">Cargar más</button>
+        </div>
+        <datalist id="adminClientesDatalist"></datalist>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

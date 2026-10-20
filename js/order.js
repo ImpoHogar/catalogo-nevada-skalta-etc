@@ -43,7 +43,7 @@ function openCustomerModal() {
   }
   try {
     const saved = JSON.parse(localStorage.getItem('impohogar_tec_customer') || '{}');
-    document.getElementById('custName').value = saved.name || '';
+    document.getElementById('custName').value = saved.name || (typeof SESION !== 'undefined' && SESION ? SESION.nombre : '');
     document.getElementById('custPhone').value = saved.phone || '';
   } catch (err) {}
   const { products, units } = cartTotals();
@@ -83,6 +83,20 @@ function confirmCustomerInfo() {
   generateExcel();
 }
 
+// Guarda el pedido en Supabase para el panel administrativo (Pedidos y
+// Ranking). El cliente queda identificado por su sesion. Nunca frena
+// el pedido: si falla, el Excel ya se descargo igual.
+let ultimoPedidoId = null;
+function registrarPedidoEnPanel(nombre, telefono, items) {
+  ultimoPedidoId = null;
+  if (typeof SESION === 'undefined' || !SESION || typeof accesoRpc !== 'function') return;
+  accesoRpc('nevada_registrar_pedido', {
+    p_token: SESION.token, p_nombre: nombre, p_telefono: telefono,
+    p_items: items.map(it => ({ code: it.code, name: it.name, brand: it.brand, qty: it.qty }))
+  }).then(r => { if (r && r.ok) ultimoPedidoId = r.id; })
+    .catch(err => console.warn('No se pudo registrar el pedido en el panel', err));
+}
+
 async function generateExcel() {
   try {
     if (typeof ExcelJS === 'undefined') {
@@ -99,38 +113,52 @@ async function generateExcel() {
     const customerName = (currentCustomer.name || '').trim();
     const customerPhone = (currentCustomer.phone || '').trim();
 
+    // Precios P4 (IVA incluido): se piden a Supabase con la sesion del
+    // cliente. Si no llegan, el Excel sale igual, sin precios.
+    const precios = typeof cargarPreciosP4 === 'function' ? await cargarPreciosP4() : null;
+    const cliente = typeof SESION !== 'undefined' && SESION ? SESION : null;
+
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Pedido');
 
     sheet.getColumn(1).width = 20;
     sheet.getColumn(2).width = 50;
-    sheet.getColumn(3).width = 20;
+    sheet.getColumn(3).width = 12;
+    sheet.getColumn(4).width = 14;
 
-    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad']);
+    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad', 'Precio']);
     headerRow.font = { bold: true };
 
     const historyItems = [];
     const photoItems = [];
 
+    // Precio = P4 unitario con IVA; en blanco si el producto no tiene P4.
     ids.forEach(id => {
       const p = PRODUCTS_BY_ID[id];
-      historyItems.push({ code: p.code, name: p.name, brand: p.brand, qty: qtyMap[id] });
-      sheet.addRow([p.code, p.name, qtyMap[id]]);
+      const qty = qtyMap[id];
+      historyItems.push({ code: p.code, name: p.name, brand: p.brand, qty });
+      const precio = precios && Number(precios.datos[p.code]) > 0 ? Number(precios.datos[p.code]) : null;
+      const row = sheet.addRow([p.code, p.name, qty, precio]);
+      row.getCell(4).numFmt = '#,##0.00';
       if (p.img) {
         photoItems.push(p);
       }
     });
 
+    const today = new Date().toISOString().slice(0, 10);
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const today = new Date().toISOString().slice(0, 10);
-    const fileTag = customerName ? `_${sanitizeFilename(customerName)}` : '';
+    const fileTag = (cliente ? `_${cliente.codigo}` : '') + (customerName ? `_${sanitizeFilename(customerName)}` : '');
     lastExcel = { blob, filename: `Pedido${fileTag}_${today}.xlsx` };
     downloadBlob(lastExcel.blob, lastExcel.filename);
 
-    setStatus('✓ Excel descargado.', false);
+    setStatus(precios ? '✓ Excel descargado.' : '✓ Excel descargado (sin precios: no se pudieron cargar).', false);
+    registrarPedidoEnPanel(customerName, customerPhone, historyItems);
+    if (!precios && typeof notify === 'function') notify('El Excel salió sin precios: no se pudieron cargar. Revisa tu conexión o vuelve a ingresar.', true);
     saveOrderToHistory(customerName, customerPhone, historyItems);
     lastOrderSummary = {
+      codigo: cliente ? cliente.codigo : '',
       name: customerName,
       phone: customerPhone,
       totalProducts: historyItems.length,
@@ -288,7 +316,11 @@ function sellerPhoneLabel(phone) {
   return `(506) ${n.slice(0, 4)}-${n.slice(4)}`;
 }
 function sellerCardInner(s) {
-  return `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role)}" loading="lazy" width="480" height="480">
+  // Vendedor agregado desde el panel sin foto todavia: tarjeta de texto.
+  const foto = s.img
+    ? `<img src="${s.img}" alt="${escapeHtml(s.name)} · ${escapeHtml(s.role || '')}" loading="lazy" width="480" height="480">`
+    : `<span class="seller-sinfoto"><b>${escapeHtml(s.name)}</b>${s.role ? `<small>${escapeHtml(s.role)}</small>` : ''}</span>`;
+  return `${foto}
     <span class="seller-phone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.4A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1-.2-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.4 1 2.5c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>${sellerPhoneLabel(s.phone)}</span>`;
 }
 // El ultimo vendedor que eligio el cliente sale primero y marcado
@@ -315,7 +347,7 @@ function renderSellers() {
   if (foot) foot.innerHTML = Object.values(SELLERS).map(s =>
     `<a class="seller-option" href="https://wa.me/${s.phone}" target="_blank" rel="noopener" aria-label="Escribir a ${escapeHtml(s.name)} por WhatsApp">${sellerCardInner(s)}</a>`).join('');
 }
-document.addEventListener('DOMContentLoaded', renderSellers);
+cuandoListo(renderSellers);
 
 function openSellerModal(mode, pid) {
   sellerMode = mode || 'pedido';
@@ -340,20 +372,30 @@ function closeSellerModal() {
   document.getElementById('sellerModal').classList.remove('open');
 }
 
+// ", soy NOMBRE (cliente 123)" para los mensajes de WhatsApp.
+function quienSoy() {
+  const c = typeof SESION !== 'undefined' && SESION ? SESION : null;
+  return c ? `, soy ${c.nombre} (cliente ${c.codigo})` : '';
+}
+
 function sendToSeller(key) {
   const seller = SELLERS[key];
   if (!seller) return;
   let message;
   if (sellerMode === 'consulta' && sellerProduct) {
     const p = sellerProduct;
-    message = `Buenas, tengo una consulta sobre este producto: ${prettyName(p)} (${p.brand}) · Código ${p.code}.`;
+    message = `Buenas${quienSoy()}, tengo una consulta sobre este producto: ${prettyName(p)} (${p.brand}) · Código ${p.code}.`;
   } else if (sellerMode === 'contacto') {
-    message = 'Buenas, quisiera hacer una consulta sobre el catálogo.';
+    message = `Buenas${quienSoy()}, quisiera hacer una consulta sobre el catálogo.`;
   } else {
     const s = lastOrderSummary;
-    const intro = s.name ? `Buenas, mi nombre es ${s.name}, este es mi pedido` : 'Buenas, este es mi pedido';
+    const quien = s.codigo ? ` (cliente ${s.codigo})` : '';
+    const intro = s.name ? `Buenas, mi nombre es ${s.name}${quien}, este es mi pedido` : `Buenas${quien}, este es mi pedido`;
     const detalle = s.totalProducts ? ` (${s.totalProducts} ${s.totalProducts === 1 ? 'producto' : 'productos'}, ${s.totalUnits} ${s.totalUnits === 1 ? 'unidad' : 'unidades'}). Te adjunto el Excel.` : '.';
     message = intro + detalle;
+  }
+  if (sellerMode === 'pedido' && ultimoPedidoId && typeof SESION !== 'undefined' && SESION) {
+    accesoRpc('nevada_pedido_vendedor', { p_token: SESION.token, p_id: ultimoPedidoId, p_vendedor: seller.name }).catch(() => {});
   }
   const url = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
   try { localStorage.setItem(SELLER_KEY, key); } catch (e) {}

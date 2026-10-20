@@ -38,6 +38,54 @@ function Log($msg) {
   } catch { }
 }
 
+# ---------- Precios P4 (tabla04: una fila por articulo y tipo de precio) ----------
+# Lee SOLO las filas con ID_TIPO = P4 y su PVENTA (precio con IVA). No lee
+# costos ni margenes. Devuelve @{ codigo = precio }.
+function Leer-PreciosP4($ruta) {
+  $fs = [IO.File]::Open($ruta, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+  try {
+    $b = New-Object byte[] $fs.Length
+    $leido = 0
+    while ($leido -lt $b.Length) { $r = $fs.Read($b, $leido, $b.Length - $leido); if ($r -le 0) { break }; $leido += $r }
+  } finally { $fs.Close() }
+  $nReg = [BitConverter]::ToUInt32($b, 4); $hl = [BitConverter]::ToUInt16($b, 8); $rl = [BitConverter]::ToUInt16($b, 10)
+  $campos = @{}
+  $off = 1
+  for ($i = 32; $i -lt $hl -and $b[$i] -ne 13; $i += 32) {
+    $nm = [Text.Encoding]::ASCII.GetString($b, $i, 11).Trim([char]0, ' ')
+    $campos[$nm] = @{ t = [char]$b[$i + 11]; o = $off; l = $b[$i + 16] }
+    $off += $b[$i + 16]
+  }
+  foreach ($c in 'ID_TIPO', 'CODIGO', 'PVENTA') { if (-not $campos.ContainsKey($c)) { throw "La tabla de precios no tiene la columna $c." } }
+  $enc = [Text.Encoding]::GetEncoding(1252)
+  $texto = {
+    param($base, $f)
+    $largo = $f.l
+    if ($f.t -eq 'V') { $ult = $b[$base + $f.o + $f.l - 1]; if ($ult -lt $f.l) { $largo = $ult } }
+    $enc.GetString($b, $base + $f.o, $largo) -replace '^[\x00-\x20]+|[\x00-\x20]+$', ''
+  }
+  $fT = $campos['ID_TIPO']; $fC = $campos['CODIGO']; $fP = $campos['PVENTA']
+  $precios = @{}
+  $max = [Math]::Min([int64]$nReg, [int64][Math]::Floor(($b.Length - $hl) / $rl))
+  for ($r = 0; $r -lt $max; $r++) {
+    $base = $hl + $r * $rl
+    if ($b[$base] -eq 42) { continue }
+    if ((& $texto $base $fT) -ne 'P4') { continue }
+    $code = & $texto $base $fC
+    if (-not $code -or $precios.ContainsKey($code)) { continue }
+    $s = $base + $fP.o
+    $v = 0.0
+    switch ($fP.t) {
+      'B' { $v = [BitConverter]::ToDouble($b, $s) }
+      'Y' { $v = [BitConverter]::ToInt64($b, $s) / 10000 }
+      'I' { $v = [double][BitConverter]::ToInt32($b, $s) }
+      default { [void][double]::TryParse((& $texto $base $fP), [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$v) }
+    }
+    if ($v -gt 0) { $precios[$code] = [Math]::Round($v, 2) }
+  }
+  return $precios
+}
+
 try {
   # ---------- Configuracion ----------
   $cfgPath = Join-Path $aqui 'config.json'
@@ -47,6 +95,9 @@ try {
   $minimo = if ($cfg.minimo_codigos) { [int]$cfg.minimo_codigos } else { 1000 }
   if ($dbf -match '\\\\SERVIDOR\\local') { throw "La ruta apunta al sistema de perfumeria. Debe ser \\Servidor\interakzion\SISTEMA\tablas\tabla01.dbf" }
   if (-not (Test-Path $dbf)) { throw "No se encuentra la tabla: $dbf" }
+  # Precios P4: tabla04.dbf en la misma carpeta (o "tabla_precios" en config.json).
+  $tablaPrecios = if ($cfg.tabla_precios) { $cfg.tabla_precios } else { Join-Path (Split-Path -Parent $dbf) 'tabla04.dbf' }
+  if ($tablaPrecios -match '\\\\SERVIDOR\\local') { throw "La ruta de precios apunta al sistema de perfumeria." }
 
   # ---------- Lectura del DBF (sin bloquear al sistema) ----------
   # Se abre en modo lectura compartida: Interakzion puede seguir
@@ -116,6 +167,11 @@ try {
   if ($Prueba) {
     $muestra = '7897042017881', '886540004179', '847610009159', '025215720734', '8809679696451', '810112884715'
     foreach ($m in $muestra) { Write-Host ("   {0}  ->  {1}" -f $m, $(if ($stock.ContainsKey($m)) { $stock[$m] } else { '(no esta)' })) }
+    try {
+      $p4 = Leer-PreciosP4 $tablaPrecios
+      Log ("Precios P4: {0} articulos en {1}" -f $p4.Count, $tablaPrecios)
+      foreach ($m in $muestra) { Write-Host ("   P4 {0}  ->  {1}" -f $m, $(if ($p4.ContainsKey($m)) { $p4[$m] } else { '(sin P4)' })) }
+    } catch { Log ("AVISO precios P4: " + $_.Exception.Message) }
     Log 'Modo prueba: NO se subio nada.'
     exit 0
   }
@@ -149,6 +205,27 @@ try {
   }
   Invoke-RestMethod -Method Post -Uri $url -Headers $headers -UserAgent 'ImpoHogar-Nevada-Sincronizador/1.0' -ContentType 'application/json; charset=utf-8' -Body $body | Out-Null
   Log ("OK: {0} codigos subidos a Supabase ({1})." -f $total, $tabla)
+
+  # ---------- Precios P4 (protegidos: solo los ve un cliente con sesion) ----------
+  # Si algo falla aqui, el inventario ya quedo subido igual.
+  try {
+    $p4 = Leer-PreciosP4 $tablaPrecios
+    if ($p4.Count -lt 500) { throw ("Solo {0} precios P4: algo raro con la tabla. No se suben." -f $p4.Count) }
+    $sp = New-Object Text.StringBuilder
+    [void]$sp.Append('{"p_total":').Append($p4.Count).Append(',"p_datos":{')
+    $primero = $true
+    foreach ($k in $p4.Keys) {
+      if (-not $primero) { [void]$sp.Append(',') }
+      $primero = $false
+      [void]$sp.Append('"').Append($k.Replace('\', '\\').Replace('"', '\"')).Append('":').Append($p4[$k].ToString([Globalization.CultureInfo]::InvariantCulture))
+    }
+    [void]$sp.Append('}}')
+    $urlP = $cfg.supabase_url.TrimEnd('/') + '/rest/v1/rpc/nevada_subir_precios'
+    Invoke-RestMethod -Method Post -Uri $urlP -Headers @{ apikey = $key } -UserAgent 'ImpoHogar-Nevada-Sincronizador/1.0' -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($sp.ToString())) | Out-Null
+    Log ("OK: {0} precios P4 subidos." -f $p4.Count)
+  } catch {
+    Log ("AVISO precios P4 (el inventario si se subio): " + $_.Exception.Message)
+  }
   exit 0
 }
 catch {

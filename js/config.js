@@ -190,6 +190,45 @@ const INVENTARIO_EN_VIVO = {
 };
 
 // ------------------------------------------------------------
+//  PRODUCTOS Y AJUSTES DESDE SUPABASE (panel administrativo)
+// ------------------------------------------------------------
+//  Los productos, los vendedores y la rotacion de Nuevos Ingresos se
+//  editan desde el panel administrativo (5 clics en el logo) y viven
+//  en Supabase: tablas nevada_productos y nevada_ajustes (propias de
+//  este catalogo; no son las de perfumeria). js/arranque.js los carga
+//  antes de armar el catalogo. Si Supabase no responde a tiempo, se
+//  usan js/products.js y los valores de este archivo.
+const CATALOGO_EN_VIVO = {
+  activo: true,
+  url: INVENTARIO_EN_VIVO.url,
+  clavePublica: INVENTARIO_EN_VIVO.clavePublica,
+  esperaMs: 4000
+};
+
+// Corre fn cuando la pagina esta lista (o enseguida si ya lo esta).
+// Los archivos del catalogo se cargan despues del arranque, cuando el
+// evento DOMContentLoaded ya puede haber pasado.
+function cuandoListo(fn) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+  else setTimeout(fn, 0);
+}
+
+// ------------------------------------------------------------
+//  ACCESO DE CLIENTES Y PRECIOS P4
+// ------------------------------------------------------------
+//  Cada cliente entra con su codigo del sistema y su contrasena.
+//  Las valida Supabase (funciones public.nevada_*; ver
+//  herramientas/acceso_clientes). Los precios P4 (IVA incluido) NO
+//  estan en este codigo: se piden a Supabase con la sesion del
+//  cliente solo al generar el Excel del pedido, y nunca se muestran
+//  en pantalla.
+const ACCESO_CLIENTES = {
+  url: INVENTARIO_EN_VIVO.url,
+  clavePublica: INVENTARIO_EN_VIVO.clavePublica,
+  esperaMs: 12000
+};
+
+// ------------------------------------------------------------
 //  "¿QUE ESTAS BUSCANDO?" (comprar por necesidad)
 // ------------------------------------------------------------
 //  Accesos pensados para el cliente que no conoce las marcas.
@@ -277,9 +316,9 @@ const VITRINA_CATEGORIAS = ["Maquillaje", "Tecnología", "Cuidado facial", "Elec
 //  Vacio = no hay rotacion (solo se muestran los Nuevos Ingresos
 //  normales, los que tienen dateAdded en products.js).
 // ============================================================
-const LOW_ROTATION_START_DATE = "2026-09-21";
+let LOW_ROTATION_START_DATE = "2026-09-21";
 
-const LOW_ROTATION_BATCHES = [
+let LOW_ROTATION_BATCHES = [
 ];
 
 function getActiveLowRotationBatch() {
