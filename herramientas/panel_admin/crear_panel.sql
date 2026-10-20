@@ -1,7 +1,7 @@
 -- ============================================================
 --  PANEL ADMINISTRATIVO - Catalogo Nevada
 -- ============================================================
---  Lo que necesita el panel (5 clics en el logo del catalogo):
+--  Lo que necesita el panel (3 clics en el logo del catalogo):
 --  productos, pedidos, ajustes e historial de cambios de NEVADA.
 --  Todo con el prefijo "nevada": no usa ni modifica ninguna tabla de
 --  perfumeria (productos, clientes, pedidos, ajustes_catalogo,

@@ -4,7 +4,7 @@
 --  Gerencia y el personal tambien son clientes de la empresa. Con
 --  este cambio, quien inicia sesion en el catalogo con su codigo de
 --  cliente y su contraseña, y esta en la lista nevada.admins_clientes,
---  abre el panel con 5 clics en el logo: ya no se pide otro usuario
+--  abre el panel con 3 clics en el logo: ya no se pide otro usuario
 --  ni otra contraseña.
 --
 --  Reemplaza el ingreso con las cuentas de Supabase Auth (las de

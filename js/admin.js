@@ -5,7 +5,7 @@
 //  y el personal tambien son clientes: quien inicia sesion en el
 //  catalogo con su codigo de cliente y su contraseña, y esta marcado
 //  como administrador en Supabase (nevada.admins_clientes), abre el
-//  panel haciendo 5 clics seguidos sobre el logo del encabezado en
+//  panel haciendo 3 clics seguidos sobre el logo del encabezado en
 //  menos de 3 segundos. No se pide otro usuario ni otra contraseña.
 //  Para cualquier otro cliente el logo funciona como siempre.
 //
@@ -38,7 +38,7 @@ function adminCfg() {
   return CATALOGO_EN_VIVO;
 }
 
-// ---------- Gesto secreto: 5 clics en el logo en 3 segundos ----------
+// ---------- Gesto secreto: 3 clics en el logo en 3 segundos ----------
 (function setupAdminTrigger() {
   let clicks = 0;
   let timer = null;
@@ -49,7 +49,7 @@ function adminCfg() {
       clicks++;
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => { clicks = 0; }, 3000);
-      if (clicks >= 5) {
+      if (clicks >= 3) {
         clicks = 0;
         clearTimeout(timer);
         e.preventDefault();
