@@ -12,9 +12,10 @@ Interakzion) y su **contraseña**. Ya no hay una contraseña general.
 - **Seguridad:** 5 intentos fallidos bloquean la cuenta 15 minutos. Las
   contraseñas se guardan cifradas (bcrypt); nadie puede verlas, ni siquiera
   en Supabase.
-- **Precios:** el Excel del pedido trae el **precio P4 con IVA incluido** y
-  el subtotal por producto, más una hoja "Resumen" con el total. Los
-  productos sin P4 en el sistema salen con el precio en blanco. Los precios
+- **Precios:** el Excel del pedido es una sola hoja con cuatro columnas:
+  **Codigo de barras, Descripcion, Cantidad y Precio** (P4 con IVA
+  incluido). Los productos sin P4 en el sistema salen con el precio en
+  blanco. Los precios
   **nunca** aparecen en la pantalla ni en el código del catálogo: se piden a
   Supabase con la sesión del cliente solo al generar el Excel.
 

@@ -110,60 +110,28 @@ async function generateExcel() {
     sheet.getColumn(1).width = 20;
     sheet.getColumn(2).width = 50;
     sheet.getColumn(3).width = 12;
-    sheet.getColumn(4).width = 22;
-    sheet.getColumn(5).width = 18;
+    sheet.getColumn(4).width = 14;
 
-    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad', 'Precio unitario (IVA incl.)', 'Subtotal (IVA incl.)']);
+    const headerRow = sheet.addRow(['Codigo de barras', 'Descripcion', 'Cantidad', 'Precio']);
     headerRow.font = { bold: true };
 
     const historyItems = [];
     const photoItems = [];
-    let total = 0;
-    let sinPrecio = 0;
 
+    // Precio = P4 unitario con IVA; en blanco si el producto no tiene P4.
     ids.forEach(id => {
       const p = PRODUCTS_BY_ID[id];
       const qty = qtyMap[id];
       historyItems.push({ code: p.code, name: p.name, brand: p.brand, qty });
       const precio = precios && Number(precios.datos[p.code]) > 0 ? Number(precios.datos[p.code]) : null;
-      const row = sheet.addRow([p.code, p.name, qty, precio, null]);
-      if (precio !== null) {
-        const sub = Math.round(precio * qty * 100) / 100;
-        total += sub;
-        row.getCell(5).value = { formula: `C${row.number}*D${row.number}`, result: sub };
-      } else {
-        sinPrecio++;
-      }
+      const row = sheet.addRow([p.code, p.name, qty, precio]);
       row.getCell(4).numFmt = '#,##0.00';
-      row.getCell(5).numFmt = '#,##0.00';
       if (p.img) {
         photoItems.push(p);
       }
     });
 
     const today = new Date().toISOString().slice(0, 10);
-
-    // Hoja "Resumen": cliente, totales y aclaraciones del precio.
-    const res = workbook.addWorksheet('Resumen');
-    res.getColumn(1).width = 30;
-    res.getColumn(2).width = 48;
-    const filasResumen = [
-      ['Cliente', cliente ? `${cliente.codigo} · ${cliente.nombre}` : customerName],
-      ['Nombre en el pedido', customerName],
-      ['Teléfono', customerPhone],
-      ['Fecha', today],
-      ['Productos', historyItems.length],
-      ['Unidades', historyItems.reduce((sum, it) => sum + it.qty, 0)],
-      ['Total con IVA', precios ? Math.round(total * 100) / 100 : 'Sin precios (no se pudieron cargar)'],
-      ['Productos sin precio', precios ? sinPrecio : '-'],
-      ['Nota', 'Precios con IVA incluido, sujetos a confirmación de tu vendedor. Los productos sin precio te los confirma tu vendedor.']
-    ];
-    filasResumen.forEach(f => {
-      const r = res.addRow(f);
-      r.getCell(1).font = { bold: true };
-      r.getCell(2).alignment = { wrapText: true, vertical: 'top' };
-    });
-    if (precios) res.getCell('B7').numFmt = '#,##0.00';
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
