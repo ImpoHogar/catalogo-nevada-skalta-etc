@@ -547,23 +547,106 @@ function uvHeroCartel(brand, u, list, grupos, disp) {
     </section>`;
 }
 
-// TREE HUT: el aroma manda. Los nombres reales de los aromas forman el fondo.
-function uvHeroAromas(brand, u, list, grupos, disp) {
-  const presentes = u.aromas.map(a => ({ a, n: list.filter(p => uvNorm(p.name).includes(a)).length })).filter(x => x.n).sort((x, y) => y.n - x.n);
-  const fotos = presentes.slice(0, 4).map(x => uvFoto(list.filter(p => uvNorm(p.name).includes(x.a)))).filter(Boolean);
+// TREE HUT: el aroma manda. Se elige un aroma y la entrada lo muestra en sus
+// formatos (exfoliante, manteca, gel...) con su color; los nombres de los
+// aromas pasan en una cinta aparte, sin tapar el texto.
+// Color de cada aroma, tomado de lo que nombra (fruta, flor, tono).
+const TH_COLOR = {
+  'COCO COLADA': '#F2B33D', 'MOROCCAN ROSE': '#E8798F', 'VANILLA': '#D99A4E', 'WATERMELON': '#EF5A6F',
+  'TROPIC GLOW': '#F08A3C', 'MOONLIGHT GLOW': '#8E83C9', 'PINK HIBISCUS': '#E2559A', 'TANGERINE': '#F37B2D',
+  'OCEAN GLOW': '#3BA7C4', 'LOTUS WATER': '#6FB7CF', 'PINEAPPLE': '#E5B92E', 'SANTAL HAZE': '#B98C67',
+  'PASSIONFRUIT SOL': '#B05AA8', 'PALM GROVE': '#4E9B63', 'PUMPKIN POP': '#E07A2C', 'VIOLET VICTORY': '#8060C0',
+  'CHERRY RAVE': '#C9304A', 'DEWY DAISY': '#E9BE3F'
+};
+
+// Cada aroma con sus productos, agrupados por formato (linea).
+function thAromas(u, list) {
+  return u.aromas.map(a => {
+    const items = list.filter(p => uvNorm(p.name).includes(a));
+    const porLinea = new Map();
+    items.forEach(p => { const l = lineaDe(p); if (!porLinea.has(l)) porLinea.set(l, []); porLinea.get(l).push(p); });
+    const formatos = [...porLinea.entries()].map(([l, its]) => ({ l, foto: uvFoto(its) })).filter(f => f.foto && f.foto.img)
+      .sort((x, y) => (stockNum(y.foto) > 0) - (stockNum(x.foto) > 0) || porLinea.get(y.l).length - porLinea.get(x.l).length);
+    return { a, nombre: uvTitulo(a), color: TH_COLOR[a] || '#F28BA3', items, formatos, nLineas: porLinea.size };
+  }).filter(x => x.items.length >= 2 && x.formatos.length).sort((x, y) => y.items.length - x.items.length);
+}
+
+function thEscena(x) {
+  const [f0, f1, f2] = x.formatos;
+  const pieza = (f, cls, eager) => f ? `
+      <figure class="th-pieza ${cls}">
+        ${uvImg(f.foto, '', eager)}
+        <figcaption>${escapeHtml(f.l.nombre)}</figcaption>
+      </figure>` : '';
   return `
-    <section class="uv-hero">
-      <div class="uvh-words" aria-hidden="true">${presentes.slice(0, 12).map((x, i) => `<span class="w${i % 4}">${escapeHtml(uvTitulo(x.a))}</span>`).join('')}</div>
-      <div class="uvh-copy">
+    <div class="th-escena" style="--ac:${x.color}">
+      ${pieza(f0, 'th-p0', true)}${pieza(f1, 'th-p1', true)}${pieza(f2, 'th-p2', false)}
+    </div>
+    <div class="th-ficha">
+      <span class="th-k">Aroma</span>
+      <b class="th-nombre">${escapeHtml(x.nombre)}</b>
+      <span class="th-n">${fmt(x.items.length)} productos en ${fmt(x.nLineas)} ${x.nLineas === 1 ? 'formato' : 'formatos'}</span>
+      <button type="button" class="th-ver" onclick="uvAroma('${uvAttr(x.nombre)}')">Ver ${escapeHtml(x.nombre)} <span aria-hidden="true">→</span></button>
+    </div>`;
+}
+
+function uvHeroAromas(brand, u, list, grupos, disp) {
+  const aromas = thAromas(u, list);
+  if (!aromas.length) return uvHeroBotica(brand, u, list, grupos, disp);
+  const x = aromas[0];
+  const cinta = aromas.map(a => `<span style="--ac:${a.color}">${escapeHtml(a.nombre)}</span>`).join('<i>✦</i>');
+  return `
+    <section class="uv-hero th-hero" style="--ac:${x.color}">
+      <div class="uvh-copy th-copy">
         <span class="uv-eyebrow">${escapeHtml(u.eyebrow)}</span>
-        <h1 class="uvh-logo-wrap">${uvLogo(brand, 'uvh-logo')}</h1>
+        <h1 class="uvh-logo-wrap th-logo">${uvLogo(brand, 'uvh-logo')}</h1>
         <p class="uvh-lead">${escapeHtml(u.lead(fmt(list.length)))}</p>
         ${uvStatsHTML(list, grupos, disp)}
         ${uvCtaHTML(list, 'Ver por formato')}
       </div>
-      <div class="uvh-float" aria-hidden="true">${fotos.map((p, i) => `<span class="uvf uvf-${i}">${uvImg(p, '', i < 2)}</span>`).join('')}</div>
+      <div class="th-vitrina">
+        <div class="th-elegido" id="thElegido" aria-live="polite">${thEscena(x)}</div>
+        <div class="th-elige" role="group" aria-label="Elige un aroma">
+          ${aromas.slice(0, 8).map((a, i) => `<button type="button" class="th-chip" style="--ac:${a.color}" aria-pressed="${i === 0}" data-i="${i}">${escapeHtml(a.nombre)}</button>`).join('')}
+        </div>
+      </div>
+      <div class="th-cinta" aria-hidden="true"><div class="th-cinta-in">${cinta}<i>✦</i>${cinta}<i>✦</i></div></div>
     </section>`;
 }
+
+// Interaccion: elegir aroma y rotacion suave hasta que la persona elige.
+function thActivar() {
+  document.querySelectorAll('.th-hero:not([data-listo])').forEach(thActivarUna);
+}
+function thActivarUna(hero) {
+  hero.dataset.listo = '1';
+  const u = universoDe('TREE HUT');
+  const aromas = thAromas(u, uvLista('TREE HUT')).slice(0, 8);
+  const caja = hero.querySelector('#thElegido');
+  const chips = [...hero.querySelectorAll('.th-chip')];
+  let actual = 0, timer = null;
+  const mostrar = i => {
+    if (i === actual) return;
+    actual = i;
+    const x = aromas[i];
+    hero.style.setProperty('--ac', x.color);
+    chips.forEach((c, j) => c.setAttribute('aria-pressed', String(j === i)));
+    caja.classList.remove('th-entra'); void caja.offsetWidth;
+    caja.innerHTML = thEscena(x);
+    caja.classList.add('th-entra');
+  };
+  const parar = () => { clearInterval(timer); timer = null; };
+  chips.forEach(c => c.addEventListener('click', () => { parar(); mostrar(+c.dataset.i); }));
+  const quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!quieto && aromas.length > 1) {
+    timer = setInterval(() => {
+      if (!document.body.contains(hero)) return parar();
+      if (!hero.offsetParent || hero.matches(':hover') || hero.contains(document.activeElement) || document.hidden) return;
+      mostrar((actual + 1) % aromas.length);
+    }, 4200);
+  }
+}
+new MutationObserver(thActivar).observe(document.documentElement, { childList: true, subtree: true });
 
 // MAXELL: hoja tecnica. La medida es el titular.
 function uvHeroFicha(brand, u, list, grupos, disp) {
