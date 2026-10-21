@@ -145,13 +145,13 @@ function brandMarkHTML(b, cls) {
 
 // ---------- Colecciones comerciales ----------
 const COLLECTIONS = {
-  'nuevos':        { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', sub: 'Productos recién incorporados al catálogo.', icon: 'spark', filter: isInNuevosIngresosView, sort: 'recent', always: true,
+  'nuevos':        { title: 'Nuevos ingresos', eyebrow: 'Recién llegados', sub: 'Lo último que llegó a bodega. Sé de los primeros en tenerlo en tu tienda.', icon: 'spark', filter: isInNuevosIngresosView, sort: 'recent', always: true,
                      empty: 'Por ahora no hay nuevos ingresos marcados. En cuanto entren productos nuevos a bodega aparecerán aquí.' },
-  'oportunidades': { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', sub: 'Productos que te recomendamos tener en tu negocio: buena disponibilidad y listos para mover.', icon: 'flame', filter: isOpportunity, sort: 'opp', always: true,
+  'oportunidades': { title: 'Oportunidades', eyebrow: 'Selección ImpoHogar', sub: 'Productos con buen stock y listos para mover: pídelos antes de que se acaben.', icon: 'flame', filter: isOpportunity, sort: 'opp', always: true,
                      empty: 'Pronto vas a encontrar aquí nuestras oportunidades comerciales.' },
-  'volumen':       { title: 'Stock para volumen', eyebrow: 'Pedidos grandes', sub: 'Encuentra rápido los productos con inventario suficiente para pedidos grandes.', icon: 'box', filter: p => stockNum(p) >= VOL_LEVELS[0], sort: 'stock', always: true },
-  'ultimas':       { title: 'Últimas unidades', eyebrow: 'Quedan pocas', sub: `Productos con ${LOW_STOCK} unidades o menos: asegúralos antes de que se agoten.`, icon: 'bolt', filter: isLowStock, sort: 'stock-asc' },
-  'mas-vendidos':  { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Los productos que más piden nuestros clientes.', icon: 'tag', filter: isBestSeller, sort: 'bestseller' },
+  'volumen':       { title: 'Stock para volumen', eyebrow: 'Pedidos grandes', sub: 'Inventario de sobra para tus pedidos grandes, sin quedarte corto.', icon: 'box', filter: p => stockNum(p) >= VOL_LEVELS[0], sort: 'stock', always: true },
+  'ultimas':       { title: '¡Últimas unidades!', eyebrow: 'Quedan pocas', sub: `Productos con ${LOW_STOCK} unidades o menos: asegúralos antes de que se agoten.`, icon: 'bolt', filter: isLowStock, sort: 'stock-asc' },
+  'mas-vendidos':  { title: 'Más vendidos', eyebrow: 'Alta rotación', sub: 'Lo que más piden otros negocios como el tuyo.', icon: 'tag', filter: isBestSeller, sort: 'bestseller' },
   'dia-nino':      { title: 'Día del Niño', eyebrow: 'Temporada', sub: 'Productos seleccionados para la temporada.', icon: 'spark', filter: p => DIA_DEL_NINO_CATEGORIES.includes(p.brand), sort: 'brand' }
 };
 // Oportunidades: un solo centro con tres motivos comerciales reales
@@ -826,12 +826,12 @@ function volLevelChipsHTML(active, onclickFn) {
 //  muestra.
 const SHOWCASE_MAX = 16;
 const SHOWCASES = [
-  { id: 'nuevos', icon: 'spark', claim: 'Esto acaba de llegar', title: 'Nuevos ingresos',
-    sub: 'Lo más reciente que entró a bodega.', tabs: 'dept', col: 'nuevos' },
-  { id: 'oportunidades', icon: 'flame', claim: 'Para pedir hoy', title: 'Oportunidades',
-    sub: 'Productos con un motivo real para pedirlos ahora, según la disponibilidad en bodega.', tabs: 'motive' },
-  { id: 'mas-vendidos', icon: 'tag', claim: 'Alta rotación', title: 'Más vendidos',
-    sub: 'Lo que más piden nuestros clientes.', tabs: 'dept', col: 'mas-vendidos' }
+  { id: 'nuevos', icon: 'spark', claim: 'Recién llegado', title: 'Lo nuevo en bodega',
+    sub: 'Sé de los primeros en tenerlo en tu tienda.', tabs: 'dept', col: 'nuevos' },
+  { id: 'oportunidades', icon: 'flame', claim: 'Para pedir hoy', title: 'Oportunidades que no esperan',
+    sub: 'Buen stock y listos para mover: pídelos ahora, según lo que hay en bodega.', tabs: 'motive' },
+  { id: 'mas-vendidos', icon: 'tag', claim: 'Alta rotación', title: 'Lo que más se mueve',
+    sub: 'Lo que más piden otros negocios como el tuyo.', tabs: 'dept', col: 'mas-vendidos' }
 ];
 const SC_STATE = {};
 
