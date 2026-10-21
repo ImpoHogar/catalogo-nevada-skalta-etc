@@ -7,7 +7,7 @@
 
 // Sube esta fecha cada vez que reemplaces fotos de la carpeta img/,
 // para que el navegador de los clientes no sirva la imagen vieja.
-const IMG_VERSION = "20260923";
+const IMG_VERSION = "20261101";
 
 // Marcas que aparecen en el carrusel animado de arriba del catalogo.
 // Si la marca tiene logo, guardalo en img/marcas/<archivo> y ponelo en
