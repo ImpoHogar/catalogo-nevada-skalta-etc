@@ -508,6 +508,19 @@ body.dark .tabbar a.active, body.dark .tabbar button.active { color: #8FB2F0; }
 .admin-edit-grid .field-input { margin-bottom: 0; }
 .admin-muted { color: var(--muted); }
 .admin-accent { color: var(--accent); }
+.admin-ubic-fila { margin-top: 3px; }
+.admin-ubic-lugar { color: var(--ink); font-weight: 600; }
+.admin-ubic-movil { display: inline-block; margin-left: 4px; padding: 2px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: 11.5px; font-weight: 600; vertical-align: 1px; white-space: nowrap; }
+.admin-ubic-detalle { display: grid; gap: 3px; margin: 0 0 10px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--c-blue-50); font-size: 13px; color: var(--ink); }
+.admin-ubic-cliente { display: grid; gap: 10px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.admin-ubic-titulo b { display: block; font-size: 13px; color: var(--ink); }
+.admin-ubic-titulo span { font-size: 12px; color: var(--muted); }
+.admin-ubic-titulo a { color: inherit; }
+.admin-ubic-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); font-size: 13px; color: var(--ink); }
+.admin-ubic-item.es-reciente { background: var(--c-blue-50); border-color: transparent; box-shadow: inset 3px 0 0 var(--accent); }
+.admin-ubic-item small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+.admin-ubic-pin { font-size: 17px; line-height: 1.2; }
+.admin-ubic-ultima { margin-left: 4px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; vertical-align: 1px; }
 .admin-clave-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
 .admin-clave-box b { display: block; font-size: 13px; color: var(--ink); }
 .admin-clave-box span { font-size: 12px; color: var(--muted); }

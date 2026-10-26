@@ -728,7 +728,10 @@ async function loadClientesAdmin(term) {
   adminEditingId = null;
   document.getElementById('adminListBody').innerHTML = '';
   try {
-    const rows = await adminRpc('nevada_panel_clientes', { p_buscar: term || '', p_papelera: adminShowPapelera, p_limite: 2000 });
+    const [rows] = await Promise.all([
+      adminRpc('nevada_panel_clientes', { p_buscar: term || '', p_papelera: adminShowPapelera, p_limite: 2000 }),
+      loadUbicacionesAdmin()
+    ]);
     adminClientesRows = Array.isArray(rows) ? rows : [];
     renderClientesAdmin();
   } catch (err) {
@@ -772,12 +775,14 @@ function renderClientesAdmin() {
     const sub = [`Código ${escapeAdminHtml(c.codigo)}`, escapeAdminHtml(c.tel1 || 'sin teléfono')];
     if (c.vendedor) sub.push('Vendedor ' + escapeAdminHtml(c.vendedor));
     sub.push(c.ultimo_ingreso ? 'último ingreso ' + fmtDateTimeAdmin(c.ultimo_ingreso) : 'nunca ha entrado');
+    const ubic = ubicacionesClienteAdmin(c.codigo);
     return `
     <div class="admin-list">
       <div class="admin-row" onclick="toggleAdminClientEdit(${adminJsArg(c.codigo)})">
         <div class="admin-row-main">
           <div class="admin-row-title">${escapeAdminHtml(c.nombre)}</div>
           <div class="admin-row-sub">${sub.join(' · ')}</div>
+          ${ubic.length ? `<div class="admin-row-sub admin-ubic-fila"><span class="admin-ubic-lugar">📍 ${ubic.length === 1 ? escapeAdminHtml(ubicLugarAdmin(ubic[0])) : ubic.length + ' ubicaciones'}</span></div>` : ''}
         </div>
         <span class="admin-pill ${est.cls}">${est.txt}</span>
       </div>
@@ -830,6 +835,7 @@ function clientEditFormHtml(c) {
         <input type="checkbox" data-req="admin" id="cf_activo" ${c.activo ? 'checked' : ''} onchange="toggleAdminClienteActivo(${arg}, this.checked)">
         <label for="cf_activo">Puede entrar al catálogo (desmarcar para bloquearlo)</label>
       </div>
+      ${ubicacionesClienteHtml(c.codigo)}
       <div class="admin-clave-box" id="cf_claveBox">
         <div>
           <b>Contraseña</b>
@@ -1227,6 +1233,7 @@ function renderPedidosRows() {
         <div class="admin-row-main">
           <div class="admin-row-title">${escapeAdminHtml(p.cliente_nombre)} <span class="admin-muted" style="font-weight:400;">· ${fmtDateTimeAdmin(p.creado_en)}</span></div>
           <div class="admin-row-sub">${quien ? quien + ' · ' : ''}${pedidoProductsPreview(items)} · ${p.total_unidades} uds</div>
+          <div class="admin-row-sub admin-ubic-fila">${pedidoUbicacionHtml(p)}</div>
         </div>
         ${pedidoClientePill(p)}
       </div>
@@ -1264,7 +1271,79 @@ function toggleAdminPedidoDetail(id) {
       <button type="button" class="btn btn-primary" onclick="vincularPedidoAdmin(${adminJsArg(id)})">Vincular</button>
     </div>
   `;
-  wrap.innerHTML = `<div class="admin-pedido-detail">${cab}${itemsHtml}${linkHtml}</div>`;
+  const ubic = p.ubic_provincia || p.ubic_equipo ? `
+    <div class="admin-ubic-detalle">
+      <b>Ubicación aproximada del pedido</b>
+      <div>${pedidoUbicacionHtml(p)}</div>
+      <div class="admin-muted">${[p.ubic_proveedor, p.ubic_equipo].filter(Boolean).map(escapeAdminHtml).join(' · ')}</div>
+    </div>` : '';
+  wrap.innerHTML = `<div class="admin-pedido-detail">${ubic}${cab}${itemsHtml}${linkHtml}</div>`;
+}
+
+// ---------- Ubicacion aproximada de los pedidos ----------
+// Se calcula en Supabase con la conexion a internet del cliente al
+// guardar el pedido (lista de DB-IP Lite) y se borra a los 6 meses.
+// Con datos moviles suele salir San Jose aunque la persona este en otra
+// provincia: esos pedidos llevan la marca "datos moviles".
+const ADMIN_MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+let adminUbicaciones = new Map(); // codigo -> [{ lugar, provincia, pedidos, movil, desde, hasta }]
+
+async function loadUbicacionesAdmin() {
+  try {
+    const rows = await adminRpc('nevada_panel_ubicaciones', {});
+    adminUbicaciones = new Map();
+    (Array.isArray(rows) ? rows : []).forEach(r => {
+      if (!adminUbicaciones.has(r.cliente_codigo)) adminUbicaciones.set(r.cliente_codigo, []);
+      adminUbicaciones.get(r.cliente_codigo).push(r);
+    });
+    adminUbicaciones.forEach(l => l.sort((a, b) => String(b.hasta).localeCompare(String(a.hasta))));
+  } catch (err) {
+    adminUbicaciones = new Map();
+  }
+}
+
+function ubicacionesClienteAdmin(codigo) {
+  return adminUbicaciones.get(codigo) || [];
+}
+
+function ubicLugarAdmin(u) {
+  const lugar = u.lugar || u.ubic_lugar, prov = u.provincia || u.ubic_provincia;
+  return lugar && lugar !== prov ? `${lugar}, ${prov}` : (lugar || prov || '');
+}
+
+function ubicMovilAdminHtml() {
+  return '<span class="admin-ubic-movil" title="Con datos móviles la ubicación suele salir como San José aunque la persona esté en otra provincia.">datos móviles · puede ser inexacta</span>';
+}
+
+function mesAnioAdmin(d) { return `${ADMIN_MESES[d.getMonth()]} ${d.getFullYear()}`; }
+function rangoMesesAdmin(desde, hasta) {
+  const a = new Date(desde), b = new Date(hasta);
+  if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) return mesAnioAdmin(a);
+  return a.getFullYear() === b.getFullYear() ? `${ADMIN_MESES[a.getMonth()]} – ${mesAnioAdmin(b)}` : `${mesAnioAdmin(a)} – ${mesAnioAdmin(b)}`;
+}
+
+function pedidoUbicacionHtml(p) {
+  if (!p.ubic_provincia) {
+    const viejo = new Date(p.creado_en) < new Date(Date.now() - 183 * 864e5);
+    return `<span class="admin-muted">📍 ${viejo ? 'Sin ubicación (más de 6 meses)' : p.ubic_equipo ? 'Ubicación no identificada' : 'Sin ubicación'}</span>`;
+  }
+  return `<span class="admin-ubic-lugar">📍 ${escapeAdminHtml(ubicLugarAdmin(p))}</span>${p.ubic_movil ? ' ' + ubicMovilAdminHtml() : ''}`;
+}
+
+function ubicacionesClienteHtml(codigo) {
+  const lista = ubicacionesClienteAdmin(codigo);
+  const items = lista.map((u, i) => `
+        <div class="admin-ubic-item${i === 0 ? ' es-reciente' : ''}">
+          <span class="admin-ubic-pin" aria-hidden="true">📍</span>
+          <div><b>${escapeAdminHtml(ubicLugarAdmin(u))}</b>${i === 0 && lista.length > 1 ? ' <span class="admin-ubic-ultima">la más reciente</span>' : ''}
+            <small>${u.pedidos} ${u.pedidos === 1 ? 'pedido' : 'pedidos'} · ${rangoMesesAdmin(u.desde, u.hasta)}</small>
+            ${u.movil === u.pedidos ? ubicMovilAdminHtml() : ''}</div>
+        </div>`).join('');
+  return `
+      <div class="admin-ubic-cliente">
+        <div class="admin-ubic-titulo"><b>Ubicaciones de sus pedidos</b><span>Aproximadas, según la conexión a internet · últimos 6 meses · datos de <a href="https://db-ip.com" target="_blank" rel="noopener">DB-IP</a></span></div>
+        ${items || '<div class="admin-muted">Sin pedidos con ubicación en los últimos 6 meses.</div>'}
+      </div>`;
 }
 
 async function vincularPedidoAdmin(id) {

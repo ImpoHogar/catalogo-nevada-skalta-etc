@@ -92,7 +92,9 @@ function registrarPedidoEnPanel(nombre, telefono, items) {
   if (typeof SESION === 'undefined' || !SESION || typeof accesoRpc !== 'function') return;
   accesoRpc('nevada_registrar_pedido', {
     p_token: SESION.token, p_nombre: nombre, p_telefono: telefono,
-    p_items: items.map(it => ({ code: it.code, name: it.name, brand: it.brand, qty: it.qty }))
+    p_items: items.map(it => ({ code: it.code, name: it.name, brand: it.brand, qty: it.qty })),
+    // Tipo de conexion ('cellular', 'wifi'...): solo algunos navegadores lo informan.
+    p_conexion: (navigator.connection && navigator.connection.type) || null
   }).then(r => { if (r && r.ok) ultimoPedidoId = r.id; })
     .catch(err => console.warn('No se pudo registrar el pedido en el panel', err));
 }
