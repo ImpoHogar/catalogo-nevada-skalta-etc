@@ -8,12 +8,14 @@
      Azul ImpoHogar  #19438E  logo (medido en img/logo.png), identidad,
                               navegacion, enlaces y accion principal
      Verde esmeralda #08B88A  disponibilidad, "en tu pedido", detalles
-     Verde lima      #B7FF38  nuevos ingresos, etiquetas especiales,
+     Celeste logo    #019DDC  nuevos ingresos, etiquetas especiales,
                               oportunidades (siempre con texto grafito)
+                              (antes verde lima #B7FF38)
      Blanco          #FFFFFF  fondo, tarjetas
      Negro grafito   #202124  titulos, textos y secciones de contraste
-   El lima no se usa nunca como color de texto sobre blanco (no se lee):
-   va de fondo con texto grafito, o como texto sobre grafito.
+   El celeste no se usa como color de texto sobre blanco: va de fondo
+   con texto grafito, o como texto sobre grafito. Las variables siguen
+   llamandose --c-lime* para no tocar el resto de los estilos.
    ========================================================================== */
 
 :root {
@@ -26,9 +28,9 @@
   --c-emerald: #08B88A;
   --c-emerald-ink: #067A5C;      /* esmeralda legible sobre blanco (5.3:1) */
   --c-emerald-50: #E6F8F2;
-  --c-lime: #B7FF38;
-  --c-lime-ink: #3E6B00;         /* tono oliva para iconos sobre blanco */
-  --c-lime-50: #F3FFE0;
+  --c-lime: #019DDC;             /* celeste del logo ("IMPO") */
+  --c-lime-ink: #0A6E9E;         /* celeste oscuro para iconos sobre blanco */
+  --c-lime-50: #E6F6FD;
   --c-graphite: #202124;
   --c-graphite-2: #2D2F33;
 
@@ -70,8 +72,8 @@
 body.dark {
   --c-emerald-ink: #34D6A8;
   --c-emerald-50: rgba(8,184,138,.14);
-  --c-lime-ink: #B7FF38;
-  --c-lime-50: rgba(183,255,56,.12);
+  --c-lime-ink: #4CC3F0;
+  --c-lime-50: rgba(1,157,220,.14);
   --c-blue-50: rgba(91,140,230,.16);
   --ink: #E8EAED;
   --ink-2: #C4C7CC;
@@ -81,10 +83,10 @@ body.dark {
   --brand-soft: rgba(111,155,234,.14);
   --primary: #4F80DC;
   --accent: #6F9BEA;
-  --new: #B7FF38;
+  --new: #4CC3F0;
   --ok: #34D6A8;
   --opp: #E8EAED;
-  --opp-soft: rgba(183,255,56,.12);
+  --opp-soft: rgba(1,157,220,.14);
   --avail-ok: #34D6A8;
   --avail-ok-soft: rgba(8,184,138,.14);
 }
@@ -104,7 +106,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); }
 body.dark .tone-beauty  { --tone: #34D6A8; --tone-soft: rgba(52,214,168,.13); }
 body.dark .tone-care    { --tone: #5CC6D6; --tone-soft: rgba(92,198,214,.13); }
 body.dark .tone-tech    { --tone: #8FB2F0; --tone-soft: rgba(143,178,240,.13); }
-body.dark .tone-battery { --tone: #B7FF38; --tone-soft: rgba(183,255,56,.12); }
+body.dark .tone-battery { --tone: #4CC3F0; --tone-soft: rgba(1,157,220,.14); }
 body.dark .tone-home    { --tone: #E8EAED; --tone-soft: rgba(232,234,237,.1); }
 
 /* ---------- Encabezado ---------- */
@@ -135,7 +137,7 @@ body.dark .xbtn-primary, body.dark .btn-primary { background: #4F80DC; }
 /* ---------- Etiquetas (una sola por tarjeta) ---------- */
 .badge-new, body.dark .badge-new, body.dark .pc-badges .badge-new { background: var(--c-lime); color: #202124; }
 .badge-opp, body.dark .badge-opp, body.dark .pc-badges .badge-opp { background: var(--c-graphite); color: var(--c-lime); }
-body.dark .badge-opp { box-shadow: inset 0 0 0 1px rgba(183,255,56,.35); }
+body.dark .badge-opp { box-shadow: inset 0 0 0 1px rgba(1,157,220,.45); }
 .badge-vol { background: var(--c-blue-50); color: var(--c-blue); }
 body.dark .badge-vol { color: #8FB2F0; }
 .badge-best { background: var(--c-blue); color: #fff; }

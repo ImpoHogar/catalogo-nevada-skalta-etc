@@ -1524,5 +1524,19 @@ const PRODUCTS = [
   {"id":1521,"brand":"KARA BEAUTY","code":"810112880717","name":"ESSENTIALS - FACIAL  PRIMER","categoria":"Maquillaje","img":"810112880717.webp","dateAdded":"2026-10-17"},
   {"id":1522,"brand":"KARA BEAUTY","code":"810112889970","name":"POLAR POP! - HYDRATING COOLING STICK","categoria":"Cuidado facial","img":"810112889970.webp","dateAdded":"2026-10-17"},
   {"id":1523,"brand":"TREE HUT","code":"075371015144","name":"TH MTQ CORPORAL CHERRY RAVE 240G","categoria":"Cuidado corporal","img":"075371015144.webp","dateAdded":"2026-10-17"},
-  {"id":1524,"brand":"KARA BEAUTY","code":"810112883169","name":"TRANSLUCENT LIGHT - SOFT FOCUS - LOOSE S","categoria":"Maquillaje","img":"810112883169.webp","dateAdded":"2026-10-17"}
+  {"id":1524,"brand":"KARA BEAUTY","code":"810112883169","name":"TRANSLUCENT LIGHT - SOFT FOCUS - LOOSE S","categoria":"Maquillaje","img":"810112883169.webp","dateAdded":"2026-10-17"},
+  {"id":1525,"brand":"TREE HUT","code":"075371005091","name":"TH SUGAR SCRUB CANDY CANE 510G","categoria":"Cuidado corporal","img":"075371005091.webp","dateAdded":"2026-10-28"},
+  {"id":1526,"brand":"TREE HUT","code":"075371015212","name":"TH SHEA BODY BUTTER CANDY CANE 238G","categoria":"Cuidado corporal","img":"075371015212.webp","dateAdded":"2026-10-28"},
+  {"id":1527,"brand":"TREE HUT","code":"075371028427","name":"TH SHAVE OIL CANDY CANE 227ML","categoria":"Cuidado corporal","img":"075371028427.webp","dateAdded":"2026-10-28"},
+  {"id":1528,"brand":"TREE HUT","code":"075371251177","name":"TH GEL WASH TROPIC GLOW 97ML","categoria":"Cuidado corporal","img":"075371251177.webp","dateAdded":"2026-10-28"},
+  {"id":1529,"brand":"TREE HUT","code":"075371251078","name":"TH GEL WASH GOLDEN VANILLA 532ML","categoria":"Cuidado corporal","img":"075371251078.webp","dateAdded":"2026-10-28"},
+  {"id":1530,"brand":"TREE HUT","code":"075371021282","name":"TH OVERNIGHT LIP MASK STRAWBERRY 17G","categoria":"Cuidado corporal","img":"075371021282.webp","dateAdded":"2026-10-28"},
+  {"id":1531,"brand":"TREE HUT","code":"075371021091","name":"TH SUGAR LIPS LIP BUTTER ORIGINAL 15G","categoria":"Cuidado corporal","img":"075371021091.webp","dateAdded":"2026-10-28"},
+  {"id":1532,"brand":"TREE HUT","code":"075371021237","name":"TH SUGARLIPS LIP BUTTER STRAWBERRY 15G","categoria":"Cuidado corporal","img":"075371021237.webp","dateAdded":"2026-10-28"},
+  {"id":1533,"brand":"TREE HUT","code":"075371028069","name":"TH SUGAR SCRUB SHAVE PREP MR ROSE 255G","categoria":"Cuidado corporal","img":"075371028069.webp","dateAdded":"2026-10-28"},
+  {"id":1534,"brand":"TREE HUT","code":"075371010569","name":"TREE HUT SUN KISSED POPPY FRAGANCE MIST","categoria":"Cuidado corporal","img":"075371010569.webp","dateAdded":"2026-10-28"},
+  {"id":1535,"brand":"TREE HUT","code":"075371028410","name":"TH ACEITE PARA AFEITAR OCEAN GLOW 227M","categoria":"Cuidado corporal","img":"075371028410.webp","dateAdded":"2026-10-28"},
+  {"id":1536,"brand":"KARA BEAUTY","code":"810112881226","name":"WATERMELON - RAD ROUGE - WATER LIP TINT","categoria":"Maquillaje","img":"810112881226.webp","dateAdded":"2026-10-28"},
+  {"id":1537,"brand":"IMMORTAL","code":"8682225553671","name":"AFTER SHAVE IMMORTAL 350ML DLX THE CREE","categoria":"Cabello y barbería","img":"8682225553671.webp","dateAdded":"2026-10-28"},
+  {"id":1538,"brand":"ARGOM","code":"886540008801","name":"SP-4075BK SPEAKER RAVE 75 ARGOM WIRELESS","categoria":"Tecnología","img":"886540008801.webp","dateAdded":"2026-10-28"}
 ];

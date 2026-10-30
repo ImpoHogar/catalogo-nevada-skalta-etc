@@ -85,7 +85,7 @@ const UNIVERSOS = {
     indiceSub: 'El mismo aroma aparece en varios formatos. Elige primero qué buscas o explora por aroma.',
     aromas: ['COCO COLADA', 'MOROCCAN ROSE', 'VANILLA', 'WATERMELON', 'TROPIC GLOW', 'MOONLIGHT GLOW', 'PINK HIBISCUS', 'TANGERINE', 'OCEAN GLOW', 'LOTUS WATER', 'PINEAPPLE', 'SANTAL HAZE', 'PASSIONFRUIT SOL', 'PALM GROVE', 'PUMPKIN POP', 'VIOLET VICTORY', 'CHERRY RAVE', 'DEWY DAISY'],
     lineas: [
-      { k: 'Azúcar', nombre: 'Exfoliantes de azúcar', color: '#E8618C', re: /EXFOLIANTE|POLISH|SMOOTH \+ TONE/ },
+      { k: 'Azúcar', nombre: 'Exfoliantes de azúcar', color: '#E8618C', re: /EXFOLIANTE|SUGAR SCRUB|POLISH|SMOOTH \+ TONE/ },
       { k: 'Manteca', nombre: 'Body butter', color: '#E79A3C', re: /\bMTQ\b|BODY B\.|BODY BUTTER|WIPPED|FIRMING|HYDRAGLOW|BRIGHTEN/ },
       { k: 'Baño', nombre: 'Geles de baño y jabones', color: '#2FA7A0', re: /\bGEL\b|WASH|JABON|SET2/ },
       { k: 'Afeitado', nombre: 'Afeitado', color: '#7E6BC4', re: /AFEITAR|SHAVE/ },
