@@ -2,6 +2,12 @@
 <html lang="es">
 <head>
 
+<!-- Politica de seguridad (CSP): la pagina solo carga codigo, estilos,
+     fuentes e imagenes de los lugares de esta lista, y solo se comunica
+     con Supabase, Google Analytics y el formulario de comentarios.
+     Si se agrega un servicio externo nuevo, hay que sumarlo aca. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://wzntsmbnsiafebfojaww.supabase.co https://script.google.com https://script.googleusercontent.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QF2TFBMBLR"></script>
 <script>
@@ -485,10 +491,12 @@
 </div>
 </div>
 
-<!-- Librerias externas: Excel del pedido, ZIP de fotos y codigos de barras -->
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
+<!-- Librerias: Excel del pedido, ZIP de fotos y codigos de barras.
+     Copias verificadas (firma de npm) guardadas en js/vendor: ya no se
+     cargan de un servidor externo. Ver js/vendor/LEEME.md. -->
+<script defer src="js/vendor/exceljs.min.js?v=4.4.0"></script>
+<script defer src="js/vendor/jszip.min.js?v=3.10.1"></script>
+<script defer src="js/vendor/JsBarcode.all.min.js?v=3.12.3"></script>
 
 <!-- El ORDEN de estos archivos importa: no los reordenes. -->
 <script defer src="js/config.js?v=20261101f"></script>
