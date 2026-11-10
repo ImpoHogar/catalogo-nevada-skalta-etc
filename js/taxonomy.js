@@ -453,6 +453,16 @@ function queryTokensOf(q) {
 // Puntaje de relevancia (0 = no coincide).
 function searchScore(p, tokens) {
   if (!tokens.length) return 1;
+  // Codigo del articulo ("AC-0122BK"): se encuentra escrito con o sin
+  // guion, con espacios o solo una parte ("ac0122bk", "ac 0122", "0122").
+  const model = compactCode(articleCode(p));
+  if (model) {
+    const q = compactCode(tokens.join(''));
+    if (q.length >= 3 && model.includes(q) && /\d/.test(q)) {
+      const st = parseInt(p.stock) || 0;
+      return (model === q ? 1500 : model.startsWith(q) ? 900 : 500) + (st > 0 ? 6 : 0) + (p.img ? 3 : 0);
+    }
+  }
   const hay = productHaystack(p);
   const name = p._hayName;
   const code = String(p.code);

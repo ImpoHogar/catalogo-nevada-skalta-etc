@@ -121,6 +121,37 @@ function modelCode(p) {
   return m ? m[1].replace(/\s+/, '-') : '';
 }
 
+// Codigo del articulo que viene en el nombre (referencia del fabricante),
+// para mostrarlo en la etiqueta y poder buscarlo. Solo tecnologia y
+// electrodomesticos: las marcas de belleza no traen codigo en el nombre.
+// Casos: "AC-0122BK ...", "AC- 0110WT ..." (espacio de mas), "723407
+// LR06-2PK ..." (Maxell), "098691037603CB4061BL ..." (pegado al codigo de
+// barras) y "... DENVER BG2502BL" (al final del nombre).
+const MODEL_END_RE = /(?:^|\s)([A-Z]{2,4}-?\d{3,5}[A-Z]{0,3})(?=\s|$|[)\/,])/g;
+function articleCode(p) {
+  if (!p) return '';
+  if (p._acode !== undefined) return p._acode;
+  let c = '';
+  if (catMeta(p.categoria).group === 'tech') {
+    const n = String(p.name).toUpperCase().replace(/\s+/g, ' ').trim();
+    let m;
+    if ((m = n.match(/^([A-Z]{1,4})- (\d{2,5}[A-Z]{0,4})\s/))) c = m[1] + '-' + m[2];
+    else if ((m = n.match(/^\d{12,14}([A-Z]{1,4}\d{2,5}[A-Z]{0,4})\s/))) c = m[1];
+    else if ((c = modelCode(p))) { /* codigo al inicio */ }
+    else if ((m = n.match(/^(\d{5,7})\s/))) c = m[1];
+    else if ((m = n.match(/\b(CR|LR)[ -]?(\d{2,4})\b/))) c = m[1] + m[2];   // micro baterias: "CR 1632", "LR-44"
+    else {
+      const hits = [...n.matchAll(MODEL_END_RE)].map(x => x[1]).filter(x => !NOT_MODEL.test(x));
+      const nums = n.match(/(?:^|\s)(\d{6})(?=\s|$)/g) || [];                  // referencia de 6 cifras: "CAJA 723467", "... NEGRO 348594"
+      if (hits.length === 1) c = hits[0];
+      else if (!hits.length && nums.length === 1) c = nums[0].trim();
+    }
+  }
+  return (p._acode = c);
+}
+// "AC-0122BK" -> "ac0122bk": para comparar sin guiones ni espacios.
+function compactCode(s) { return normText(s).replace(/[^a-z0-9]/g, ''); }
+
 function prettyName(p) {
   if (!p) return '';
   if (p._pretty) return p._pretty;

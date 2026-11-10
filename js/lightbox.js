@@ -54,7 +54,7 @@ function onProductViewLeave() { lightboxState.pid = null; }
 function productFacts(p) {
   const tone = deptTone(p.dept);
   const specs = p._specs || (p._specs = productSpecs(p));
-  const model = modelCode(p);
+  const model = articleCode(p);
   const rows = [['Marca', p.brand], ['Categoría', catName(p.cat)], ['Tipo de producto', p.tipo !== 'Otros' ? p.tipo : catName(p.cat)]];
   if (tone === 'battery') {
     if (batterySize(p)) rows.push(['Tamaño', batterySize(p)]);
@@ -233,9 +233,15 @@ function renderProductPage(pid) {
           <a class="pdp-brand" href="${brandHash(p.brand)}">${escapeHtml(p.brand)}<small>Ver sus ${brandCount} productos ${ICONS.arrow}</small></a>
           <h1 class="pdp-name">${escapeHtml(prettyName(p))}</h1>
           <div class="pdp-raw">${escapeHtml(p.name)}</div>
-          <div class="pdp-code">
-            <span>Código</span><b>${escapeHtml(p.code)}</b>
-            <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(p.code)}', this)" aria-label="Copiar código">${ICONS.copy}<span>Copiar</span></button>
+          <div class="pdp-codes">
+            ${articleCode(p) ? `<div class="pdp-code is-model">
+              <span>Modelo</span><b>${escapeHtml(articleCode(p))}</b>
+              <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(articleCode(p))}', this)" aria-label="Copiar modelo">${ICONS.copy}<span>Copiar</span></button>
+            </div>` : ''}
+            <div class="pdp-code">
+              <span>Código</span><b>${escapeHtml(p.code)}</b>
+              <button type="button" class="pdp-copy" onclick="copyCode('${escapeHtml(p.code)}', this)" aria-label="Copiar código">${ICONS.copy}<span>Copiar</span></button>
+            </div>
           </div>
           <div class="pdp-keyfacts">${pdpKeyFacts(p).map(([k, v]) => `<div><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`).join('')}</div>
           <div class="pdp-avail is-${lvl.key}"><i></i><span>${escapeHtml(lvl.label)}</span>${lvl.qty ? `<small>${escapeHtml(lvl.qty)}</small>` : ''}</div>
