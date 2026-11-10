@@ -534,7 +534,7 @@ body[data-uv="maxell"] .uv-ch-t h3 { text-transform: uppercase; letter-spacing: 
 body[data-uv="maxell"] .uv-ch-n, body[data-uv="maxell"] .uv-ch-n b { font-family: 'IBM Plex Mono', monospace; }
 body[data-uv="maxell"] .uv-card { border-radius: 0; border: 1px solid var(--brand-border); }
 body[data-uv="maxell"] .uv-card .pc-name { font-weight: 600; text-transform: uppercase; font-size: 13.5px; letter-spacing: .01em; }
-body[data-uv="maxell"] .uv-card .pc-code b { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+body[data-uv="maxell"] .uv-card .pc-code b, body[data-uv="maxell"] .uv-card .pc-model b { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
 body[data-uv="maxell"] .uv-tag { font-family: 'IBM Plex Mono', monospace; letter-spacing: .02em; color: var(--lc); }
 body[data-uv="maxell"] .uv-tag i { border-radius: 0; }
 body[data-uv="maxell"] .uv-pdp .pdp-name { text-transform: uppercase; }

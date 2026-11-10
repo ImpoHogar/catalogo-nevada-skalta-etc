@@ -17,7 +17,7 @@ const PRODUCTOS_FUENTE = { origen: 'products.js', actualizado: null };
 (function arrancarCatalogo() {
   const yo = document.currentScript;
   const version = yo && yo.src.includes('?') ? yo.src.split('?')[1] : '';
-  const RESTO = ['stock', 'data', 'utils', 'ui', 'taxonomy', 'relacionados', 'catalog', 'stock-en-vivo',
+  const RESTO = ['stock', 'data', 'codigos_item', 'utils', 'ui', 'taxonomy', 'relacionados', 'catalog', 'stock-en-vivo',
     'cart', 'theme', 'order', 'history', 'calculator', 'lightbox', 'showcase', 'gate', 'admin', 'universos', 'feedback', 'main'];
 
   function cargarArchivo(nombre) {

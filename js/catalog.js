@@ -464,28 +464,17 @@ function cardBadges(p) {
 
 // Datos clave de la tarjeta segun el departamento: cada uno muestra lo
 // que importa para decidir (nunca datos inventados).
-// Variantes que se verian con el mismo nombre (el mismo parlante en negro,
-// azul y rosado): se les muestra el modelo, que es lo que las distingue.
-let _nameCount = null;
-function variantModel(p) {
-  if (!_nameCount) {
-    _nameCount = {};
-    VISIBLE_PRODUCTS.forEach(q => { const k = prettyName(q).toUpperCase(); _nameCount[k] = (_nameCount[k] || 0) + 1; });
-  }
-  return _nameCount[prettyName(p).toUpperCase()] > 1 ? modelCode(p) : '';
-}
 
 function keySpec(p) {
   const specs = p._specs || (p._specs = productSpecs(p));
   const tone = deptTone(p.dept);
   const get = l => (specs.find(s => s.label === l) || {}).value;
-  const model = variantModel(p);
   let list;
   if (tone === 'battery') list = [batterySize(p) && 'Tamaño ' + batterySize(p), batteryPack(p), batteryVolt(p)];
   else if (tone === 'tech') list = [get('Conector'), get('Conexión'), get('Potencia'), get('Batería'), get('Video'), get('Largo')];
   else if (tone === 'home') list = [get('Capacidad'), get('Potencia'), get('Velocidades'), get('Conexión')];
   else list = [get('Tono') && 'Tono ' + get('Tono'), sizeOf(p), get('Protección'), get('Contenido')];
-  return [model && 'Modelo ' + model].concat(list).filter(Boolean).slice(0, 2);
+  return list.filter(Boolean).slice(0, 2);
 }
 // Presentacion / tamano tal como viene en el nombre (ej. "250 ml").
 function sizeOf(p) {
@@ -557,6 +546,7 @@ function cardHTML(p) {
         <a class="pc-brand" href="${brandHash(p.brand)}">${escapeHtml(p.brand)}</a>
         <a class="pc-name" href="#/p/${p.id}" title="${escapeHtml(p.name)}">${safeName}</a>
         <div class="pc-meta"><span class="pc-type">${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span>${specs.map(s => `<span class="pc-spec">${escapeHtml(s)}</span>`).join('')}</div>
+        ${articleCode(p) ? `<div class="pc-model" title="Código del artículo (modelo)">Mod. <b>${escapeHtml(articleCode(p))}</b></div>` : ''}
         <div class="pc-code" title="Código de barras">Código: <b>${escapeHtml(p.code)}</b></div>
         ${availHTML(p)}
         ${isVolume(p) && flag !== 'vol' ? `<span class="pc-vol">${ICONS.box}Disponible para volumen</span>` : ''}
@@ -1690,6 +1680,12 @@ function clearRecent() {
   renderSearchResults(Object.values(SEARCH_CTXS).find(c => c.box && c.box.classList.contains('open')));
 }
 
+// Resalta el codigo del articulo si lo buscado coincide (con o sin guion).
+function highlightCode(code, tokens) {
+  const q = compactCode(tokens.join(''));
+  return q.length >= 3 && compactCode(code).includes(q) ? `<mark>${escapeHtml(code)}</mark>` : escapeHtml(code);
+}
+
 function highlight(text, tokens) {
   let out = escapeHtml(text);
   tokens.filter(t => t.length > 1).forEach(t => {
@@ -1754,7 +1750,7 @@ function renderSearchResults(ctx) {
     return `<div class="sr-item${qty ? ' has-qty' : ''}" data-card="${p.id}">
       <a class="sr-link" role="option" href="#/p/${p.id}">
         <img src="${productImgSrc(p)}" alt="" loading="lazy">
-        <span class="sr-text"><span class="sr-brand">${escapeHtml(p.brand)} · ${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span><span class="sr-name">${highlight(prettyName(p), tokens)}</span><span class="sr-code">Código ${highlight(p.code, tokens)}</span></span>
+        <span class="sr-text"><span class="sr-brand">${escapeHtml(p.brand)} · ${escapeHtml(p.tipo !== 'Otros' ? p.tipo : catName(p.cat))}</span><span class="sr-name">${highlight(prettyName(p), tokens)}</span><span class="sr-code">${articleCode(p) ? `Mod. ${highlightCode(articleCode(p), tokens)} · ` : ''}Código ${highlight(p.code, tokens)}</span></span>
         <span class="sr-stock is-${lvl.key}"><i></i>${escapeHtml(lvl.label)}</span>
       </a>
       ${lvl.key === 'out' ? '' : `<button type="button" class="sr-add" onclick="event.stopPropagation();changeQty(${p.id},1)" aria-label="Agregar ${escapeHtml(prettyName(p))} al pedido">${ICONS.plus}<b data-qty-badge="${p.id}">${qty || ''}</b></button>`}

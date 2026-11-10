@@ -453,6 +453,19 @@ function queryTokensOf(q) {
 // Puntaje de relevancia (0 = no coincide).
 function searchScore(p, tokens) {
   if (!tokens.length) return 1;
+  // Codigo del articulo ("AC-0122BK"): se encuentra escrito con o sin
+  // guion, con espacios o solo una parte ("ac0122bk", "ac 0122", "0122").
+  // Vale el codigo del sistema y tambien el que trae el nombre (el que
+  // viene impreso en la caja).
+  const q = compactCode(tokens.join(''));
+  if (q.length >= 3 && /\d/.test(q)) {
+    let best = 0;
+    [articleCode(p), nameCode(p)].forEach(c => {
+      const m = compactCode(c);
+      if (m && m.includes(q)) best = Math.max(best, m === q ? 1500 : m.startsWith(q) ? 900 : 500);
+    });
+    if (best) return best + ((parseInt(p.stock) || 0) > 0 ? 6 : 0) + (p.img ? 3 : 0);
+  }
   const hay = productHaystack(p);
   const name = p._hayName;
   const code = String(p.code);
