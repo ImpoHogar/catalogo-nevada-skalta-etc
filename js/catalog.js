@@ -1683,7 +1683,7 @@ function clearRecent() {
 // Resalta el codigo del articulo si lo buscado coincide (con o sin guion).
 function highlightCode(code, tokens) {
   const q = compactCode(tokens.join(''));
-  return q.length >= 3 && compactCode(code).includes(q) ? `<mark>${escapeHtml(code)}</mark>` : highlight(code, tokens);
+  return q.length >= 3 && compactCode(code).includes(q) ? `<mark>${escapeHtml(code)}</mark>` : escapeHtml(code);
 }
 
 function highlight(text, tokens) {
